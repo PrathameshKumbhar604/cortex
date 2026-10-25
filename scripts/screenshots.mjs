@@ -38,9 +38,15 @@ async function shoot(width, height, suffix) {
   for (const p of ["brief", "memory", "connections"]) {
     await page.goto(`${base}/${p}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(p === "brief" ? 2500 : 600);
-    await page.addStyleTag({ content: UNROLL });
-    await page.waitForTimeout(200);
-    await page.screenshot({ path: `${out}/${p}${suffix}.png`, fullPage: true });
+    // Unroll only when the page actually overflows; short pages keep their natural viewport.
+    const overflows = await page.evaluate(() =>
+      [...document.querySelectorAll(".overflow-y-auto")].some((el) => el.scrollHeight > el.clientHeight + 1),
+    );
+    if (overflows) {
+      await page.addStyleTag({ content: UNROLL });
+      await page.waitForTimeout(200);
+    }
+    await page.screenshot({ path: `${out}/${p}${suffix}.png`, fullPage: overflows });
   }
   await ctx.close();
 }

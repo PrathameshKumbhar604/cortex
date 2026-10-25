@@ -53,10 +53,10 @@ export function ActionCard({
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-[550] text-ink">{proposal.title}</p>
-          <p className="readout mt-1 flex items-center gap-1.5 text-muted">
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-muted">
             <SourceMark source={proposal.connectorId} />
             {sourceName(proposal.connectorId)}
-            {pending && <span>· {proposal.risk === "high" ? "Acts on your behalf · needs your approval" : "Needs your approval"}</span>}
+            {pending && <span>· {proposal.risk === "high" ? "Acts on your behalf · Needs your approval" : "Needs your approval"}</span>}
           </p>
         </div>
         {stamp && (

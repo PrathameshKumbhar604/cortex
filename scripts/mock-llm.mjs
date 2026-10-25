@@ -33,25 +33,43 @@ function reply(body) {
   if (sys.includes("judge whether the quoted evidence")) return JSON.stringify({ results: [] });
   if (sys.includes("daily brief")) {
     const ev = evidenceLines(user);
+    const used = new Set();
+    const card = (kind, title, items) => {
+      items.forEach((e) => used.add(e.n));
+      return { kind, title, detail: items[0].quote, evidence: items.map((e) => Number(e.n)), when: null };
+    };
+    const cards = [];
+    const demo = ev.filter((e) => /demo day (has )?moved/i.test(e.quote) || /milestone/i.test(e.title));
+    const demoSources = new Set(demo.map((e) => e.meta.split(" · ")[0]));
+    if (demo.length > 1 && demoSources.size > 1) cards.push(card("conflict", "Demo Day date differs between sources", demo.slice(0, 2)));
+    for (const e of ev.filter((e) => /blocked|loop|bug|requested changes/i.test(e.quote) && !used.has(e.n)).slice(0, 2))
+      cards.push(card("risk", firstSentence(e.quote), [e]));
+    for (const e of ev.filter((e) => /^calendar/.test(e.meta) && !used.has(e.n)).slice(0, 3)) cards.push(card("upcoming", e.title, [e]));
+    for (const e of ev.filter((e) => !used.has(e.n)).slice(0, 2)) cards.push(card("changed", firstSentence(e.quote), [e]));
+    const risks = cards.filter((c) => c.kind === "risk").length;
     return JSON.stringify({
-      headline: "Demo Day moved earlier, and two blockers threaten the beta.",
-      cards: ev.slice(0, 6).map((e, i) => ({ kind: ["risk", "conflict", "upcoming", "changed"][i % 4], title: firstSentence(e.quote).slice(0, 68), detail: e.quote, evidence: [Number(e.n)], when: null })),
+      headline: cards.some((c) => c.kind === "conflict")
+        ? `Demo Day moved, and ${risks} item${risks === 1 ? "" : "s"} could hold up the beta.`
+        : `${cards.length} updates across your sources this week.`,
+      cards,
     });
   }
   if (sys.includes("Answer ONLY from the numbered evidence")) {
     const ev = evidenceLines(user);
-    const pick = ev.slice(0, 4);
+    const pick = ev.slice(0, 3);
     const lead = pick[0] ? `${firstSentence(pick[0].quote)} [${pick[0].n}].` : "I couldn't find this in your sources.";
-    const bullets = pick.slice(1).map((e) => `- ${firstSentence(e.quote)} [${e.n}].`);
+    const rest = pick.slice(1).map((e) => `${firstSentence(e.quote)} [${e.n}].`).join(" ");
+    const report = ev.find((e) => /progress report/i.test(e.quote));
+    // One deliberately over-reaching claim, so partial verification is visible in demos.
+    const partial = report ? `The progress report should also cover hosting costs, budget and a risk register [${report.n}].` : "";
     const demo = ev.filter((e) => /demo day/i.test(e.quote)).map((e) => e.n);
     const action = /\b(draft|send|post)\b.*slack|slack update/i.test(user)
       ? `[{"connector":"slack","action":"send_message","title":"Post the Demo Day update to #orbit-dev","args":{"channel":"orbit-dev","text":"Heads up: Demo Day is now earlier. I'm updating the milestone today."}}]`
       : "[]";
     return [
-      lead,
+      `${lead} ${rest}`,
       "",
-      ...bullets,
-      "- The team already agreed to cut group chat from the beta.",
+      `${partial} The team already agreed to cut group chat from the beta.`.trim(),
       "<<<CONFLICTS>>>",
       demo.length > 1 ? `Demo Day date differs between sources [${demo[0]}][${demo[1]}]` : "none",
       "<<<MISSING>>>",

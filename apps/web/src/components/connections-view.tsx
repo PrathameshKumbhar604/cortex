@@ -80,7 +80,7 @@ export function ConnectionsView() {
           {(
             [
               { id: "demo", label: "Sample workspace", note: "Fictional student team data. Nothing leaves Cortex." },
-              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Not available on this server yet." },
+              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Connecting your own accounts is coming soon." },
             ] as const
           ).map((w) => (
             <button
@@ -144,7 +144,7 @@ export function ConnectionsView() {
             </li>
           ))}
           {info && info.connectors.length === 0 && (
-            <li className="border-b border-line py-6 text-[14px] text-muted">No apps are available on this server yet. Use the sample workspace to try Cortex.</li>
+            <li className="border-b border-line py-6 text-[14px] text-muted">Connecting your own apps is coming soon. Use the sample workspace to try Cortex.</li>
           )}
         </ul>
 
@@ -153,14 +153,14 @@ export function ConnectionsView() {
             <div>
               <dt className="text-[12.5px] text-muted">Language models</dt>
               <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.llm.length ? info.llm.map((p) => p.label).join(" → ") : <span className="text-risk">No model is available on this server yet.</span>}
+                {info.llm.length ? info.llm.map((p) => p.label).join(" → ") : <span className="text-risk">Answers are unavailable right now.</span>}
               </dd>
-              <dd className="text-[12.5px] text-muted mt-1">Free models, tried in order. If all are busy, Cortex falls back to Puter.</dd>
+              <dd className="text-[12.5px] text-muted mt-1">Free AI models, with automatic backup when one is busy.</dd>
             </div>
             <div>
               <dt className="text-[12.5px] text-muted">Memory</dt>
               <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.memory.ok ? (info.memory.backend === "oracle" ? "Oracle Agent Memory" : "Local store (SQLite)") : <span className="text-risk">Offline. Answers still work, but nothing is remembered.</span>}
+                {info.memory.ok ? (info.memory.backend === "oracle" ? "Saved securely in the cloud" : "Saved on this device") : <span className="text-risk">Offline. Answers still work, but nothing is remembered.</span>}
               </dd>
             </div>
           </dl>

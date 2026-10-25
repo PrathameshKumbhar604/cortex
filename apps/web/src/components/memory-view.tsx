@@ -134,7 +134,7 @@ export function MemoryView() {
         ))}
         {backend && (
           <p className="text-[12.5px] text-muted mt-12">
-            Stored in {backend === "oracle" ? "Oracle AI Database with Oracle Agent Memory" : backend === "sqlite" ? "a local store on this machine" : backend}.
+            Saved {backend === "oracle" ? "the cloud, encrypted" : "on this device"}.
           </p>
         )}
       </div>

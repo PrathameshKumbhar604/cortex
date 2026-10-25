@@ -143,7 +143,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
         <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
           {latest?.done && latest.followups.length > 0 && !busy && (
-            <div className="mb-2 flex gap-2 overflow-x-auto pb-1" aria-label="Suggested next questions">
+            <div className="mb-2 flex gap-2 overflow-x-auto pr-6 pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] [scrollbar-width:none]" aria-label="Suggested next questions">
               {latest.followups.map((f) => (
                 <button
                   key={f}
