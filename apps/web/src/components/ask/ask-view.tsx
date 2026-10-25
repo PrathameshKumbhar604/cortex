@@ -142,6 +142,20 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
       <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
         <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
+          {latest?.done && latest.followups.length > 0 && !busy && (
+            <div className="mb-2 flex gap-2 overflow-x-auto pb-1" aria-label="Suggested next questions">
+              {latest.followups.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => submit(f)}
+                  className="shrink-0 rounded-full border border-line px-3 py-1 text-[13px] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink"
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
           <Composer
             value={draft}
             onChange={setDraft}
@@ -153,8 +167,8 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             autoFocus
             placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
           />
-          <div className="readout mt-2 flex items-center justify-between text-hair">
-            <span className="hidden sm:inline">{mode === "fast" ? "Fast · one pass, lexical checks" : "Deep · plans, searches in parallel, verifies"}</span>
+          <div className="text-[12.5px] text-muted mt-2 flex items-center justify-between">
+            <span className="hidden sm:inline">{mode === "fast" ? "Fast: one pass, quickest answer" : "Deep: plans, searches in parallel, verifies every claim"}</span>
             {turns.length > 0 && (
               <button type="button" onClick={reset} disabled={busy} className={cn("ml-auto flex items-center gap-1 whitespace-nowrap hover:text-ink", busy && "opacity-40")}>
                 <Plus className="size-3" aria-hidden /> New thread

@@ -61,10 +61,7 @@ export function BriefView() {
       <div className="mx-auto w-full max-w-[860px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="readout text-muted">
-              Brief{today && ` · ${today}`}
-            </p>
-            <h1 className="mt-3 text-balance text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">
+            <h1 className="text-balance text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">
               {brief?.headline ?? (loading ? "Reading your sources…" : "Your brief")}
             </h1>
           </div>
@@ -72,11 +69,12 @@ export function BriefView() {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="readout mt-1 flex shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-muted hover:text-ink disabled:opacity-50"
+            className="mt-1 flex shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-[12.5px] text-muted hover:text-ink disabled:opacity-50"
           >
             <RotateCw className={cn("size-3", loading && "animate-spin")} aria-hidden /> Refresh
           </button>
         </div>
+        {today && <p className="text-[12.5px] text-muted mt-3">{today}</p>}
 
         {brief?.failures.map((f) => (
           <p key={f.source} className="mt-5 flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] text-[#7a3d00]">
@@ -124,7 +122,7 @@ export function BriefView() {
                   <h2 id={`h-${kind}`} className={cn("text-[15px] font-[600]", kind === "risk" || kind === "conflict" ? "text-risk" : "text-ink")}>
                     {label}
                   </h2>
-                  <span className="readout text-hair">{note}</span>
+                  <span className="text-[12.5px] text-muted">{note}</span>
                 </div>
                 <ul>
                   {cards.map((c, i) => (
@@ -155,7 +153,7 @@ function BriefRow({ card, withDate }: { card: Card; withDate: boolean }) {
         {withDate && <span className="readout hidden pt-1 text-muted sm:block">{card.when ? shortDate(card.when) : ""}</span>}
         <div className="min-w-0">
           <p className="text-[15.5px] font-[500] leading-snug text-ink">{card.title}</p>
-          <p className="mt-1 text-[14px] leading-relaxed text-ink-2">{card.detail}</p>
+          {!sameText(card.detail, card.title) && <p className="mt-1 text-[14px] leading-relaxed text-ink-2">{card.detail}</p>}
           <div className="readout mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
             {card.when && <span className="sm:hidden">{shortDate(card.when)}</span>}
             {card.when && <span>{relativeDays(card.when)}</span>}
@@ -191,4 +189,9 @@ function BriefRow({ card, withDate }: { card: Card; withDate: boolean }) {
       </div>
     </li>
   );
+}
+
+function sameText(a: string, b: string) {
+  const n = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return !a.trim() || n(a).startsWith(n(b)) || n(b).startsWith(n(a));
 }

@@ -10,7 +10,7 @@ function evidenceLines(text) {
 }
 
 function firstSentence(s) {
-  const m = s.match(/^.*?[.!?](?=\s|$)/);
+  const m = s.match(/^.*?(?<!\b(?:Dr|Mr|Ms|Mrs|No|St|vs))[.!?](?=\s|$)/);
   return (m ? m[0] : s).replace(/[.!?]$/, "");
 }
 

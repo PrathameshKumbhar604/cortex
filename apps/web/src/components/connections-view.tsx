@@ -70,8 +70,7 @@ export function ConnectionsView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <p className="readout text-muted">Connections</p>
-        <h1 className="mt-3 text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">Where Cortex looks</h1>
+        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">Where Cortex looks</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
           Connect an app once. You sign in with that app directly, and Cortex never sees your password. It reads to answer questions and acts only
           after you approve each action.
@@ -81,7 +80,7 @@ export function ConnectionsView() {
           {(
             [
               { id: "demo", label: "Sample workspace", note: "Fictional student team data. Nothing leaves Cortex." },
-              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Add COMPOSIO_API_KEY to enable." },
+              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Not available on this server yet." },
             ] as const
           ).map((w) => (
             <button
@@ -127,7 +126,7 @@ export function ConnectionsView() {
                 {!c.connected && c.detail && <p className="mt-1 text-[12.5px] text-warn">{c.detail}</p>}
               </div>
               {c.connected ? (
-                <span className="readout flex items-center gap-1.5 text-ok">
+                <span className="flex items-center gap-1.5 text-[12.5px] text-ok">
                   <span aria-hidden className="size-1.5 rounded-full bg-ok" />
                   {c.kind === "demo" ? "Sample data" : "Connected"}
                 </span>
@@ -145,23 +144,23 @@ export function ConnectionsView() {
             </li>
           ))}
           {info && info.connectors.length === 0 && (
-            <li className="border-b border-line py-6 text-[14px] text-muted">No connectors are configured on this server yet. See docs/08-SETUP-KEYS.md.</li>
+            <li className="border-b border-line py-6 text-[14px] text-muted">No apps are available on this server yet. Use the sample workspace to try Cortex.</li>
           )}
         </ul>
 
         {info && (
           <dl className="mt-12 grid grid-cols-1 gap-6 border-t border-line pt-6 sm:grid-cols-2">
             <div>
-              <dt className="readout text-muted">Language models</dt>
+              <dt className="text-[12.5px] text-muted">Language models</dt>
               <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.llm.length ? info.llm.map((p) => p.label).join(" → ") : <span className="text-risk">None configured. Add GEMINI_API_KEY to .env.</span>}
+                {info.llm.length ? info.llm.map((p) => p.label).join(" → ") : <span className="text-risk">No model is available on this server yet.</span>}
               </dd>
-              <dd className="mt-1 text-[12.5px] text-muted">Free tiers, tried in order; Puter is the fallback.</dd>
+              <dd className="text-[12.5px] text-muted mt-1">Free models, tried in order. If all are busy, Cortex falls back to Puter.</dd>
             </div>
             <div>
-              <dt className="readout text-muted">Memory</dt>
+              <dt className="text-[12.5px] text-muted">Memory</dt>
               <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.memory.ok ? (info.memory.backend === "oracle" ? "Oracle Agent Memory" : "Local store (SQLite)") : <span className="text-risk">Offline. Run npm run memory.</span>}
+                {info.memory.ok ? (info.memory.backend === "oracle" ? "Oracle Agent Memory" : "Local store (SQLite)") : <span className="text-risk">Offline. Answers still work, but nothing is remembered.</span>}
               </dd>
             </div>
           </dl>

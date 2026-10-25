@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Pin, PinOff, Trash2 } from "lucide-react";
+import { ChevronDown, Pin, PinOff, Trash2 } from "lucide-react";
 import type { MemoryItem, MemoryKind } from "@cortex/shared";
 import { cn, relativeDays } from "@/lib/ui";
 
@@ -56,10 +56,7 @@ export function MemoryView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <p className="readout text-muted">
-          Memory{backend && ` · ${backend === "oracle" ? "Oracle AI Database" : backend === "sqlite" ? "Local store" : backend}`}
-        </p>
-        <h1 className="mt-3 text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">What Cortex remembers</h1>
+        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">What Cortex remembers</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
           Cortex keeps only what is likely to matter later: things you ask it to remember and durable priorities you mention. Each memory shows why it
           was kept. Pinned memories never fade; everything else fades unless it comes up again.
@@ -80,15 +77,16 @@ export function MemoryView() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={500}
-            placeholder="Teach Cortex something, e.g. “Orbit is my top priority this month”"
+            placeholder="Teach Cortex something…"
             className="no-ring min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[15px] text-ink outline-none placeholder:text-hair focus-visible:outline-none"
           />
           <div className="flex gap-2">
+            <span className="relative">
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as MemoryKind)}
               aria-label="Kind"
-              className="rounded-md border border-line bg-surface px-2 py-1.5 text-[13px] text-ink-2"
+              className="appearance-none rounded-[10px] border border-line bg-surface py-1.5 pr-8 pl-3 text-[13px] text-ink-2 hover:border-line-strong"
             >
               {ORDER.map((k) => (
                 <option key={k} value={k}>
@@ -96,7 +94,9 @@ export function MemoryView() {
                 </option>
               ))}
             </select>
-            <button type="submit" disabled={draft.trim().length < 3} className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-40">
+            <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
+            </span>
+            <button type="submit" disabled={draft.trim().length < 3} className="rounded-[10px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-white disabled:border-line-strong disabled:bg-transparent disabled:text-muted">
               Remember
             </button>
           </div>
@@ -110,7 +110,7 @@ export function MemoryView() {
 
         {items && items.length === 0 && !error && (
           <p className="mt-12 border-t border-line pt-6 text-[15px] text-muted">
-            Nothing yet. Tell Cortex what matters, e.g. “remember that my thesis draft is due before Thanksgiving”, and it will appear here.
+            Nothing yet. Try “Orbit is my top priority this month”, or say “remember that…” while asking a question.
           </p>
         )}
 
@@ -132,6 +132,11 @@ export function MemoryView() {
             </ul>
           </section>
         ))}
+        {backend && (
+          <p className="text-[12.5px] text-muted mt-12">
+            Stored in {backend === "oracle" ? "Oracle AI Database with Oracle Agent Memory" : backend === "sqlite" ? "a local store on this machine" : backend}.
+          </p>
+        )}
       </div>
     </div>
   );

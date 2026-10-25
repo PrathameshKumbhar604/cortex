@@ -125,7 +125,7 @@ function Inline({
 }) {
   return (
     <>
-      {text.split(TOKEN).map((part, i) => {
+      {text.replace(/((?:\s*\[\d+\])+)([.,;:])/g, "$2$1").split(TOKEN).map((part, i) => {
         if (!part) return null;
         const cite = part.match(/^\[(\d+)\]$/);
         if (cite) {
@@ -158,7 +158,7 @@ export function Cite({ n, ev, onCite, onJump }: { n: number; ev: Evidence; onCit
       onBlur={() => onCite(null)}
       onClick={() => onJump(ev.id)}
       aria-label={`Source ${n}: ${ev.title}`}
-      className="mx-[1px] inline-flex -translate-y-[0.35em] items-center gap-[3px] rounded-[4px] px-[3px] align-baseline font-mono text-[11.5px] font-medium leading-none text-accent-ink hover:bg-accent-soft"
+      className="ml-[2px] inline-flex -translate-y-[0.35em] items-center gap-[3px] rounded-[4px] px-[3px] align-baseline font-mono text-[11.5px] font-medium leading-none text-accent-ink hover:bg-accent-soft"
     >
       <span aria-hidden className="size-[5px] rounded-full" style={{ background: sourceColor(ev.source) }} />
       {n}

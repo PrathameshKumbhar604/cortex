@@ -86,7 +86,14 @@ export async function runBrief(deps: AgentDeps, userId: string): Promise<Brief> 
       when: c.when ?? null,
       evidence: c.evidence.map((n) => ranked[n - 1]).filter((e): e is Evidence => !!e),
     }))
-    .filter((c) => c.evidence.length > 0); // grounded cards only
+    .filter((c) => c.evidence.length > 0) // grounded cards only
+    // a conflict needs two sources disagreeing; otherwise it is just a change
+    .map((c) => (c.kind === "conflict" && new Set(c.evidence.map((e) => e.source)).size < 2 ? { ...c, kind: "changed" as const } : c));
+  const alarming = cards.some((c) => c.kind === "risk" || c.kind === "conflict");
+  const headline =
+    !alarming && /risk|block|threat|conflict|slip|late/i.test(res.data.headline)
+      ? `${cards.length} update${cards.length === 1 ? "" : "s"} across your sources this week.`
+      : res.data.headline;
 
-  return { headline: res.data.headline, cards, failures, generatedAt: new Date().toISOString(), sources: connected.length };
+  return { headline, cards, failures, generatedAt: new Date().toISOString(), sources: connected.length };
 }

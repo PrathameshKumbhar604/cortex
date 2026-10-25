@@ -20,7 +20,7 @@ export function Sources({ evidence, citedIds, hovered }: { evidence: Evidence[];
         <span>{cited.length ? `${cited.length} cited` : "Evidence"}</span>
         {rest.length > 0 && cited.length > 0 && <span>{rest.length} more searched</span>}
       </div>
-      <ol className="grid grid-cols-1 border-t border-line sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="grid grid-cols-1 gap-y-px border-y border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
         {items.map((e) => {
           const n = evidence.indexOf(e) + 1;
           const dim = hovered && hovered !== e.id;
@@ -29,8 +29,8 @@ export function Sources({ evidence, citedIds, hovered }: { evidence: Evidence[];
               key={e.id}
               id={`ev-${e.id}`}
               className={cn(
-                "scroll-mt-24 border-b border-line py-3 pr-4 transition-[opacity,background-color] duration-300",
-                hovered === e.id && "bg-accent-soft/60",
+                "scroll-mt-24 bg-surface py-3 pr-4 transition-[opacity,background-color] duration-300",
+                hovered === e.id && "bg-[#f4f5ff]",
                 dim && "opacity-40",
               )}
             >
@@ -53,6 +53,18 @@ export function Sources({ evidence, citedIds, hovered }: { evidence: Evidence[];
             </li>
           );
         })}
+        {/* Fillers keep the hairline grid square when the last row is short. */}
+        {Array.from({ length: (6 - (items.length % 6)) % 6 }, (_, i) => (
+          <li
+            key={`f${i}`}
+            aria-hidden
+            className={cn(
+              "hidden bg-surface",
+              i < (2 - (items.length % 2)) % 2 && "sm:block lg:hidden",
+              i < (3 - (items.length % 3)) % 3 && "lg:block",
+            )}
+          />
+        ))}
       </ol>
     </section>
   );

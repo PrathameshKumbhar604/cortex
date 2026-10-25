@@ -124,20 +124,6 @@ export function TurnView({
         </p>
       )}
 
-      {latest && turn.done && turn.followups.length > 0 && (
-        <div className="mt-6 flex flex-wrap gap-2" aria-label="Suggested next questions">
-          {turn.followups.map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => onFollowup(f)}
-              className="rounded-full border border-line px-3 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink"
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      )}
     </motion.article>
   );
 }
