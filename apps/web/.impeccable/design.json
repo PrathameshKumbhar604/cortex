@@ -1,0 +1,599 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T16:37:43+00:00",
+  "title": "Design System: Cortex",
+  "extensions": {
+    "colorMeta": {
+      "shell": {
+        "role": "neutral",
+        "displayName": "Cool Shell",
+        "canonical": "oklch(97.9% 0.003 265)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Work Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(17.7% 0.011 261)",
+        "tonalRamp": [
+          "#080b10",
+          "#22252b",
+          "#3f4248",
+          "#5e6168",
+          "#7e8389",
+          "#a1a5ac",
+          "#c5c9d1",
+          "#eaeff6"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink Two",
+        "canonical": "#2b303a",
+        "tonalRamp": [
+          "#080b10",
+          "#22252b",
+          "#3f4248",
+          "#5e6168",
+          "#7e8389",
+          "#a1a5ac",
+          "#c5c9d1",
+          "#eaeff6"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "oklch(50.6% 0.024 264)",
+        "tonalRamp": [
+          "#060b15",
+          "#1f2531",
+          "#3c424f",
+          "#5a616f",
+          "#7b8291",
+          "#9ea5b5",
+          "#c1c9d9",
+          "#e6efff"
+        ]
+      },
+      "hair": {
+        "role": "neutral",
+        "displayName": "Hairline Grey",
+        "canonical": "#646b79",
+        "tonalRamp": [
+          "#060b15",
+          "#1f2531",
+          "#3c424f",
+          "#5a616f",
+          "#7b8291",
+          "#9ea5b5",
+          "#c1c9d9",
+          "#e6efff"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "oklch(93.1% 0.008 271)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "#d9dce3",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Electric Indigo",
+        "canonical": "oklch(54.7% 0.251 271)",
+        "tonalRamp": [
+          "#040627",
+          "#141d57",
+          "#28368c",
+          "#3e52c6",
+          "#5c76ed",
+          "#849efe",
+          "#b0c6ff",
+          "#deedff"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Indigo Wash",
+        "canonical": "#eef0ff",
+        "tonalRamp": [
+          "#040627",
+          "#141d57",
+          "#28368c",
+          "#3e52c6",
+          "#5c76ed",
+          "#849efe",
+          "#b0c6ff",
+          "#deedff"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Indigo Ink",
+        "canonical": "#2f3ce0",
+        "tonalRamp": [
+          "#040627",
+          "#141d57",
+          "#28368c",
+          "#3e52c6",
+          "#5c76ed",
+          "#849efe",
+          "#b0c6ff",
+          "#deedff"
+        ]
+      },
+      "risk": {
+        "role": "status",
+        "displayName": "Risk Red",
+        "canonical": "oklch(59.0% 0.195 24)",
+        "tonalRamp": [
+          "#200001",
+          "#4c0108",
+          "#7d0e18",
+          "#b11e29",
+          "#d9494a",
+          "#f17e78",
+          "#ffaea8",
+          "#ffded9"
+        ]
+      },
+      "risk-soft": {
+        "role": "status",
+        "displayName": "Risk Wash",
+        "canonical": "#fdf2f2",
+        "tonalRamp": [
+          "#200001",
+          "#4c0108",
+          "#7d0e18",
+          "#b11e29",
+          "#d9494a",
+          "#f17e78",
+          "#ffaea8",
+          "#ffded9"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Amber",
+        "canonical": "oklch(56.5% 0.141 54)",
+        "tonalRamp": [
+          "#1e0100",
+          "#480d00",
+          "#762100",
+          "#9b4400",
+          "#c1671b",
+          "#e88a46",
+          "#ffb787",
+          "#ffe3c5"
+        ]
+      },
+      "warn-soft": {
+        "role": "status",
+        "displayName": "Amber Wash",
+        "canonical": "#fff6ea",
+        "tonalRamp": [
+          "#1e0100",
+          "#480d00",
+          "#762100",
+          "#9b4400",
+          "#c1671b",
+          "#e88a46",
+          "#ffb787",
+          "#ffe3c5"
+        ]
+      },
+      "warn-ink": {
+        "role": "status",
+        "displayName": "Amber Ink",
+        "canonical": "#7a3d00",
+        "tonalRamp": [
+          "#1e0100",
+          "#480d00",
+          "#762100",
+          "#9b4400",
+          "#c1671b",
+          "#e88a46",
+          "#ffb787",
+          "#ffe3c5"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Verified Green",
+        "canonical": "oklch(56.2% 0.116 164)",
+        "tonalRamp": [
+          "#001304",
+          "#003316",
+          "#005431",
+          "#00754f",
+          "#289870",
+          "#53bc92",
+          "#84dfb7",
+          "#c6fde3"
+        ]
+      },
+      "nav-active": {
+        "role": "neutral",
+        "displayName": "Rail Active",
+        "canonical": "#eceef3",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "nav-hover": {
+        "role": "neutral",
+        "displayName": "Rail Hover",
+        "canonical": "#f0f1f5",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "cite-lift": {
+        "role": "primary",
+        "displayName": "Citation Lift",
+        "canonical": "#f4f5ff",
+        "tonalRamp": [
+          "#040627",
+          "#141d57",
+          "#28368c",
+          "#3e52c6",
+          "#5c76ed",
+          "#849efe",
+          "#b0c6ff",
+          "#deedff"
+        ]
+      },
+      "src-gmail": {
+        "role": "source-mark",
+        "displayName": "Gmail Red",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-calendar": {
+        "role": "source-mark",
+        "displayName": "Calendar Teal",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-drive": {
+        "role": "source-mark",
+        "displayName": "Drive Amber",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-notion": {
+        "role": "source-mark",
+        "displayName": "Notion Graphite",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-slack": {
+        "role": "source-mark",
+        "displayName": "Slack Violet",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-github": {
+        "role": "source-mark",
+        "displayName": "GitHub Ink",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-web": {
+        "role": "source-mark",
+        "displayName": "Web Blue",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      },
+      "src-memory": {
+        "role": "source-mark",
+        "displayName": "Memory Indigo",
+        "usage": "Round mark only: 6px default, 5px in citations, 8px beside connector names."
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Empty-state question prompt only; 38px below 640px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The current question above an answer; 30px below 640px."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Brief, Memory, Connections titles; 32px below 640px."
+      },
+      "answer": {
+        "displayName": "Answer",
+        "purpose": "Answer column; weight is driven by claim state (200/330/460/280), never set by hand."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads on an ink rule and in-answer subheads."
+      },
+      "item": {
+        "displayName": "Item",
+        "purpose": "Row titles in ruled lists."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Intro and empty-state copy, 52-60ch."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Source titles and quotes, summaries, buttons (13-14px)."
+      },
+      "note": {
+        "displayName": "Note",
+        "purpose": "Hints and helper lines in Slate."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Uppercase mono instrumentation: agent narration, counts, durations, dates, source meta."
+      },
+      "cite": {
+        "displayName": "Cite",
+        "purpose": "Raised citation numerals in Indigo Ink, preceded by a 5px source mark."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ask-bar-lift",
+        "value": "0 8px 24px -12px rgba(14,17,22,0.14)",
+        "purpose": "The composer at rest; the only lifted surface."
+      },
+      {
+        "name": "ask-bar-focus",
+        "value": "0 0 0 3px rgba(67,83,255,0.10), 0 8px 24px -12px rgba(14,17,22,0.14)",
+        "purpose": "Composer focus-within, with border at 60% accent."
+      },
+      {
+        "name": "thumb-contact",
+        "value": "0 1px 2px rgba(14,17,22,0.08)",
+        "purpose": "Selected Fast/Deep segment."
+      }
+    ],
+    "focus": {
+      "ring": "outline: 2px solid #4353ff; outline-offset: 2px; border-radius: 6px",
+      "optOut": ".no-ring on a field inside a container that shows its own indigo focus border (composer, memory add field)"
+    },
+    "motion": [
+      {
+        "name": "claim-weight",
+        "value": "font-weight 900ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Claim settling from pending to verified weight."
+      },
+      {
+        "name": "claim-color",
+        "value": "color 600ms ease-out",
+        "purpose": "Claim colour change on verification."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Turn entrance (350ms, 8px rise) and Trace expand (280ms)."
+      },
+      {
+        "name": "caret-blink",
+        "value": "1s steps(1) infinite",
+        "purpose": "Indigo block caret while streaming."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms",
+        "purpose": "All transitions and animations snap under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-filled action: Approve, Connect.",
+      "html": "<button class=\"ds-btn-primary\">Approve &amp; send</button>",
+      "css": ".ds-btn-primary{background:var(--ink,#0e1116);color:#fff;border:0;border-radius:6px;padding:6px 12px;font:500 13px/1.4 var(--font-geist,Geist),system-ui,sans-serif;cursor:pointer;transition:background-color .15s}.ds-btn-primary:hover{background:var(--ink-2,#2b303a)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Bordered companion to the primary: Decline.",
+      "html": "<button class=\"ds-btn-secondary\">Decline</button>",
+      "css": ".ds-btn-secondary{background:var(--surface,#fff);color:var(--ink,#0e1116);border:1px solid var(--line-strong,#d9dce3);border-radius:6px;padding:6px 12px;font:500 13px/1.4 var(--font-geist,Geist),system-ui,sans-serif;cursor:pointer}.ds-btn-secondary:hover{background:var(--shell,#f7f8fa)}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    },
+    {
+      "name": "Ask Button",
+      "kind": "button",
+      "refersTo": "button-ask",
+      "description": "The one accent-filled control: round submit in the composer.",
+      "html": "<button class=\"ds-btn-ask\" aria-label=\"Ask\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12 7-7 7 7\"/><path d=\"M12 19V5\"/></svg></button>",
+      "css": ".ds-btn-ask{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9999px;background:var(--accent,#4353ff);color:#fff;cursor:pointer}.ds-btn-ask:hover{background:var(--accent-ink,#2f3ce0)}.ds-btn-ask:disabled{background:var(--line-strong,#d9dce3);color:var(--muted,#5e6573)}.ds-btn-ask:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    },
+    {
+      "name": "Composer",
+      "kind": "input",
+      "refersTo": "composer",
+      "description": "Pinned ask bar: the only lifted surface, with the Fast/Deep segmented control.",
+      "html": "<form class=\"ds-composer\"><textarea class=\"ds-composer-input\" rows=\"1\" placeholder=\"Ask a follow-up…\"></textarea><div class=\"ds-composer-row\"><div class=\"ds-seg\"><button type=\"button\">Fast</button><button type=\"button\" class=\"on\">Deep</button></div><button type=\"button\" class=\"ds-composer-send\" aria-label=\"Ask\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12 7-7 7 7\"/><path d=\"M12 19V5\"/></svg></button></div></form>",
+      "css": ".ds-composer{max-width:720px;border:1px solid var(--line-strong,#d9dce3);border-radius:14px;background:var(--surface,#fff);box-shadow:0 8px 24px -12px rgba(14,17,22,.14);transition:border-color .15s,box-shadow .15s;font-family:var(--font-geist,Geist),system-ui,sans-serif}.ds-composer:focus-within{border-color:rgba(67,83,255,.6);box-shadow:0 0 0 3px rgba(67,83,255,.10),0 8px 24px -12px rgba(14,17,22,.14)}.ds-composer-input{display:block;width:100%;border:0;outline:0;resize:none;background:transparent;padding:16px 18px 8px;font:15.5px/1.625 var(--font-geist,Geist),system-ui,sans-serif;color:var(--ink,#0e1116);caret-color:var(--accent,#4353ff)}.ds-composer-input::placeholder{color:var(--hair,#646b79)}.ds-composer-row{display:flex;justify-content:space-between;align-items:center;padding:0 12px 12px}.ds-seg{display:flex;gap:2px;background:var(--shell,#f7f8fa);border-radius:8px;padding:2px}.ds-seg button{border:0;background:transparent;border-radius:6px;padding:4px 10px;font:12.5px var(--font-geist,Geist),system-ui,sans-serif;color:var(--muted,#5e6573);cursor:pointer}.ds-seg button:hover{color:var(--ink,#0e1116)}.ds-seg button.on{background:var(--surface,#fff);color:var(--ink,#0e1116);font-weight:500;box-shadow:0 1px 2px rgba(14,17,22,.08)}.ds-composer-send{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9999px;background:var(--accent,#4353ff);color:#fff;cursor:pointer}.ds-composer-send:hover{background:var(--accent-ink,#2f3ce0)}"
+    },
+    {
+      "name": "Follow-up Chip",
+      "kind": "chip",
+      "refersTo": "chip-followup",
+      "description": "Next-question suggestions in one row directly above the composer.",
+      "html": "<button class=\"ds-chip\">Which Demo Day date is correct?</button>",
+      "css": ".ds-chip{border:1px solid var(--line,#e6e8ee);background:transparent;border-radius:9999px;padding:4px 12px;font:400 13px/1.4 var(--font-geist,Geist),system-ui,sans-serif;color:var(--ink-2,#2b303a);cursor:pointer;transition:color .15s,border-color .15s}.ds-chip:hover{border-color:rgba(67,83,255,.5);color:var(--accent-ink,#2f3ce0)}.ds-chip:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    },
+    {
+      "name": "Navigation Rail",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "208px shell rail: wordmark and four destinations.",
+      "html": "<nav class=\"ds-rail\"><span class=\"ds-wordmark\"><i></i>Cortex</span><a class=\"ds-nav on\" href=\"#\">Ask</a><a class=\"ds-nav\" href=\"#\">Brief</a><a class=\"ds-nav\" href=\"#\">Memory</a><a class=\"ds-nav\" href=\"#\">Connections</a></nav>",
+      "css": ".ds-rail{width:208px;padding:24px 18px;background:var(--shell,#f7f8fa);display:flex;flex-direction:column;gap:2px;font-family:var(--font-geist,Geist),system-ui,sans-serif}.ds-wordmark{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:650;letter-spacing:-.02em;color:var(--ink,#0e1116);margin:0 8px 32px}.ds-wordmark i{width:9px;height:9px;border-radius:9999px;background:var(--accent,#4353ff)}.ds-nav{display:block;border-radius:6px;padding:7px 10px;font-size:14px;color:var(--muted,#5e6573);text-decoration:none;transition:background-color .15s,color .15s}.ds-nav:hover{background:#f0f1f5;color:var(--ink,#0e1116)}.ds-nav.on{background:#eceef3;color:var(--ink,#0e1116);font-weight:550}.ds-nav:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    },
+    {
+      "name": "Claim Weights",
+      "kind": "custom",
+      "refersTo": "answer",
+      "description": "Signature: a claim's weight is its verification state; citations carry a source mark.",
+      "html": "<p class=\"ds-answer\"><span class=\"ds-claim\" data-state=\"supported\">Demo Day moved to Thu, Nov 12.</span><button class=\"ds-cite\"><i style=\"background:#8e4ec6\"></i>1</button> <span class=\"ds-claim\" data-state=\"partial\">The report should also cover hosting costs.</span><button class=\"ds-cite\"><i style=\"background:#e5a000\"></i>4</button> <span class=\"ds-claim\" data-state=\"unsupported\">The team agreed to cut group chat.</span> <span class=\"ds-claim\" data-state=\"pending\">Still being checked.</span></p>",
+      "css": ".ds-answer{max-width:720px;font:17px/1.7 var(--font-geist,Geist),system-ui,sans-serif;color:var(--ink,#0e1116)}.ds-claim{transition:font-weight 900ms cubic-bezier(.16,1,.3,1),color 600ms ease-out}.ds-claim[data-state=pending]{font-weight:200;color:var(--hair,#646b79)}.ds-claim[data-state=supported],.ds-claim[data-state=plain]{font-weight:460;color:var(--ink,#0e1116)}.ds-claim[data-state=partial]{font-weight:330;color:var(--ink-2,#2b303a);text-decoration:underline dotted rgba(67,83,255,.4);text-decoration-thickness:1.5px;text-underline-offset:5px}.ds-claim[data-state=unsupported]{font-weight:280;color:var(--hair,#646b79);text-decoration:line-through;text-decoration-color:rgba(217,58,63,.75);text-decoration-thickness:1.5px}.ds-cite{display:inline-flex;align-items:center;gap:3px;margin-left:2px;transform:translateY(-.35em);border:0;background:transparent;border-radius:4px;padding:0 3px;font:500 11.5px/1 var(--font-geist-mono,'Geist Mono'),ui-monospace,monospace;color:var(--accent-ink,#2f3ce0);cursor:pointer}.ds-cite i{width:5px;height:5px;border-radius:9999px}.ds-cite:hover,.ds-cite:focus-visible{background:var(--accent-soft,#eef0ff);outline:0}"
+    },
+    {
+      "name": "Readout Line",
+      "kind": "custom",
+      "refersTo": "readout",
+      "description": "One quiet mono line narrating the agent under the question.",
+      "html": "<div class=\"ds-readout\"><span>Deep</span><span>Plan 3</span><span>Searched 9 · 6ms</span><span>10 found</span><span class=\"v\">Verified 3/5</span><span>1.7s</span><span class=\"t\">Trace</span></div>",
+      "css": ".ds-readout{display:flex;flex-wrap:wrap;gap:4px 16px;font:400 12px var(--font-geist-mono,'Geist Mono'),ui-monospace,monospace;letter-spacing:.01em;text-transform:uppercase;font-variant-numeric:tabular-nums;color:var(--muted,#5e6573)}.ds-readout .v{color:var(--accent-ink,#2f3ce0)}.ds-readout .t{color:var(--hair,#646b79);cursor:pointer}.ds-readout .t:hover{color:var(--ink-2,#2b303a)}"
+    },
+    {
+      "name": "Conflict Band",
+      "kind": "custom",
+      "refersTo": "conflict-band",
+      "description": "Ruled band stating source disagreements plainly.",
+      "html": "<div class=\"ds-conflict\"><div class=\"row\"><span class=\"k\">Conflict</span><span>Demo Day date differs between sources</span></div></div>",
+      "css": ".ds-conflict{border-top:1px solid var(--ink,#0e1116);border-bottom:1px solid var(--line,#e6e8ee);font:15px/1.55 var(--font-geist,Geist),system-ui,sans-serif;color:var(--ink,#0e1116)}.ds-conflict .row{display:flex;gap:16px;padding:12px 0}.ds-conflict .row+.row{border-top:1px solid var(--line,#e6e8ee)}.ds-conflict .k{width:80px;flex-shrink:0;font-weight:600;color:var(--risk,#d93a3f)}"
+    },
+    {
+      "name": "Action Card",
+      "kind": "card",
+      "refersTo": "action-card",
+      "description": "Consent card: nothing runs until Approve; the decided state stays stamped.",
+      "html": "<div class=\"ds-action\"><p class=\"t\">Post update to #orbit-dev</p><p class=\"m\"><i></i>Slack · Needs your approval</p><pre class=\"s\">Demo Day moves to Thu, Nov 12.</pre><div class=\"b\"><button class=\"e\">Edit</button><button class=\"d\">Decline</button><button class=\"a\">Approve &amp; send</button></div></div>",
+      "css": ".ds-action{max-width:720px;border:1px solid var(--line-strong,#d9dce3);background:var(--surface,#fff);border-radius:10px;padding:16px;font-family:var(--font-geist,Geist),system-ui,sans-serif}.ds-action .t{margin:0;font-size:14px;font-weight:550;color:var(--ink,#0e1116)}.ds-action .m{margin:4px 0 0;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted,#5e6573)}.ds-action .m i{width:6px;height:6px;border-radius:9999px;background:#8e4ec6}.ds-action .s{margin:12px 0 0;white-space:pre-wrap;background:var(--shell,#f7f8fa);border-radius:6px;padding:10px 12px;font:13.5px/1.625 var(--font-geist,Geist),system-ui,sans-serif;color:var(--ink-2,#2b303a)}.ds-action .b{margin-top:12px;display:flex;gap:8px;justify-content:flex-end}.ds-action button{border-radius:6px;padding:6px 12px;font:500 13px var(--font-geist,Geist),system-ui,sans-serif;cursor:pointer}.ds-action .e{margin-right:auto;border:0;background:transparent;color:var(--muted,#5e6573);font-weight:400}.ds-action .e:hover{color:var(--ink,#0e1116)}.ds-action .d{border:1px solid var(--line-strong,#d9dce3);background:transparent;color:var(--ink,#0e1116)}.ds-action .d:hover{background:var(--shell,#f7f8fa)}.ds-action .a{border:0;background:var(--ink,#0e1116);color:#fff}.ds-action .a:hover{background:var(--ink-2,#2b303a)}.ds-action button:focus-visible{outline:2px solid var(--accent,#4353ff);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Specimen",
+    "overview": "Cortex is set like a type specimen for evidence. Hierarchy comes from scale contrast inside one variable family, not from boxes, colour fields or shadows. The single most important typographic fact on any screen is a claim's weight: an answer arrives hairline-light and settles to full weight claim by claim as it is verified, so confidence is something you read rather than something you are told.\n\nThe ground is cool and quiet: a near-white shell carrying the left rail, a pure white work surface holding one centred column, ink text, and hairline rules doing all the structural work. One electric indigo carries citations, focus and the primary state; colour beyond that is information only, at mark scale. The agent narrates itself in a single line of small mono readouts that never competes with the answer.\n\nDensity is calm rather than sparse: one answer owns the column, earlier turns collapse to a single ruled line, and lists are ruled rows rather than cards. The system rejects the chat-bubble column with sparkle accents and the grey-sidebar-plus-rounded-card default.",
+    "keyCharacteristics": [
+      "One variable sans (Geist) across a wide weight range (200 to 650); mono only for readouts and numerals.",
+      "Claim weight equals verification state, with a slow interpolating transition.",
+      "Cool near-white shell, white surface, ink, one indigo accent.",
+      "Source colour appears only as small round marks.",
+      "Hairline 1px rules for structure; an ink rule opens a section.",
+      "Flat, with one soft lift under the ask bar."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Indigo is the only accent. It marks what is cited, focused or primary, and nothing else; it never fills a panel or a heading.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mark-Scale Rule",
+        "body": "Source colours exist only as small round dots (6px by default, 5px inside a citation, 8px beside a connector name). Never as text colour, fills, borders or icons.",
+        "section": "colors"
+      },
+      {
+        "name": "The Weight-Is-Truth Rule",
+        "body": "A claim's weight is its verification state: pending 200 in Hairline Grey; partial 330 in Ink Two with a dotted indigo underline (40% accent, 1.5px, 5px offset); supported and plain 460 in Ink; unsupported 280 in Hairline Grey struck through in red (75% risk, 1.5px). Weight interpolates over 900ms (cubic-bezier(0.16, 1, 0.3, 1)), colour over 600ms ease-out; reduced motion snaps. Do not use these weights or treatments for anything else.",
+        "section": "typography"
+      },
+      {
+        "name": "The Instrument Rule",
+        "body": "Geist Mono appears only for measurements: readouts, numerals, citations, code and queries. Headings, labels on controls and prose stay in Geist.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Lift Rule",
+        "body": "Only the ask bar floats. Cards, rows, menus and notices sit flat on rules or washes.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Ink Rule",
+        "body": "A section opens on a 1px ink rule and divides on 1px Rule grey: Brief and Memory section heads, the Connections list, and the conflict band all start with an ink line.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** let claim weight carry verification: 200 pending, 330 partial with dotted indigo underline, 460 supported, 280 struck in red.",
+      "**Do** draw structure with 1px rules (#e6e8ee) and open sections on a 1px ink rule.",
+      "**Do** keep indigo (#4353ff) to citations, focus, the Ask button and live verification.",
+      "**Do** set every measurement (counts, durations, dates, step names) as a 12px uppercase Geist Mono readout with tabular numerals.",
+      "**Do** require an explicit approve on every action, and leave the decided state stamped on the card.",
+      "**Do** use .no-ring on a field only when its container shows focus with an indigo border."
+    ],
+    "donts": [
+      "**Don't** show source colour at more than mark scale: no tinted text, fills, borders or logos.",
+      "**Don't** add shadows beyond the ask bar's lift and the segmented thumb.",
+      "**Don't** stack answers or list items in rounded cards; use ruled rows.",
+      "**Don't** use chat bubbles or sparkle accents.",
+      "**Don't** use Geist Mono for prose, headings or control labels.",
+      "**Don't** reuse the claim weights or the strikethrough treatment for emphasis or decoration."
+    ]
+  }
+}

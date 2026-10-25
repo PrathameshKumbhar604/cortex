@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { CircleAlert, CloudOff, Sparkle } from "lucide-react";
+import { Brain, CircleAlert, CloudOff } from "lucide-react";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
 import { ActionCard } from "./action-card";
@@ -114,7 +114,7 @@ export function TurnView({
 
       {(turn.memoryWritten.length > 0 || turn.memoryUsed.length > 0) && turn.done && (
         <p className="readout mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
-          <Sparkle className="size-3 text-accent" aria-hidden />
+          <Brain className="size-3 text-accent" aria-hidden />
           {turn.memoryUsed.length > 0 && <span>Used {turn.memoryUsed.length} memor{turn.memoryUsed.length > 1 ? "ies" : "y"}</span>}
           {turn.memoryWritten.map((m) => (
             <Link key={m.id} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
