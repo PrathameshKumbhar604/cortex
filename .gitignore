@@ -12,3 +12,4 @@ wallet/
 .DS_Store
 .cache/
 services/memory/data/
+.claude/skills/impeccable/scripts/bin/
