@@ -19,6 +19,10 @@ type Env = Record<string, string | undefined>;
  * via env because free-tier catalogs change often.
  */
 export function loadProviders(env: Env = process.env): ProviderConfig[] {
+  // Dev-only: scripts/mock-llm.mjs for UI testing without keys. Never combined with real providers.
+  if (env.CORTEX_MOCK_LLM_URL) {
+    return [{ id: "mock", label: "Mock (dev only)", baseURL: env.CORTEX_MOCK_LLM_URL, apiKey: "mock", models: { strong: "mock", fast: "mock" }, supportsJsonMode: true }];
+  }
   const candidates: (ProviderConfig | null)[] = [
     env.GEMINI_API_KEY
       ? {

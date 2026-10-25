@@ -107,7 +107,7 @@ export type StepId = "understand" | "recall" | "plan" | "search" | "synthesize" 
 
 export type AgentEvent =
   | { type: "run"; runId: string; mode: RunMode; threadId: string }
-  | { type: "step"; step: StepId; status: "active" | "done" | "skipped"; detail?: string }
+  | { type: "step"; step: StepId; status: "active" | "done" | "skipped"; detail?: string; ms?: number }
   | { type: "memory_used"; items: MemoryItem[] }
   | { type: "plan"; plan: Plan }
   | { type: "tool_call"; id: string; source: SourceId; query: string; subQuestionId?: string }
@@ -116,7 +116,7 @@ export type AgentEvent =
   | { type: "source_error"; failure: SourceFailure }
   | { type: "token"; text: string }
   | { type: "answer"; markdown: string }
-  | { type: "verdict"; claims: Claim[]; groundedness: number; conflicts: Conflict[]; missing: string[] }
+  | { type: "verdict"; claims: Claim[]; groundedness: number; conflicts: Conflict[]; missing: string[]; followups: string[] }
   | { type: "action_proposal"; proposal: ActionProposal }
   | { type: "memory_written"; items: MemoryItem[] }
   | { type: "usage"; llmCalls: number; cachedCalls: number; toolCalls: number; ms: number; models: string[] }
@@ -142,4 +142,21 @@ export const SOURCE_NAMES: Record<string, string> = {
 
 export function sourceName(id: string): string {
   return SOURCE_NAMES[id] ?? id;
+}
+
+/**
+ * Splits answer markdown into claim-sized units (sentences and list items).
+ * Shared by the verifier and the UI so both agree on what a "claim" is.
+ */
+export function claimUnits(markdown: string): string[] {
+  return markdown.split("\n").flatMap(lineUnits);
+}
+
+export function lineUnits(line: string): string[] {
+  const l = line.replace(/^\s*(?:[-*•]|\d+\.)\s+/, "").replace(/^#+\s*/, "").trim();
+  if (!l) return [];
+  return l
+    .split(/(?<=[.!?](?:\s*\[\d+\])*)\s+(?=[A-Z])/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 12);
 }

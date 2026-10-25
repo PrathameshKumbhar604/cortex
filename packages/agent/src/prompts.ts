@@ -64,6 +64,7 @@ export const SECTION = {
   missing: "<<<MISSING>>>",
   actions: "<<<ACTIONS>>>",
   memory: "<<<MEMORY>>>",
+  next: "<<<NEXT>>>",
 } as const;
 
 export function synthPrompt(opts: {
@@ -88,7 +89,7 @@ Answer ONLY from the numbered evidence. Every sentence that states a fact must c
 ${fast ? "Be brief: 2-5 sentences or bullets." : "Lead with a one-sentence answer, then short bullets grouped by theme. Call out risks explicitly."}
 Use markdown. No preamble.
 ${failures.length ? `Unavailable sources (mention only if it limits the answer): ${failures.join("; ")}` : ""}
-After the answer, write these four sections exactly:
+After the answer, write these five sections exactly:
 ${SECTION.conflicts}
 One line per contradiction between sources about the same fact, e.g. "Demo Day date differs: Nov 12 vs Nov 14 [3][7]". Otherwise "none".
 ${SECTION.missing}
@@ -99,7 +100,9 @@ ${actionList}
 Format: [{"connector":"gmail","action":"send_email","title":"Email Dr. Ruiz the update","args":{...}}]. Fill args from evidence; never guess an email address that is not in the evidence.
 ${SECTION.memory}
 A JSON array (max 2) of durable facts about the user's priorities or preferences, stated in the USER's own words in this conversation, worth remembering next week. Otherwise [].
-Format: [{"content":"...","kind":"priority|preference|fact|person|decision","salience":0.0-1.0,"reason":"..."}]`,
+Format: [{"content":"...","kind":"priority|preference|fact|person|decision","salience":0.0-1.0,"reason":"..."}]
+${SECTION.next}
+Up to 3 short follow-up questions the user is likely to ask next, one per line, each under 60 characters.`,
     },
     {
       role: "user" as const,

@@ -1,6 +1,5 @@
 import "server-only";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { ActionStore, MemoryClient, type AgentDeps } from "@cortex/agent";
 import { buildRegistry, type ConnectorRegistry, type Workspace } from "@cortex/connectors";
@@ -36,14 +35,10 @@ export interface Session {
   workspace: Workspace;
 }
 
-/** Anonymous per-browser identity; Composio links accounts to this id. */
+/** Anonymous per-browser identity (assigned in proxy.ts); Composio links accounts to this id. */
 export async function session(): Promise<Session> {
   const jar = await cookies();
-  let userId = jar.get("cortex_uid")?.value;
-  if (!userId) {
-    userId = randomUUID();
-    jar.set("cortex_uid", userId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
-  }
+  const userId = jar.get("cortex_uid")?.value ?? "anonymous";
   const ws = jar.get("cortex_ws")?.value;
   const workspace: Workspace = ws === "demo" || ws === "live" ? ws : defaultWorkspace();
   return { userId, workspace };

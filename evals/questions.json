@@ -1,0 +1,14 @@
+[
+  { "id": "demo-day-change", "question": "What changed with Demo Day?", "expect": ["Demo Day", "moved"], "expectConflict": true },
+  { "id": "blockers", "question": "What is blocking push notifications?", "expect": ["credentials"] },
+  { "id": "login-bug", "question": "What's the status of the Android login bug?", "expect": ["#42", "Android 15"] },
+  { "id": "report-due", "question": "When is the progress report due and what should it include?", "expect": ["progress report", "user-testing"] },
+  { "id": "oa-deadline", "question": "When is my Northbeam assessment due?", "expect": ["Northbeam", "assessment"] },
+  { "id": "user-testing", "question": "What did user testing find?", "expect": ["SUS", "RSVP"] },
+  { "id": "chat-scope", "question": "Is group chat in scope for this sprint?", "expect": ["chat"] },
+  { "id": "oss-pr", "question": "What does the maintainer want on my lumen-ui PR?", "expect": ["test", "changelog"] },
+  { "id": "risks-week", "question": "What changed in Orbit this week, and what's at risk?", "expect": ["Demo Day"], "expectConflict": true },
+  { "id": "unknown", "question": "What did the CFO say about the Series B?", "expect": [], "expectNotFound": true },
+  { "id": "action-slack", "question": "Draft a Slack message to #orbit-dev about the new Demo Day date", "expect": ["Demo Day"], "expectAction": "slack.send_message" },
+  { "id": "action-email", "question": "Email Dr. Ruiz to confirm I'll submit the progress report on time", "expect": ["progress report"], "expectAction": "gmail.send_email" }
+]

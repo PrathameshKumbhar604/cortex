@@ -43,6 +43,7 @@ export interface Turn {
   claims: Claim[];
   conflicts: Conflict[];
   missing: string[];
+  followups: string[];
   groundedness?: number;
   actions: ActionProposal[];
   usage?: { llmCalls: number; cachedCalls: number; toolCalls: number; ms: number; models: string[] };
@@ -68,6 +69,7 @@ function newTurn(question: string, mode: RunMode): Turn {
     claims: [],
     conflicts: [],
     missing: [],
+    followups: [],
     actions: [],
     done: false,
   };
@@ -81,7 +83,7 @@ function reduce(t: Turn, e: AgentEvent): Turn {
       const at = e.status === "active" ? now : prev.at ?? now;
       return {
         ...t,
-        steps: { ...t.steps, [e.step]: { status: e.status, detail: e.detail ?? prev.detail, at, ms: e.status === "active" ? undefined : now - at } },
+        steps: { ...t.steps, [e.step]: { status: e.status, detail: e.detail ?? prev.detail, at, ms: e.status === "active" ? undefined : e.ms ?? now - at } },
       };
     }
     case "plan":
@@ -103,7 +105,7 @@ function reduce(t: Turn, e: AgentEvent): Turn {
     case "answer":
       return { ...t, answer: e.markdown };
     case "verdict":
-      return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing };
+      return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing, followups: e.followups ?? [] };
     case "action_proposal":
       return { ...t, actions: [...t.actions, e.proposal] };
     case "usage":
@@ -188,11 +190,11 @@ export function useAgent() {
   const stop = useCallback(() => abort.current?.abort(), []);
 
   const decide = useCallback(
-    async (turnId: string, proposalId: string, decision: "approve" | "reject") => {
+    async (turnId: string, proposalId: string, decision: "approve" | "reject", edits?: Record<string, unknown>) => {
       const res = await fetch(`/api/actions/${proposalId}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ decision }),
+        body: JSON.stringify({ decision, edits }),
       });
       const body = (await res.json().catch(() => ({}))) as { proposal?: ActionProposal; error?: string };
       patch(turnId, (t) => ({

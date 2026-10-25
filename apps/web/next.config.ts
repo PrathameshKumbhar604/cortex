@@ -7,6 +7,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 loadEnvConfig(repoRoot);
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
   transpilePackages: ["@cortex/shared", "@cortex/llm", "@cortex/connectors", "@cortex/agent"],

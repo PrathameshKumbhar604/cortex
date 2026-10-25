@@ -15,11 +15,17 @@
     "build": "npm run build -w @cortex/web",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "memory": "cd services/memory && python -m uvicorn app.main:app --port 8000 --reload",
-    "eval": "tsx evals/run.ts"
+    "memory": "cd services/memory && .venv/Scripts/python -m uvicorn app.main:app --port 8000",
+    "eval": "tsx evals/run.ts",
+    "eval:fast": "tsx evals/run.ts fast",
+    "mock-llm": "node scripts/mock-llm.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "memory:setup": "cd services/memory && python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt"
   },
   "devDependencies": {
+    "@next/env": "^16.4.3",
     "@types/node": "^26.6.5",
+    "playwright-core": "^1.64.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.5"

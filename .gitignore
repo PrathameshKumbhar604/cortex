@@ -13,3 +13,5 @@ wallet/
 .cache/
 services/memory/data/
 .claude/skills/impeccable/scripts/bin/
+.cache/
+apps/web/.impeccable/review/

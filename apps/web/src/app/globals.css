@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --shell: #f7f8fa;
+  --surface: #ffffff;
+  --ink: #0e1116;
+  --ink-2: #2b303a;
+  --muted: #5e6573;
+  --hair: #646b79;
+  --line: #e6e8ee;
+  --line-strong: #d9dce3;
+  --accent: #4353ff;
+  --accent-soft: #eef0ff;
+  --accent-ink: #2f3ce0;
+  --risk: #d93a3f;
+  --risk-soft: #fdf2f2;
+  --warn: #b35a00;
+  --warn-soft: #fff6ea;
+  --ok: #0f8a63;
+
+  /* Source marks: colour is information, used only at mark scale. */
+  --src-gmail: #e5484d;
+  --src-calendar: #12a594;
+  --src-drive: #e5a000;
+  --src-notion: #646b78;
+  --src-slack: #8e4ec6;
+  --src-github: #0e1116;
+  --src-web: #3e63dd;
+  --src-memory: #4353ff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-shell: var(--shell);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-hair: var(--hair);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-risk: var(--risk);
+  --color-risk-soft: var(--risk-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--shell);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--ink);
+}
+
+/* Fields inside a container that shows its own focus opt out with .no-ring. */
+:focus-visible:not(.no-ring) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+.readout {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The signature: a claim's weight is its verification state. */
+.claim {
+  transition:
+    font-weight 900ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 600ms ease-out;
+}
+.claim[data-state="pending"] {
+  font-weight: 230;
+  color: var(--hair);
+}
+.claim[data-state="supported"],
+.claim[data-state="plain"] {
+  font-weight: 440;
+  color: var(--ink);
+}
+.claim[data-state="partial"] {
+  font-weight: 360;
+  color: var(--ink-2);
+  text-decoration: underline dotted color-mix(in srgb, var(--warn) 70%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 5px;
+}
+.claim[data-state="unsupported"] {
+  font-weight: 280;
+  color: var(--hair);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--risk) 75%, transparent);
+  text-decoration-thickness: 1.5px;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.streaming > :last-child:not(ul)::after,
+.streaming > ul:last-child > li:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+  animation: caret 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
 }

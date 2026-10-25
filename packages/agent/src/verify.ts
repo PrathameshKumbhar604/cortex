@@ -1,4 +1,4 @@
-import type { Claim, Conflict, Evidence } from "@cortex/shared";
+import { claimUnits, type Claim, type Conflict, type Evidence } from "@cortex/shared";
 import { parseJsonLoose } from "@cortex/llm";
 import { SECTION } from "./prompts";
 
@@ -22,6 +22,7 @@ export interface Sections {
   missing: string[];
   actions: unknown[];
   memory: unknown[];
+  next: string[];
 }
 
 function lines(block: string | undefined): string[] {
@@ -62,6 +63,7 @@ export function splitSections(text: string): Sections {
     missing: lines(body(SECTION.missing)),
     actions: jsonArray(body(SECTION.actions)),
     memory: jsonArray(body(SECTION.memory)),
+    next: lines(body(SECTION.next)).map((l) => l.replace(/^\d+[.)]\s*/, "").replace(/^"|"$/g, "")).filter((l) => l.length < 90).slice(0, 3),
   };
 }
 
@@ -72,19 +74,6 @@ export function streamCutoff(text: string): number {
   // hold back a trailing partial marker like "<" or "<<"
   const tail = text.match(/<{1,2}$/);
   return tail ? text.length - tail[0].length : text.length;
-}
-
-/** Splits markdown into claim-sized units (sentences and bullet items). */
-function claimUnits(markdown: string): string[] {
-  return markdown
-    .split("\n")
-    .flatMap((line) => {
-      const l = line.replace(/^\s*(?:[-*•]|\d+\.)\s+/, "").replace(/^#+\s*/, "").trim();
-      if (!l) return [];
-      return l.split(/(?<=[.!?])\s+(?=[A-Z])/);
-    })
-    .map((s) => s.trim())
-    .filter((s) => s.length > 12);
 }
 
 const FACTUAL = /\d|[A-Z][a-z]+ [A-Z]|#\d+|\b(?:due|deadline|blocked|moved|merged|open|closed|assigned|scheduled)\b/i;

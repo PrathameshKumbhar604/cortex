@@ -146,7 +146,22 @@ function actionBriefs(connected: Connector[]): ActionBrief[] {
  *   → verify → propose actions → remember
  * Fast Mode skips the LLM planner and LLM verification: one LLM call total.
  */
-export const runAgent = traced(runAgentImpl, "cortex.run");
+export const runAgent = traced(timed, "cortex.run");
+
+/** Stamps each finished step with its server-side duration. */
+async function* timed(input: RunInput, deps: AgentDeps): AsyncGenerator<AgentEvent> {
+  const startedAt: Partial<Record<string, number>> = {};
+  for await (const e of runAgentImpl(input, deps)) {
+    if (e.type === "step") {
+      if (e.status === "active") startedAt[e.step] = Date.now();
+      else if (startedAt[e.step] != null) {
+        yield { ...e, ms: Date.now() - startedAt[e.step]! };
+        continue;
+      }
+    }
+    yield e;
+  }
+}
 
 async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerator<AgentEvent> {
   const deps = withTracing(rawDeps);
@@ -315,7 +330,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "token", text: md };
       yield { type: "answer", markdown: md };
       yield* skip(["synthesize", "verify", "remember"]);
-      yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [input.question] };
+      yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [input.question], followups: [] };
       yield usage(budget, started);
       yield { type: "done" };
       return;
@@ -393,6 +408,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       groundedness: score,
       conflicts: toConflicts(sections.conflicts, ranked),
       missing: sections.missing,
+      followups: sections.next,
     };
     yield { type: "step", step: "verify", status: "done", detail: `${Math.round(score * 100)}% grounded` };
 
