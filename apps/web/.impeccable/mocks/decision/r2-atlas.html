@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A1022;--chalk:#EDEFF7;--dim:#A6AECB;--amber:#FFB454;--line:#1B2444}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--chalk);font-family:Geist,sans-serif;display:grid;grid-template-columns:200px 1fr}
+nav{padding:26px 18px;border-right:1px solid var(--line)}
+nav b{display:block;font-weight:600;font-size:17px;margin:0 8px 28px}
+nav a{display:block;padding:7px 8px;font-size:14px;color:var(--dim);border-radius:6px}nav a.on{color:var(--chalk);background:#121A35}
+main{padding:40px 0}
+.col{width:740px;margin:0 auto}
+.q{font-size:30px;font-weight:350;letter-spacing:-.025em;margin-bottom:18px}
+.field{height:150px;border:1px solid var(--line);border-radius:12px;position:relative;margin-bottom:24px;background:radial-gradient(circle at 60% 40%,#111a38,transparent 70%)}
+.field i{position:absolute;border-radius:50%;background:var(--chalk)}
+.field u{position:absolute;border:1.5px solid var(--amber);border-radius:50%}
+.field em{position:absolute;font:400 11.5px 'Geist Mono';color:var(--amber);font-style:normal}
+p{font-size:16.5px;line-height:1.7;margin-bottom:12px;color:#DCE0EE}
+sup{color:var(--amber);font:400 11.5px 'Geist Mono'}
+.conf{border:1px solid #5A2632;background:#1A0F1C;border-radius:10px;padding:12px 14px;font-size:14px;margin:8px 0 14px}
+.ask{margin-top:40px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--dim);background:#0E1530}
+</style></head><body>
+<nav><b>Cortex</b><a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a></nav>
+<main><div class="col">
+  <div class="q">What changed in Orbit this week, and what's at risk?</div>
+  <div class="field">
+    <i style="left:8%;top:30%;width:4px;height:4px"></i><i style="left:14%;top:70%;width:3px;height:3px"></i><i style="left:22%;top:45%;width:9px;height:9px"></i>
+    <i style="left:31%;top:20%;width:5px;height:5px"></i><i style="left:38%;top:62%;width:12px;height:12px"></i><i style="left:47%;top:35%;width:4px;height:4px"></i>
+    <i style="left:55%;top:52%;width:14px;height:14px"></i><i style="left:63%;top:24%;width:6px;height:6px"></i><i style="left:71%;top:68%;width:8px;height:8px"></i>
+    <i style="left:79%;top:40%;width:3px;height:3px"></i><i style="left:86%;top:58%;width:10px;height:10px"></i><i style="left:92%;top:28%;width:4px;height:4px"></i>
+    <u style="left:calc(55% - 7px);top:calc(52% - 7px);width:28px;height:28px"></u><em style="left:57%;top:76%">1 GMAIL</em>
+    <u style="left:calc(38% - 6px);top:calc(62% - 6px);width:24px;height:24px"></u><em style="left:33%;top:84%">3 GITHUB</em>
+    <u style="left:calc(86% - 5px);top:calc(58% - 5px);width:20px;height:20px"></u><em style="left:82%;top:80%">4 SLACK</em>
+  </div>
+  <p>Demo Day moved to Wed, Nov 12<sup>1</sup>, but the GitHub milestone still says Nov 14<sup>3</sup>.</p>
+  <div class="conf">Sources disagree on the Demo Day date.</div>
+  <p>Push notifications are blocked on university IT credentials<sup>4</sup>.</p>
+  <div class="ask">Ask a follow-up…</div>
+</div></main>
+</body></html>

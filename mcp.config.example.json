@@ -1,0 +1,22 @@
+{
+  "servers": [
+    {
+      "id": "linear",
+      "name": "Linear",
+      "describes": "issues, cycles and project updates",
+      "impact": "Issue status and cycle deadlines may be missing.",
+      "transport": { "type": "http", "url": "https://mcp.linear.app/mcp", "headers": { "Authorization": "Bearer ${LINEAR_API_KEY}" } },
+      "searchTool": "list_issues",
+      "queryArg": "query",
+      "actions": [{ "tool": "create_issue", "title": "Create Linear issue", "risk": "low" }]
+    },
+    {
+      "id": "files",
+      "name": "Local files",
+      "describes": "notes and documents in a local folder",
+      "transport": { "type": "stdio", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "./notes"] },
+      "searchTool": "search_files",
+      "queryArg": "pattern"
+    }
+  ]
+}

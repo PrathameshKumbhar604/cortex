@@ -1,111 +1,87 @@
-# Cortex — Architecture
+# Cortex: Architecture
 
-## High-level
+## High level
 
 ```
-┌──────────────────────────── apps/web (Next.js, TypeScript) ────────────────────────────┐
-│  Chat + Live Trace   │   Daily Brief / Timeline   │   Memory Inspector   │  Connections │
-│  (Motion animations, shadcn/ui, Tailwind)                                               │
-└───────────────┬─────────────────────────────────────────────────────────────────────────┘
-                │ SSE stream of agent events (plan, tool_call, evidence, memory, token, verdict)
-┌───────────────▼──────────────── packages/agent (LangGraph.js) ─────────────────────────┐
-│                                                                                         │
-│  ┌─────────┐   ┌──────────┐   ┌──────────────┐   ┌────────────┐   ┌──────────┐          │
-│  │ Router/ │──▶│ Planner  │──▶│ Tool workers │──▶│ Synthesizer│──▶│  Critic  │──▶ answer│
-│  │ Rewrite │   │(subQs)   │   │ (parallel)   │   │ (citations)│   │(verify)  │          │
-│  └────┬────┘   └────▲─────┘   └──────┬───────┘   └────────────┘   └────┬─────┘          │
-│       │ recall      │ HITL edit      │ evidence                        │ memory write   │
-└───────┼─────────────┼────────────────┼─────────────────────────────────┼────────────────┘
-        │             │                │                                 │
- ┌──────▼─────────┐   │   ┌────────────▼──────────────┐       ┌──────────▼─────────┐
- │ services/memory│◀──┘   │ packages/connectors       │       │ packages/llm       │
- │ Python FastAPI │       │ Composio (Gmail, Calendar,│       │ Free-LLM router:   │
- │ + Oracle Agent │       │ Drive, Notion, Slack,     │       │ Puter.js (user-pays)│
- │   Memory SDK   │       │ GitHub) + Firecrawl       │       │ Gemini / Groq /    │
- └──────┬─────────┘       └───────────────────────────┘       │ Cerebras / OpenRtr │
-        │                                                     └────────────────────┘
- ┌──────▼──────────────────────────────┐        LangSmith (traces, free 5k/mo)
- │ Oracle Autonomous AI Database 26ai  │
- │ (Always Free): memory, threads,     │
- │ evidence snapshots, vector search   │
- └─────────────────────────────────────┘
+┌─────────────────────────── apps/web (Next.js 16, TypeScript) ───────────────────────────┐
+│  Ask (answer + live trace)  ·  Brief  ·  Memory inspector  ·  Connections               │
+│  POST /api/ask streams AgentEvents (SSE) · /api/actions/:id is the only execute path   │
+└──────────────┬──────────────────────────────────────────────────────────────────────────┘
+               │
+┌──────────────▼──────────────── packages/agent ──────────────────────────────────────────┐
+│ understand → recall → plan → search (parallel) → synthesize (streamed) → verify →       │
+│ propose actions → remember          hard limits: steps, tool calls, LLM calls, timeout  │
+└──────┬───────────────────────┬────────────────────────────┬─────────────────────────────┘
+       │                       │                            │
+┌──────▼───────────┐  ┌────────▼──────────────────┐  ┌──────▼──────────────┐
+│ services/memory  │  │ packages/connectors       │  │ packages/llm        │
+│ FastAPI          │  │ Registry: Composio (6     │  │ Free-tier router:   │
+│ Oracle Agent     │  │ apps), Firecrawl (web),   │  │ Gemini → Groq →     │
+│ Memory + SQLite  │  │ any MCP server, sample    │  │ Cerebras → Open-    │
+│ ledger/fallback  │  │ workspace                 │  │ Router → Puter      │
+└──────────────────┘  └───────────────────────────┘  └─────────────────────┘
+        LangSmith tracing (optional): cortex.run → llm.* / connector.search spans
 ```
 
-## Agent graph (LangGraph.js)
+## The agent loop (`packages/agent/src/run.ts`)
 
-| Node | Job | Model tier |
-|------|-----|-----------|
-| `rewrite` | Normalize the query, resolve "it/that project" from short-term memory, detect the time window ("this quarter" → dates) | fast |
-| `recall` | `memory.search()` on the Oracle sidecar for user priorities, facts and prior answers | none |
-| `plan` | Produce 3–7 typed sub-questions, each with target sources and time ranges. **Interrupt** here for optional user edit (HITL) | strong |
-| `act` (fan-out) | One worker per sub-question. Calls Composio/Firecrawl tools, may loop up to N steps, returns `Evidence[]` | fast |
-| `diff` | For temporal queries, compares current evidence with stored snapshots and emits `Change[]` | none/fast |
-| `conflicts` | Finds contradictory claims across sources (dates, owners, status) | fast |
-| `synthesize` | Writes the answer with `[n]` citations that map to evidence IDs | strong |
-| `verify` | Checks each claim against the evidence quotes; drops or flags unsupported ones and computes the groundedness % | strong |
-| `memorize` | Salience scoring decides what is promoted to long-term memory; writes it with provenance | fast |
+The orchestrator is hand-written rather than built on a graph framework. Every branch is explicit, every loop is bounded, and the number of LLM calls is predictable, which is what keeps it inside free-tier quotas.
 
-### Core types
+| Step | Deep mode | Fast Mode | LLM calls |
+|------|-----------|-----------|-----------|
+| understand | Check which connectors are live; report the ones that are down | same | 0 |
+| recall | Search memory (pinned memories always included) | same | 0 |
+| plan | Strong model writes 2–5 sub-questions, sources, keyword queries, time window | One sub-question over every source, window parsed locally | 1 / 0 |
+| search | All (sub-question × source) pairs in parallel, deduplicated, cached 90 s; one broadened retry for empty sub-questions | Same, no retry | 0 |
+| synthesize | Strong model, streamed; answer plus `CONFLICTS / MISSING / ACTIONS / MEMORY` sections | Fast model, shorter | 1 |
+| verify | Lexical claim check (citations exist, content overlap, numbers match); LLM re-check only for doubtful claims | Lexical only | 0–1 / 0 |
+| actions | Proposals validated against connector schemas, stored server-side, **never executed** | same | 0 |
+| remember | Explicit "remember…" requests + model candidates with salience ≥ 0.6 | same | 0 |
+
+**Limits** (`LIMITS`): ≤5 sub-questions, ≤18 tool calls, ≤4 LLM calls deep / 2 fast, 90 s run timeout, a 12 s timeout per connector with one retry.
+
+**Grounding rules.** The synthesizer may only use numbered evidence and must cite every factual sentence. If nothing is found, Cortex says so **without an LLM call**. Unsupported claims are flagged in the UI, and the groundedness score is shown.
+
+**Errors.** Connector failures become `source_error` events that name the source, the reason (expired, rate-limited, unreachable, timed out) and the *impact* ("Blockers discussed in chat may be missing"). The run then continues. If every LLM fails, the user gets a plain message and a hint to try Fast Mode.
+
+## Connector layer (`packages/connectors`)
 
 ```ts
-type Evidence = { id: string; source: "gmail"|"calendar"|"drive"|"notion"|"slack"|"github"|"web";
-  url: string; title: string; quote: string; timestamp: string; subQuestionId: string };
-type Claim = { text: string; evidenceIds: string[]; status: "supported"|"partial"|"unsupported" };
-type AgentEvent =
-  | { type: "plan"; subQuestions: SubQuestion[] }
-  | { type: "tool_call"; subQuestionId: string; tool: string; args: unknown }
-  | { type: "evidence"; item: Evidence }
-  | { type: "memory_used" | "memory_written"; items: MemoryItem[] }
-  | { type: "token"; text: string }
-  | { type: "verdict"; claims: Claim[]; groundedness: number };
+interface Connector {
+  id; name; kind; describes; impact; actions: ActionDef[];
+  status(ctx); search(input, ctx); execute(actionId, args, ctx); connect?(ctx);
+}
 ```
 
-## Memory design (Oracle Agent Memory)
+- **ComposioConnector**: one class, six toolkit specs (`composio/toolkits.ts`). Tool slugs are data, so a rename is a one-line change. OAuth uses `toolkits.authorize()`, which returns a redirect URL, so users never see a token.
+- **McpConnector**: any MCP server (streamable HTTP or stdio), declared in `mcp.config.json`. Adding one needs no code. See `mcp.config.example.json`.
+- **FirecrawlConnector**: web search, or scraping when the query contains a URL.
+- **DemoConnector**: a fictional sample workspace with the same interface and actions. Its dates are relative to today, and it contains deliberate cross-source conflicts.
+- **extractEvidence()**: tolerant mapping from any tool output shape to `{title, quote, url, author, timestamp}`.
 
-Oracle Agent Memory provides **short-term** memory (thread context cards + conversation summaries) and **long-term** memory (`add` / `search`, scoped by `user_id`). It also extracts memories automatically from `thread.add_messages()`. Cortex adds a policy layer on top:
+## Actions and consent
 
-| Layer | What goes there | Lifetime |
-|-------|----------------|----------|
-| Working (in-graph state) | Current plan, evidence, tool outputs | One run |
-| Short-term (Oracle thread) | Conversation turns, context card, rolling summary | One session / thread |
-| Long-term (Oracle `add_memory`) | User priorities ("Atlas is top priority"), preferences, durable project facts, resolved conflicts | Across sessions, with decay |
-| Evidence snapshots (Oracle tables + vectors) | Normalized source items with timestamps, for diffs | Rolling window |
+1. The model proposes `{connector, action, args}`.
+2. `ActionStore.propose` validates the connector, the action and the required params, then builds an exact human-readable preview.
+3. The UI shows a confirmation card (Edit / Approve / Decline).
+4. `POST /api/actions/:id` with `approve` is the **only** code path that calls `connector.execute`. It is single-use, scoped to the user, and expires after 30 minutes.
 
-**Write policy.** The `memorize` node gives each candidate fact a score of salience × durability × novelty. Only facts above a threshold are written. Each memory carries `{source, reason, confidence, createdAt, expiresAt?, pinned}`. Cortex never stores raw transcripts in long-term memory.
+## Memory (`services/memory`)
 
-**Sidecar API** (FastAPI, `services/memory`):
-`POST /threads` · `POST /threads/{id}/messages` · `POST /memories` · `POST /search` · `GET /memories?user_id=` · `PATCH /memories/{id}` (pin/edit) · `DELETE /memories/{id}` (forget).
+| Layer | Store | Notes |
+|-------|-------|-------|
+| Working | in-run state | plan, evidence, tool outputs |
+| Short-term | Oracle thread (`add_messages`, `get_summary`) + SQLite messages | per conversation |
+| Long-term | Oracle `add_memory` / `search` (vector) + SQLite ledger | provenance, pin, edit, forget |
 
-**LLM/embeddings for the sidecar.** Oracle's SDK supports Gemini models and `gemini-embedding-001`, so a free Gemini API key covers extraction and embeddings.
+Oracle's automatic extraction is **off**. Cortex's policy decides what is kept: explicit requests at 0.95 salience, and model-proposed facts only at ≥0.6, at most two per run. Each kind has a TTL (priority 45 d, fact 90 d; preferences and people never expire). Salience decays with a 30-day half-life unless the memory is pinned, and near-duplicates reinforce an existing memory instead of being stored again. Without Oracle configured, the same API runs on SQLite FTS5, and `/health` reports which backend is active.
 
-## Connectors (Composio, zero-token UX)
+## LLM router (`packages/llm`)
 
-- The user clicks **Connect Gmail**, completes the OAuth popup and is sent back. They never handle tokens.
-- The backend calls Composio's TS SDK with `userId` = the Cortex user ID. Composio stores and refreshes the tokens.
-- Toolkits used: Gmail, Google Calendar, Google Drive, Notion, Slack, GitHub.
-- Read-only scopes are the default. Write actions (send email, create event) are off in the MVP.
-- **Firecrawl** adds the web as a source: scrape URLs found inside Slack/Notion/email so they can be cited, `search` for external risk context (vendor outages, CVEs in dependencies), and watch changelogs and competitor pages. The keyless tier covers scrape/search, and a free key unlocks crawl/extract.
-
-## Free-LLM router (`packages/llm`)
-
-There is no high-quality LLM that is both free and uncapped. Cortex combines several sources:
-
-1. **Puter.js (primary, user-pays).** Each user signs in with a free Puter account, and their usage counts against *their* monthly Puter credit, so the developer pays $0 at any scale. Access to Claude/GPT/Gemini-class models. Server-side use goes through Puter's OpenAI-compatible endpoint (`https://api.puter.com/puterai/openai/v1/`) with the user's token. *Spike S1 verifies this.*
-2. **Free-tier failover pool.** Google AI Studio (Gemini Flash), Groq, Cerebras and OpenRouter `:free` models. Calls are tried in order, and a provider that returns 429/402 is skipped for a cooldown period.
-3. **Task routing.** Planner/synthesizer/critic go to the strongest available model; rewrite/extraction/salience go to the fastest.
-
-All providers are wrapped behind one OpenAI-compatible interface, so LangGraph doesn't depend on any one vendor.
-
-## Observability
-
-- **LangSmith** (free Developer plan, 5k traces/mo) via `LANGSMITH_TRACING=true`. LangGraph.js traces automatically.
-- **In-app trace**: the same `AgentEvent` stream is stored per run, which powers the live trace panel and the "reasoning receipt" permalinks.
-
-## Deployment (all free)
-
-| Piece | Where |
-|-------|-------|
-| Web + agent (Next.js) | Vercel Hobby, or an Oracle Cloud Always Free ARM VM |
-| Memory sidecar (FastAPI) | Oracle Cloud Always Free ARM VM (Docker) |
-| Database | Oracle Autonomous AI Database, Always Free |
-| Traces | LangSmith Developer |
+- Every provider is OpenAI-compatible, so one client covers them all.
+- Failover order: Gemini → Groq → Cerebras → OpenRouter `:free` → Puter (fallback).
+- Cooldowns: 429 → `retry-after` or 60 s; bad key → 10 min; out of credit → 1 h.
+- Two tiers: `strong` for planning and synthesis, `fast` for verification and Fast Mode.
+- An LRU response cache (6 h by default, persisted to `.cache/`) means identical prompts cost nothing.
+- JSON mode, with tolerant parsing of fenced or embedded JSON.
+- Streaming fails over only before the first token; a stream that breaks mid-answer is reported honestly.

@@ -1,0 +1,101 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#2350A8;--blue-deep:#1B3F86;--paper:#FBFCFE;--ink:#14213D;--graphite:#5B6475;--rule:#E3E7EF;--red:#C8352B;--muted:#626B7E}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Geist,sans-serif;color:var(--ink);background:var(--paper);display:grid;grid-template-columns:232px 1fr 360px}
+.rail{background:var(--blue);color:#fff;padding:22px 16px;display:flex;flex-direction:column;gap:4px}
+.mark{font-family:Archivo;font-stretch:72%;font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;margin:0 8px 26px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;color:#D6E0F5;font-size:14px;text-decoration:none}
+.nav a.on{background:var(--blue-deep);color:#fff}
+.nav svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.threads{margin-top:24px;font-size:12px;color:#DCE5F7;padding:0 10px;text-transform:uppercase;letter-spacing:.08em;font-family:Archivo;font-stretch:80%;font-weight:600}
+.th{padding:7px 10px;font-size:13px;color:#D6E0F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws{margin-top:auto;font-size:12px;color:#C9D5EF;padding:10px;border-top:1px solid #3A64B6}
+main{padding:34px 0 0;display:flex;flex-direction:column;border-right:1px solid var(--rule)}
+.col{width:720px;margin:0 auto;flex:1}
+.q{font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.3;margin-bottom:6px}
+.meta{font-size:12px;color:var(--graphite);display:flex;gap:12px;margin-bottom:22px}
+.meta b{font-weight:500;color:var(--ink)}
+.sheet{display:grid;grid-template-columns:44px 1fr;border-left:0}
+.margin{border-right:1.5px solid #E7A7A2;display:flex;flex-direction:column}
+.m{height:52px;display:flex;align-items:flex-start;justify-content:center;padding-top:3px}
+.m svg{width:18px;height:18px;fill:none;stroke-width:2.2;stroke-linecap:round}
+.ans{padding-left:22px}
+.ans p{font-size:15.5px;line-height:1.65;height:52px}
+.c{display:inline-block;font-size:12px;font-weight:600;color:var(--blue);background:#E8EEFA;border-radius:4px;padding:0 5px;margin-left:2px;vertical-align:2px}
+.flag{color:var(--red);text-decoration:underline wavy #E7A7A2;text-underline-offset:4px}
+.conflict{margin:18px 0 0 66px;padding:12px 14px;border:1px solid #F0C9C5;background:#FDF5F4;border-radius:8px;font-size:13.5px;line-height:1.5}
+.conflict strong{color:var(--red);font-family:Archivo;font-stretch:80%;text-transform:uppercase;letter-spacing:.06em;font-size:12px;display:block;margin-bottom:2px}
+.act{margin:14px 0 0 66px;border:1px solid var(--rule);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:14px;font-size:13.5px}
+.act .t{flex:1}.act small{display:block;color:var(--graphite);font-size:12.5px;margin-top:2px}
+.btn{font:500 13px Geist;padding:7px 12px;border-radius:6px;border:1px solid var(--rule);background:#fff;color:var(--ink)}
+.btn.p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.foot{width:720px;margin:0 auto;padding:12px 0 22px}
+.status{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;margin-bottom:10px;font-variant-numeric:tabular-nums}
+.status i{width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block}
+.ask{border:1.5px solid var(--ink);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:15px;color:var(--graphite);background:#fff}
+.ask .sp{flex:1}.pill{font-size:12px;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;color:var(--ink)}
+aside{padding:30px 22px;background:#fff}
+aside h3{font-family:Archivo;font-stretch:80%;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--graphite);margin-bottom:12px}
+.ev{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.45}
+.ev:first-of-type{border-top:0}
+.ev .n{font-size:11px;font-weight:600;color:var(--blue);background:#E8EEFA;border-radius:4px;text-align:center;height:18px;line-height:18px}
+.ev .s{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.ev.dim{opacity:.45}
+.score{display:flex;align-items:baseline;gap:8px;margin:18px 0 6px}.score b{font-size:28px;font-weight:600;letter-spacing:-.02em}
+.score span{font-size:12px;color:var(--graphite)}
+</style></head><body>
+<nav class="rail">
+  <div class="mark">Cortex</div>
+  <div class="nav">
+    <a class="on"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Ask</a>
+    <a><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM9 9h6M9 13h6"/></svg>Brief</a>
+    <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Memory</a>
+    <a><svg viewBox="0 0 24 24"><path d="M9 7a5 5 0 0 1 8 6l-2 2M15 17a5 5 0 0 1-8-6l2-2"/></svg>Connections</a>
+  </div>
+  <div class="threads">Recent</div>
+  <div class="th">What changed in Orbit this week?</div>
+  <div class="th">Draft my progress report outline</div>
+  <div class="th">Northbeam OA deadline</div>
+  <div class="ws">Sample workspace · 6 sources</div>
+</nav>
+<main>
+  <div class="col">
+    <div class="q">What changed in Orbit this week, and what's at risk?</div>
+    <div class="meta"><span><b>Deep</b> · 4 sub-questions</span><span>11 sources cited</span><span>Remembered: Orbit is your top priority</span></div>
+    <div class="sheet">
+      <div class="margin">
+        <div class="m"><svg viewBox="0 0 24 24" stroke="#2350A8"><path d="M5 12l5 5 9-10"/></svg></div>
+        <div class="m"><svg viewBox="0 0 24 24" stroke="#2350A8"><path d="M5 12l5 5 9-10"/></svg></div>
+        <div class="m"><svg viewBox="0 0 24 24" stroke="#5B6475"><path d="M5 13c3-4 5 2 8-1s4-2 6-1"/></svg></div>
+        <div class="m"><svg viewBox="0 0 24 24" stroke="#C8352B"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      </div>
+      <div class="ans">
+        <p>Demo Day moved two days earlier, to Wed, Nov 12 <span class="c">1</span><span class="c">2</span>, but the GitHub milestone still says Fri, Nov 14 <span class="c">3</span>.</p>
+        <p>Push notifications are blocked: university IT hasn't issued FCM/APNs keys <span class="c">4</span><span class="c">5</span>.</p>
+        <p>Login loop #42 still reproduces on Android 15, likely a token-refresh race <span class="c">6</span>.</p>
+        <p><span class="flag">The team agreed to cut group chat from the beta.</span></p>
+      </div>
+    </div>
+    <div class="conflict"><strong>Sources disagree</strong>Demo Day is Nov 12 in the department email and Slack, but Nov 14 on the GitHub milestone and your calendar <span class="c">1</span><span class="c">3</span><span class="c">7</span>.</div>
+    <div class="act"><div class="t">Post in #orbit-dev: "Demo Day is now Nov 12, updating the milestone"<small>Slack · needs your OK before sending</small></div><button class="btn">Edit</button><button class="btn p">Approve &amp; post</button></div>
+  </div>
+  <div class="foot">
+    <div class="status"><i></i>Verified 4 claims · 3.1s &nbsp;·&nbsp; searched 6 sources in 1.4s &nbsp;·&nbsp; 2 model calls</div>
+    <div class="ask"><span class="sp">Ask a follow-up…</span><span class="pill">Fast Mode</span><span class="pill">Deep</span></div>
+  </div>
+</main>
+<aside>
+  <h3>Grounding</h3>
+  <div class="score"><b>81%</b><span>of claims supported · 1 unsupported</span></div>
+  <h3 style="margin-top:22px">Evidence</h3>
+  <div class="ev"><span class="n">1</span><div><span class="s">Gmail · Engineering Dept. · Oct 20</span>Demo Day has moved to Wed, Nov 12, 2–5pm, Engineering Hall.</div></div>
+  <div class="ev"><span class="n">2</span><div><span class="s">Slack · #orbit-dev · Maya · Oct 21</span>Heads up: Demo Day moved per the department email.</div></div>
+  <div class="ev"><span class="n">3</span><div><span class="s">GitHub · milestone · Beta (Demo Day)</span>Due Fri, Nov 14 · 11 of 19 issues closed.</div></div>
+  <div class="ev dim"><span class="n">4</span><div><span class="s">Slack · #orbit-dev · Jordan · Oct 19</span>Push notifications are blocked: credentials haven't arrived.</div></div>
+  <div class="ev dim"><span class="n">5</span><div><span class="s">Gmail · University IT · Oct 22</span>Expected turnaround is 5–7 business days.</div></div>
+  <div class="ev dim"><span class="n">6</span><div><span class="s">GitHub · #42 · maya</span>Login loop on Android 15 after token refresh.</div></div>
+</aside>
+</body></html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Inter,sans-serif;color:#111827;background:#fff;display:grid;grid-template-columns:260px 1fr}
+.side{background:#F9FAFB;border-right:1px solid #E5E7EB;padding:18px 12px}
+.logo{font-weight:600;font-size:16px;padding:6px 10px 18px}
+.new{border:1px solid #E5E7EB;background:#fff;border-radius:8px;padding:9px 12px;font-size:14px;margin-bottom:18px}
+.side a{display:block;padding:8px 10px;font-size:14px;color:#4B5563;border-radius:6px}
+.side a.on{background:#EEF2FF;color:#4F46E5;font-weight:500}
+.side h4{font-size:12px;color:#6B7280;font-weight:500;padding:18px 10px 6px}
+main{display:flex;flex-direction:column;align-items:center;padding-top:40px}
+.col{width:740px}
+.user{align-self:flex-end;background:#F3F4F6;border-radius:16px;padding:12px 16px;font-size:15px;margin-left:auto;width:fit-content;margin-bottom:22px}
+.src{display:flex;gap:8px;margin-bottom:16px}
+.chip{border:1px solid #E5E7EB;border-radius:10px;padding:8px 10px;font-size:12px;color:#4B5563;width:170px}
+.chip b{display:block;color:#111827;font-weight:500;font-size:12.5px;margin-bottom:2px}
+.card{border:1px solid #E5E7EB;border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card p{font-size:15px;line-height:1.65;margin-bottom:10px}
+sup{color:#4F46E5;font-weight:600}
+.note{background:#FEF2F2;color:#991B1B;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:6px}
+.ask{position:absolute;bottom:28px;left:610px;width:740px;border:1px solid #E5E7EB;border-radius:16px;padding:16px 18px;font-size:15px;color:#6B7280;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+</style></head><body>
+<nav class="side"><div class="logo">Cortex</div><div class="new">+ New question</div>
+<a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a>
+<h4>Today</h4><a>What changed in Orbit this week?</a><a>Northbeam OA deadline</a></nav>
+<main><div class="col">
+  <div class="user">What changed in Orbit this week, and what's at risk?</div>
+  <div class="src"><div class="chip"><b>Demo Day schedule change</b>Gmail</div><div class="chip"><b>Beta (Demo Day)</b>GitHub</div><div class="chip"><b>#orbit-dev</b>Slack</div><div class="chip"><b>+8 more</b>sources</div></div>
+  <div class="card">
+    <p>Demo Day moved to Wed, Nov 12<sup>[1]</sup>, but the GitHub milestone still says Nov 14<sup>[3]</sup>.</p>
+    <p>Push notifications are blocked on university IT credentials<sup>[4]</sup>, and login loop #42 still reproduces on Android 15<sup>[6]</sup>.</p>
+    <div class="note">Sources disagree on the Demo Day date.</div>
+  </div>
+</div></main>
+<div class="ask">Ask anything…</div>
+</body></html>

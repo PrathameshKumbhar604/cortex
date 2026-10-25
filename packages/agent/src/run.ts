@@ -18,6 +18,7 @@ import type { ActionStore } from "./actions";
 import { explicitMemory, type MemoryBackend } from "./memory";
 import { chatPrompt, planPrompt, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
 import { keywords, parseWindow } from "./time";
+import { traced, withTracing } from "./tracing";
 import { groundedness, splitSections, streamCutoff, toConflicts, verifyClaims } from "./verify";
 
 export const LIMITS = {
@@ -145,7 +146,10 @@ function actionBriefs(connected: Connector[]): ActionBrief[] {
  *   → verify → propose actions → remember
  * Fast Mode skips the LLM planner and LLM verification: one LLM call total.
  */
-export async function* runAgent(input: RunInput, deps: AgentDeps): AsyncGenerator<AgentEvent> {
+export const runAgent = traced(runAgentImpl, "cortex.run");
+
+async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerator<AgentEvent> {
+  const deps = withTracing(rawDeps);
   const started = Date.now();
   const runId = randomUUID();
   const threadId = input.threadId ?? randomUUID();

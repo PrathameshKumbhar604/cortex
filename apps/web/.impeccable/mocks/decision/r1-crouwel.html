@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B1020;--grid:rgba(120,140,255,.08);--text:#EEF2FF;--dim:#A8B2D8;--acc:#3D5AFE;--rose:#FF4D6D;--line:#1E2747}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Geist,sans-serif;color:var(--text);background:var(--bg);
+background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;display:grid;grid-template-columns:240px 1fr 320px}
+nav{padding:24px 16px;border-right:1px solid var(--line);background:rgba(11,16,32,.92)}
+.mark{display:grid;grid-template-columns:repeat(6,8px);grid-auto-rows:8px;gap:2px;margin:0 8px 30px}
+.mark i{background:var(--text)}
+nav a{display:block;padding:8px 10px;font-size:14px;color:var(--dim);border-radius:4px}
+nav a.on{background:var(--acc);color:#fff}
+main{padding:36px 64px;background:rgba(11,16,32,.9)}
+.q{font-size:24px;font-weight:600;margin-bottom:22px;max-width:660px}
+.nums{display:flex;gap:40px;margin-bottom:26px}
+.nums div{font-size:12px;color:var(--dim)}
+.nums b{display:block;font-size:44px;font-weight:600;letter-spacing:-.04em;color:var(--text);font-variant-numeric:tabular-nums}
+p{font-size:16px;line-height:1.7;max-width:660px;margin-bottom:12px;color:#DDE3FF}
+.c{display:inline-block;width:18px;height:18px;background:var(--acc);color:#fff;font-size:12px;text-align:center;line-height:18px;margin-left:3px}
+.conf{border:1px solid var(--rose);padding:12px 14px;max-width:660px;font-size:14px;margin:6px 0 14px}
+.ask{position:absolute;left:304px;bottom:28px;width:760px;border:1px solid var(--line);background:#0F1630;padding:14px 16px;font-size:15px;color:var(--dim)}
+aside{border-left:1px solid var(--line);padding:30px 20px;background:rgba(11,16,32,.92)}
+aside h3{font-size:12px;color:var(--dim);font-weight:500;margin-bottom:12px}
+.ev{border-top:1px solid var(--line);padding:10px 0;font-size:13px;line-height:1.45}
+.ev span{display:block;font-size:12px;color:var(--dim)}
+</style></head><body>
+<nav><div class="mark">
+<i></i><i></i><i></i><i></i><i></i><i style="opacity:0"></i>
+<i></i><i style="opacity:0"></i><i style="opacity:0"></i><i style="opacity:0"></i><i style="opacity:0"></i><i style="opacity:0"></i>
+<i></i><i></i><i></i><i></i><i></i><i style="opacity:0"></i></div>
+<a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a></nav>
+<main>
+  <div class="q">What changed in Orbit this week, and what's at risk?</div>
+  <div class="nums"><div><b>81%</b>grounded</div><div><b>18</b>evidence</div><div><b>3.1s</b>to verified</div></div>
+  <p>Demo Day moved to Wed, Nov 12<span class="c">1</span>, but the GitHub milestone still says Nov 14<span class="c">3</span>.</p>
+  <div class="conf">Sources disagree: Nov 12 (email, Slack) vs Nov 14 (GitHub, calendar).</div>
+  <p>Push notifications are blocked on university IT credentials<span class="c">4</span>, and login loop #42 still reproduces on Android 15<span class="c">6</span>.</p>
+</main>
+<aside><h3>Evidence</h3>
+<div class="ev"><span>Gmail · Oct 20</span>Demo Day has moved to Wed, Nov 12.</div>
+<div class="ev"><span>GitHub · milestone</span>Due Fri, Nov 14 · 11 of 19 closed.</div>
+<div class="ev"><span>Slack · Jordan</span>Push notifications are blocked.</div></aside>
+<div class="ask">Ask a follow-up…</div>
+</body></html>

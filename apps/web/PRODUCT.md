@@ -40,7 +40,11 @@ Cortex is an agentic research assistant over the user's *live* tools. It breaks 
 ## Brand Commitments
 
 - Name: **Cortex**.
-- Look: clean, premium, in the style of a YC-backed startup. Light mode is the default.
+- Look: clean, premium, in the style of a YC-backed startup.
+- User steer (binding): "it should have intelligent colors and futuristic. it's a product and not a project."
+- User steer (binding): "minimalistic, thoughtful, have broad vision, insightful, cleaner, mature yet modern."
+- Must not feel like: a generic AI-chat clone, a dense dashboard, noisy reasoning, or anything playful.
+- First screen is ask-first. Laptop first; mobile fully usable.
 
 ## Evidence on Hand
 

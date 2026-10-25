@@ -79,7 +79,7 @@ export class DemoConnector implements Connector {
     }));
   }
 
-  async execute(actionId: string, args: Record<string, unknown>) {
+  async execute(actionId: string, args: Record<string, unknown>, _ctx?: ConnectorContext) {
     const action = this.actions.find((a) => a.id === actionId);
     demoOutbox.unshift({ at: new Date().toISOString(), source: this.id, actionId, args });
     return {

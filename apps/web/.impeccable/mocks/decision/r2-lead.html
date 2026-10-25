@@ -1,0 +1,78 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F8FA;--ink:#0E1116;--grey:#5E6573;--hair:#646B79;--line:#E6E8EE;--acc:#4353FF;--gm:#E5484D;--sl:#8E4EC6;--gh:#0E1116;--ca:#12A594;--no:#646B78}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Geist,sans-serif;display:grid;grid-template-columns:200px 1fr}
+.mono{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums;font-size:12px;letter-spacing:.01em}
+nav{padding:26px 18px;display:flex;flex-direction:column;gap:2px}
+.mark{font-weight:650;font-size:17px;letter-spacing:-.02em;margin:0 8px 30px;display:flex;align-items:center;gap:8px}
+.mark i{width:9px;height:9px;border-radius:50%;background:var(--acc)}
+nav a{padding:7px 8px;border-radius:6px;font-size:14px;color:var(--grey)}
+nav a.on{color:var(--ink);font-weight:550;background:#ECEEF3}
+nav .sep{height:1px;background:var(--line);margin:18px 8px}
+nav .th{padding:6px 8px;font-size:13px;color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+main{display:flex;flex-direction:column;padding:0 0 26px;border-left:1px solid var(--line);background:#FFFFFF}
+.top{display:flex;justify-content:flex-end;gap:18px;padding:18px 40px;color:var(--grey)}
+.col{width:720px;margin:28px auto 0;flex:1}
+.prev{color:var(--grey);font-size:14px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:34px;display:flex;justify-content:space-between}
+.q{font-size:38px;font-weight:300;letter-spacing:-.035em;line-height:1.15;margin-bottom:14px}
+.read{display:flex;gap:18px;color:var(--grey);margin-bottom:30px}
+.read b{color:var(--acc);font-weight:500}
+.ans p{font-size:17px;line-height:1.7;margin-bottom:14px}
+.v{font-weight:460;color:var(--ink)}
+.h{font-weight:200;color:var(--hair)}
+.x{font-weight:300;color:var(--hair);text-decoration:line-through;text-decoration-color:#E5484D}
+sup{font:500 11.5px 'Geist Mono';color:var(--acc);margin-left:2px}
+.conf{display:flex;gap:16px;padding:14px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);margin:22px 0;font-size:15px;line-height:1.55}
+.conf span:first-child{font-weight:600;min-width:90px}
+.src{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line)}
+.s{padding:12px 14px 12px 0;font-size:13px;line-height:1.45;color:#2B303A}
+.s .m{display:flex;align-items:center;gap:6px;color:var(--grey);margin-bottom:3px}
+.s .m i{width:6px;height:6px;border-radius:50%}
+.act{display:flex;align-items:center;gap:16px;margin-top:22px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+.act div{flex:1}.act small{display:block;color:var(--grey);font-size:12.5px;margin-top:2px}
+.btn{font:500 13px Geist;padding:7px 13px;border-radius:7px;border:1px solid var(--line);background:#fff}
+.btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.foot{width:720px;margin:0 auto}
+.ask{border:1px solid #D9DCE3;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:12px;font-size:15.5px;color:var(--grey);box-shadow:0 8px 24px -12px rgba(14,17,22,.12)}
+.ask span:first-child{flex:1}
+.sw{display:flex;gap:2px;background:#F1F2F5;border-radius:8px;padding:2px}
+.sw span{padding:4px 10px;border-radius:6px;font-size:12.5px;color:var(--grey)}
+.sw .on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.next{display:flex;gap:8px;margin-top:10px}
+.next span{font-size:13px;color:var(--grey);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+</style></head><body>
+<nav>
+  <div class="mark"><i></i>Cortex</div>
+  <a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a>
+  <div class="sep"></div>
+  <div class="th">What changed in Orbit this week?</div>
+  <div class="th">Outline my progress report</div>
+  <div class="th">Northbeam OA deadline</div>
+</nav>
+<main>
+  <div class="top mono"><span>SAMPLE WORKSPACE · 6 SOURCES</span><span>MEMORY · 3</span></div>
+  <div class="col">
+    <div class="prev"><span>When is my advisor sync?</span><span class="mono">FAST · 1.2s</span></div>
+    <div class="q">What changed in Orbit this week, and what's at risk?</div>
+    <div class="read mono"><span>DEEP</span><span>PLAN 4 QUESTIONS</span><span>SEARCHED 12 · 1.4s</span><span><b>VERIFYING 3/4</b></span></div>
+    <div class="ans">
+      <p><span class="v">Demo Day moved two days earlier, to Wed, Nov 12,</span><sup>1 2</sup> <span class="v">but the GitHub milestone still says Fri, Nov 14.</span><sup>3</sup></p>
+      <p><span class="v">Push notifications are blocked on university IT credentials,</span><sup>4</sup> <span class="h">and login loop #42 still reproduces on Android 15.</span><sup>6</sup> <span class="x">The team already agreed to cut group chat.</span></p>
+    </div>
+    <div class="conf"><span>Conflict</span><span>The department email and Slack say Nov 12; the milestone and your calendar still say Nov 14.<sup>1 3 7</sup></span></div>
+    <div class="src">
+      <div class="s"><div class="m mono"><i style="background:var(--gm)"></i>1 GMAIL · OCT 20</div>Demo Day has moved to Wed, Nov 12.</div>
+      <div class="s"><div class="m mono"><i style="background:var(--sl)"></i>2 SLACK · MAYA</div>Heads up: Demo Day moved.</div>
+      <div class="s"><div class="m mono"><i style="background:var(--gh)"></i>3 GITHUB · MILESTONE</div>Due Fri, Nov 14 · 11 of 19 closed.</div>
+    </div>
+    <div class="act"><div>Post to #orbit-dev: "Demo Day is now Nov 12, updating the milestone"<small>Slack · waiting for your approval</small></div><button class="btn">Edit</button><button class="btn p">Approve</button></div>
+  </div>
+  <div class="foot">
+    <div class="ask"><span>Ask a follow-up…</span><div class="sw"><span>Fast</span><span class="on">Deep</span></div></div>
+    <div class="next"><span>Update the milestone date</span><span>Draft the progress report timeline</span><span>Who owns #42?</span></div>
+  </div>
+</main>
+</body></html>

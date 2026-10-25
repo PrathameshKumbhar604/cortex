@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bone:#F4F2EE;--ink:#16140F;--rub:#C23A24;--grey:#5E5A51;--rule:#CFCAC0}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bone);color:var(--ink);font-family:Geist,sans-serif;display:grid;grid-template-columns:180px 1fr}
+nav{border-right:1px solid var(--rule);padding:26px 20px;font-size:14px}
+nav b{display:block;font:600 18px 'Source Serif 4';margin-bottom:28px}
+nav a{display:block;padding:6px 0;color:var(--grey)}nav a.on{color:var(--ink);font-weight:600}
+.page{display:grid;grid-template-columns:1fr 560px 330px 1fr;padding-top:60px;position:relative}
+.block{grid-column:2}
+.mar{grid-column:3;padding-left:28px;border-left:1px solid var(--rule)}
+h1{font:600 26px/1.25 'Source Serif 4';margin-bottom:8px}
+.meta{font-size:12.5px;color:var(--grey);margin-bottom:24px;letter-spacing:.04em;text-transform:uppercase}
+p{font:400 18px/1.6 'Source Serif 4';margin-bottom:14px}
+.k{color:var(--rub);font:600 12px Geist;margin-left:2px}
+.note{font-size:13px;line-height:1.5;margin-bottom:22px;color:#2E2B25}
+.note b{color:var(--rub);margin-right:6px}
+.note span{display:block;font-size:12px;color:var(--grey);letter-spacing:.03em;text-transform:uppercase}
+.conf{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:10px 0;font-size:14.5px;margin:18px 0}
+.ask{position:absolute;left:calc(50% - 445px);bottom:-470px;width:560px;border-top:1px solid var(--ink);padding-top:14px;font-size:15px;color:var(--grey)}
+</style></head><body>
+<nav><b>Cortex</b><a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a></nav>
+<div class="page">
+  <div class="block">
+    <h1>What changed in Orbit this week, and what's at risk?</h1>
+    <div class="meta">Deep · 11 sources · 3 of 4 claims supported</div>
+    <p>Demo Day moved two days earlier, to Wednesday, November 12,<span class="k">a</span> but the milestone still shows November 14.<span class="k">b</span></p>
+    <div class="conf">Sources disagree on the date: email and Slack against GitHub and the calendar.</div>
+    <p>Push notifications remain blocked on university IT credentials,<span class="k">c</span> and the Android login loop is unresolved.<span class="k">d</span></p>
+  </div>
+  <div class="mar">
+    <div class="note"><b>a</b>Demo Day has moved to Wed, Nov 12.<span>Gmail · Engineering Dept.</span></div>
+    <div class="note"><b>b</b>Beta milestone due Fri, Nov 14.<span>GitHub · milestone</span></div>
+    <div class="note"><b>c</b>Can't test on iOS until credentials arrive.<span>Slack · Jordan</span></div>
+    <div class="note"><b>d</b>Login loop on Android 15 after token refresh.<span>GitHub · #42</span></div>
+  </div>
+  <div class="ask">Ask a follow-up…</div>
+</div>
+</body></html>

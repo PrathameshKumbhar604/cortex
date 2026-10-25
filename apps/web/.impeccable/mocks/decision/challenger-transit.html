@@ -1,0 +1,59 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ground:#F7F8FA;--ink:#14213D;--red:#E23D28;--cobalt:#2457C5;--amber:#F2A900;--green:#1F9D55;--rule:#E1E5EC;--grey:#566178}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:'Hanken Grotesk',sans-serif;color:var(--ink);background:var(--ground);display:grid;grid-template-columns:220px 1fr}
+.side{background:#fff;border-right:1px solid var(--rule);padding:22px 14px}
+.logo{font-weight:700;font-size:19px;margin:0 8px 24px;display:flex;align-items:center;gap:8px}
+.logo i{width:14px;height:14px;border-radius:50%;border:3px solid var(--ink)}
+.side a{display:block;padding:8px 10px;border-radius:6px;font-size:14px;color:var(--grey)}
+.side a.on{background:var(--ground);color:var(--ink);font-weight:600}
+main{display:grid;grid-template-columns:1fr 340px;gap:0}
+.col{padding:36px 56px}
+.q{font-size:23px;font-weight:600;margin-bottom:18px}
+.route{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:14px 18px;margin-bottom:24px}
+.route svg{display:block}
+.route .lbl{font-size:11px;fill:var(--grey);font-family:'Hanken Grotesk'}
+p{font-size:16px;line-height:1.65;margin-bottom:14px;max-width:660px}
+.c{display:inline-block;width:18px;height:18px;border-radius:50%;color:#fff;font-size:10.5px;font-weight:700;text-align:center;line-height:18px;margin-left:3px;vertical-align:1px}
+.warn{border:1px solid #F3C3BC;background:#FFF5F3;border-radius:8px;padding:12px 14px;font-size:14px;max-width:660px;margin:6px 0 16px}
+.ask{position:absolute;bottom:26px;left:276px;width:760px;background:#fff;border:1px solid var(--rule);border-radius:12px;padding:14px 16px;font-size:15px;color:var(--grey);box-shadow:0 6px 20px rgba(20,33,61,.07)}
+aside{border-left:1px solid var(--rule);background:#fff;padding:30px 20px}
+aside h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-bottom:12px}
+.ev{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--rule);font-size:13px;line-height:1.45}
+.ev span{color:var(--grey);font-size:11.5px;display:block}
+</style></head><body>
+<nav class="side"><div class="logo"><i></i>Cortex</div><a class="on">Ask</a><a>Brief</a><a>Memory</a><a>Connections</a></nav>
+<main>
+  <div class="col">
+    <div class="q">What changed in Orbit this week, and what's at risk?</div>
+    <div class="route">
+      <svg width="760" height="92" viewBox="0 0 760 92">
+        <path d="M20 46 H200 L240 18 H520" stroke="#E23D28" stroke-width="5" fill="none"/>
+        <path d="M20 46 H740" stroke="#2457C5" stroke-width="5" fill="none"/>
+        <path d="M200 46 L240 74 H600" stroke="#1F9D55" stroke-width="5" fill="none"/>
+        <path d="M380 46 L420 18" stroke="#F2A900" stroke-width="5" fill="none"/>
+        <circle cx="20" cy="46" r="8" fill="#fff" stroke="#14213D" stroke-width="3"/>
+        <circle cx="200" cy="46" r="8" fill="#fff" stroke="#14213D" stroke-width="3"/>
+        <circle cx="380" cy="46" r="8" fill="#fff" stroke="#14213D" stroke-width="3"/>
+        <circle cx="560" cy="46" r="8" fill="#fff" stroke="#14213D" stroke-width="3"/>
+        <circle cx="740" cy="46" r="8" fill="#14213D"/>
+        <text class="lbl" x="6" y="80">Question</text><text class="lbl" x="170" y="88">Goals</text>
+        <text class="lbl" x="350" y="88">Deadlines</text><text class="lbl" x="534" y="88">Blockers</text><text class="lbl" x="712" y="80">Answer</text>
+      </svg>
+    </div>
+    <p>Demo Day moved to Wed, Nov 12<span class="c" style="background:#E23D28">1</span>, but the GitHub milestone still says Nov 14<span class="c" style="background:#2457C5">3</span>.</p>
+    <div class="warn"><b>Sources disagree</b>: Nov 12 (email, Slack) vs Nov 14 (GitHub, calendar).</div>
+    <p>Push notifications are blocked on university IT credentials<span class="c" style="background:#F2A900">4</span>, and login loop #42 still reproduces on Android 15<span class="c" style="background:#2457C5">6</span>.</p>
+  </div>
+  <aside><h3>Lines searched</h3>
+    <div class="ev"><svg width="16" height="16"><rect width="16" height="5" y="5" rx="2" fill="#E23D28"/></svg><div><span>Gmail · 3 results</span>Demo Day has moved to Wed, Nov 12.</div></div>
+    <div class="ev"><svg width="16" height="16"><rect width="16" height="5" y="5" rx="2" fill="#2457C5"/></svg><div><span>GitHub · 4 results</span>Beta milestone due Fri, Nov 14.</div></div>
+    <div class="ev"><svg width="16" height="16"><rect width="16" height="5" y="5" rx="2" fill="#F2A900"/></svg><div><span>Slack · 5 results</span>Push notifications are blocked.</div></div>
+    <div class="ev"><svg width="16" height="16"><rect width="16" height="5" y="5" rx="2" fill="#1F9D55"/></svg><div><span>Notion · 2 results</span>Sprint 6 goals, chat out of scope.</div></div>
+  </aside>
+</main>
+<div class="ask">Ask a follow-up…</div>
+</body></html>

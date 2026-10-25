@@ -1,0 +1,91 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07080B;--panel:#0D0F14;--line:#1C2029;--text:#F4F6FA;--dim:#A3ABBA;--faint:#7C8596;--gh:#5B8CFF;--sl:#9B7BFF;--gm:#FF7A59;--ca:#2ED3B7;--dr:#FFC24B;--no:#E7EAF0;--risk:#FF5C7A}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);font-family:Geist,sans-serif;display:grid;grid-template-columns:216px 1fr 344px}
+.mono{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+nav{border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:2px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:-.01em;margin:0 8px 26px}
+.mark b{display:flex;gap:2px;align-items:flex-end;height:16px}.mark b i{width:2px;background:var(--text)}
+nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:var(--dim);font-size:14px}
+nav a.on{background:#151922;color:var(--text)}
+nav svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7}
+.rec{margin:22px 10px 6px;font-size:12px;color:var(--faint)}
+.th{padding:6px 10px;font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws{margin-top:auto;padding:12px 10px;border-top:1px solid var(--line);font-size:12px;color:var(--dim)}
+.ws span{display:inline-flex;gap:3px;margin-right:6px}.ws span i{width:6px;height:6px;border-radius:50%}
+main{display:flex;flex-direction:column;padding:34px 0 0}
+.col{width:700px;margin:0 auto;flex:1}
+.q{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.3}
+.meta{display:flex;gap:16px;font-size:12px;color:var(--dim);margin:8px 0 18px}
+.field{height:72px;display:flex;align-items:flex-end;gap:3px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.field i{width:5px;border-radius:1px}
+.axis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);margin:6px 0 22px}
+.ans p{font-size:16px;line-height:1.7;color:#E6E9F0;margin-bottom:12px}
+.c{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:4px;font:500 11.5px 'Geist Mono';color:#07080B;margin-left:3px;vertical-align:1px}
+.u{text-decoration:underline dotted var(--risk);text-underline-offset:5px;color:#FFC9D3}
+.conf{border:1px solid #4A1E2A;background:#170C10;border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;margin:6px 0 12px;display:flex;gap:12px}
+.conf b{color:var(--risk);font-weight:600}
+.act{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;font-size:14px}
+.act .t{flex:1}.act small{display:block;color:var(--dim);font-size:12.5px;margin-top:3px}
+.btn{font:500 13px Geist;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--text)}
+.btn.p{background:var(--text);color:#07080B;border-color:var(--text)}
+.foot{width:700px;margin:0 auto;padding:12px 0 24px}
+.status{font-size:12px;color:var(--faint);margin-bottom:10px;display:flex;gap:14px}
+.status em{font-style:normal;color:var(--ca)}
+.ask{border:1px solid #2A303C;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:15px;color:var(--dim);background:var(--panel)}
+.ask .sp{flex:1}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12.5px}
+.seg span{padding:5px 10px;color:var(--dim)}.seg .on{background:#1A1F2A;color:var(--text)}
+aside{border-left:1px solid var(--line);padding:30px 20px;background:var(--panel)}
+h3{font-size:12px;font-weight:500;color:var(--dim);margin-bottom:12px}
+.g{display:flex;align-items:baseline;gap:10px;margin-bottom:24px}.g b{font:500 34px 'Geist Mono';letter-spacing:-.03em}
+.g span{font-size:12.5px;color:var(--dim)}
+.ev{display:grid;grid-template-columns:20px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13px;line-height:1.45;color:#D8DCE5}
+.ev .s{display:block;font-size:12px;color:var(--faint);margin-bottom:2px}
+.ev.lift{background:#141924;margin:0 -10px;padding:10px;border-radius:8px;border-top-color:transparent}
+.ev.dim{opacity:.4}
+</style></head><body>
+<nav>
+  <div class="mark"><b><i style="height:7px"></i><i style="height:13px"></i><i style="height:16px"></i><i style="height:10px"></i></b>Cortex</div>
+  <a class="on"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Ask</a>
+  <a><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Brief</a>
+  <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Memory</a>
+  <a><svg viewBox="0 0 24 24"><path d="M9 7a5 5 0 0 1 8 6l-2 2M15 17a5 5 0 0 1-8-6l2-2"/></svg>Connections</a>
+  <div class="rec">Recent</div>
+  <div class="th">What changed in Orbit this week?</div>
+  <div class="th">Outline my progress report</div>
+  <div class="th">Northbeam OA deadline</div>
+  <div class="ws"><span><i style="background:var(--gm)"></i><i style="background:var(--ca)"></i><i style="background:var(--dr)"></i><i style="background:var(--no)"></i><i style="background:var(--sl)"></i><i style="background:var(--gh)"></i></span>6 sources live</div>
+</nav>
+<main>
+  <div class="col">
+    <div class="q">What changed in Orbit this week, and what's at risk?</div>
+    <div class="meta mono"><span>DEEP · 4 SUB-QUESTIONS</span><span>18 EVIDENCE</span><span>MEMORY · ORBIT = TOP PRIORITY</span></div>
+    <div class="field"><i style="height:58px;background:#9B7BFF;opacity:1"></i><i style="height:54px;background:#FF7A59;opacity:1"></i><i style="height:14px;background:#FF7A59;opacity:1"></i><i style="height:14px;background:#E7EAF0;opacity:1"></i><i style="height:46px;background:#E7EAF0;opacity:1"></i><i style="height:58px;background:#E7EAF0;opacity:1"></i><i style="height:14px;background:#5B8CFF;opacity:1"></i><i style="height:38px;background:#FF7A59;opacity:1"></i><i style="height:22px;background:#FF7A59;opacity:1"></i><i style="height:46px;background:#2ED3B7;opacity:1"></i><i style="height:58px;background:#E7EAF0;opacity:1"></i><i style="height:14px;background:#9B7BFF;opacity:1"></i><i style="height:54px;background:#5B8CFF;opacity:1"></i><i style="height:46px;background:#2ED3B7;opacity:1"></i><i style="height:46px;background:#FF7A59;opacity:1"></i><i style="height:64px;background:#E7EAF0;opacity:1"></i><i style="height:22px;background:#FFC24B;opacity:1"></i><i style="height:46px;background:#E7EAF0;opacity:1"></i><i style="height:30px;background:#5B8CFF;opacity:1"></i><i style="height:22px;background:#FF7A59;opacity:1"></i><i style="height:58px;background:#FFC24B;opacity:1"></i><i style="height:30px;background:#E7EAF0;opacity:1"></i><i style="height:54px;background:#5B8CFF;opacity:1"></i><i style="height:14px;background:#E7EAF0;opacity:1"></i><i style="height:46px;background:#FF7A59;opacity:1"></i><i style="height:58px;background:#2ED3B7;opacity:1"></i><i style="height:14px;background:#2ED3B7;opacity:1"></i><i style="height:54px;background:#E7EAF0;opacity:1"></i><i style="height:46px;background:#FFC24B;opacity:1"></i><i style="height:46px;background:#E7EAF0;opacity:1"></i><i style="height:64px;background:#5B8CFF;opacity:1"></i><i style="height:46px;background:#2ED3B7;opacity:1"></i><i style="height:30px;background:#2ED3B7;opacity:1"></i><i style="height:46px;background:#FFC24B;opacity:1"></i><i style="height:30px;background:#E7EAF0;opacity:1"></i><i style="height:58px;background:#5B8CFF;opacity:1"></i><i style="height:54px;background:#5B8CFF;opacity:1"></i><i style="height:14px;background:#9B7BFF;opacity:1"></i><i style="height:30px;background:#FFC24B;opacity:1"></i><i style="height:38px;background:#E7EAF0;opacity:1"></i><i style="height:64px;background:#E7EAF0;opacity:1"></i><i style="height:46px;background:#5B8CFF;opacity:1"></i><i style="height:14px;background:#5B8CFF;opacity:1"></i><i style="height:38px;background:#2ED3B7;opacity:1"></i><i style="height:30px;background:#FF7A59;opacity:1"></i><i style="height:64px;background:#2ED3B7;opacity:1"></i><i style="height:14px;background:#E7EAF0;opacity:1"></i><i style="height:14px;background:#9B7BFF;opacity:1"></i><i style="height:46px;background:#FF7A59;opacity:1"></i><i style="height:30px;background:#FF7A59;opacity:1"></i><i style="height:64px;background:#FFC24B;opacity:1"></i><i style="height:38px;background:#E7EAF0;opacity:1"></i><i style="height:38px;background:#5B8CFF;opacity:1"></i><i style="height:14px;background:#E7EAF0;opacity:1"></i><i style="height:38px;background:#9B7BFF;opacity:1"></i><i style="height:58px;background:#2ED3B7;opacity:1"></i><i style="height:54px;background:#FF7A59;opacity:1"></i><i style="height:30px;background:#E7EAF0;opacity:1"></i><i style="height:46px;background:#5B8CFF;opacity:1"></i><i style="height:38px;background:#9B7BFF;opacity:1"></i><i style="height:64px;background:#9B7BFF;opacity:1"></i><i style="height:30px;background:#2ED3B7;opacity:1"></i><i style="height:38px;background:#FF7A59;opacity:0.28"></i><i style="height:22px;background:#FFC24B;opacity:0.28"></i><i style="height:14px;background:#5B8CFF;opacity:0.28"></i><i style="height:58px;background:#5B8CFF;opacity:0.28"></i><i style="height:30px;background:#5B8CFF;opacity:0.28"></i><i style="height:54px;background:#9B7BFF;opacity:0.28"></i><i style="height:38px;background:#FF7A59;opacity:0.28"></i><i style="height:38px;background:#FFC24B;opacity:0.28"></i><i style="height:58px;background:#FFC24B;opacity:0.28"></i><i style="height:38px;background:#5B8CFF;opacity:0.28"></i><i style="height:30px;background:#FF7A59;opacity:0.28"></i><i style="height:38px;background:#9B7BFF;opacity:0.28"></i><i style="height:30px;background:#FFC24B;opacity:0.28"></i><i style="height:64px;background:#E7EAF0;opacity:0.28"></i><i style="height:54px;background:#E7EAF0;opacity:0.28"></i><i style="height:22px;background:#5B8CFF;opacity:0.28"></i><i style="height:14px;background:#5B8CFF;opacity:0.28"></i><i style="height:22px;background:#9B7BFF;opacity:0.28"></i><i style="height:58px;background:#FF7A59;opacity:0.28"></i><i style="height:38px;background:#2ED3B7;opacity:0.28"></i><i style="height:22px;background:#5B8CFF;opacity:0.28"></i><i style="height:30px;background:#5B8CFF;opacity:0.28"></i></div>
+    <div class="axis mono"><span>0.0s plan</span><span>0.9s search ×12</span><span>2.3s synthesize</span><span>3.1s verified</span></div>
+    <div class="ans">
+      <p>Demo Day moved two days earlier, to Wed, Nov 12<span class="c" style="background:var(--gm)">1</span><span class="c" style="background:var(--sl)">2</span>, but the GitHub milestone still says Fri, Nov 14<span class="c" style="background:var(--gh)">3</span>.</p>
+      <div class="conf"><b>Conflict</b><span>Nov 12 in the department email and Slack, Nov 14 on the milestone and your calendar.</span></div>
+      <p>Push notifications are blocked on university IT credentials<span class="c" style="background:var(--sl)">4</span><span class="c" style="background:var(--gm)">5</span>, and login loop #42 still reproduces on Android 15<span class="c" style="background:var(--gh)">6</span>. <span class="u">The team already agreed to cut group chat.</span></p>
+    </div>
+    <div class="act"><div class="t">Post to #orbit-dev: "Demo Day is now Nov 12, updating the milestone"<small>Slack · waiting for your approval</small></div><button class="btn">Edit</button><button class="btn p">Approve</button></div>
+  </div>
+  <div class="foot">
+    <div class="status mono"><em>● VERIFIED</em><span>4 claims · 1 unsupported</span><span>3.1s</span><span>2 LLM calls · 1 cached</span></div>
+    <div class="ask"><span class="sp">Ask a follow-up…</span><div class="seg"><span>Fast</span><span class="on">Deep</span></div></div>
+  </div>
+</main>
+<aside>
+  <h3>Grounded</h3>
+  <div class="g"><b>81%</b><span>3 of 4 claims supported</span></div>
+  <h3>Evidence</h3>
+  <div class="ev lift"><span class="c" style="background:var(--gm)">1</span><div><span class="s">Gmail · Engineering Dept. · Oct 20</span>Demo Day has moved to Wed, Nov 12, 2–5pm.</div></div>
+  <div class="ev"><span class="c" style="background:var(--sl)">2</span><div><span class="s">Slack · #orbit-dev · Maya · Oct 21</span>Heads up: Demo Day moved per the department email.</div></div>
+  <div class="ev"><span class="c" style="background:var(--gh)">3</span><div><span class="s">GitHub · Beta milestone</span>Due Fri, Nov 14 · 11 of 19 issues closed.</div></div>
+  <div class="ev dim"><span class="c" style="background:var(--sl)">4</span><div><span class="s">Slack · Jordan · Oct 19</span>Push notifications are blocked.</div></div>
+  <div class="ev dim"><span class="c" style="background:var(--gh)">6</span><div><span class="s">GitHub · #42</span>Login loop on Android 15.</div></div>
+</aside>
+</body></html>
