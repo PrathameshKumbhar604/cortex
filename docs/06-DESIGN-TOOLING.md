@@ -1,35 +1,37 @@
-# Design Tooling Setup (Codex / Claude Code)
+# Design Tooling Setup (Claude Code)
 
-> Note: in the original video transcript, "google/gogolee" is a mistranscription of the coding agent (**Claude**/**Codex**).
+Cortex is built only with Claude-compatible tooling. The target look is a clean, premium, YC-startup aesthetic.
 
-## 0. Install Codex CLI
+## 1. UI UX Pro Max (Claude skill: typography, colour, spacing and UX rules)
 
 ```bash
-# Requires Node.js LTS (you have v24)
-npm install -g @openai/codex      # NOT `npm i -g codex`, which is an unrelated package
-codex --version
-codex                              # first run → sign in with your ChatGPT account
+npx ui-ux-pro-max-cli init --ai claude      # installs to .claude/skills/ui-ux-pro-max/
+# or, inside Claude Code:
+# /plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
+# /plugin install ui-ux-pro-max@ui-ux-pro-max-skill
 ```
 
-- On Windows, OpenAI and most guides recommend running Codex inside **WSL** for the most reliable sandbox. Native PowerShell works but uses an experimental sandbox.
-- Update with `npm install -g @openai/codex@latest`.
-- Codex usage limits depend on your ChatGPT plan.
-
-## 1. Impeccable (design skill that makes UIs look less AI-generated)
+It activates automatically on UI work in Claude Code. To generate a design system:
 
 ```bash
-# From the project root; auto-detects Claude Code / Codex / Cursor
-npx skills add pbakaus/impeccable
-# or (per the README)
-npx impeccable install
+python .claude/skills/ui-ux-pro-max/scripts/search.py "AI SaaS dashboard minimal premium" --design-system --persist -p "Cortex"
 ```
 
-Then run `/impeccable init` inside your agent. This saves design context to `.impeccable.md`. In Codex, the commands are invoked as `/prompts:audit`, `/prompts:polish`, etc. Docs: https://impeccable.style · https://github.com/pbakaus/impeccable
+Repo: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
 
-## 2. Motion (animations for React)
+## 2. Impeccable (Claude skill: anti-generic design review)
 
 ```bash
-pnpm --filter web add motion
+npx impeccable install           # from the repo root
+# or, inside Claude Code: /plugin marketplace add pbakaus/impeccable
+```
+
+Inside Claude Code, run `/impeccable init` once (it writes `PRODUCT.md`), then use `/impeccable critique`, `/impeccable audit`, `/impeccable polish`, `/impeccable animate`, `/impeccable typeset`, etc. Repo: https://github.com/pbakaus/impeccable
+
+## 3. Motion (React animation)
+
+```bash
+npm install motion -w apps/web
 ```
 
 ```tsx
@@ -38,25 +40,6 @@ import { motion, AnimatePresence } from "motion/react";
 
 Docs: https://motion.dev/docs/react-installation
 
-## 3. UI UX Pro Max (typography, colours, spacing and UX rules)
-
-```bash
-npm install -g uipro-cli
-uipro init --ai codex     # or: --ai claude
-```
-
-In Codex it activates automatically on UI/UX requests. Repo: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
-
 ## 4. Visual reference
 
-- **MotionSites** (motionsites.ai) sells hero-section prompts (≈$149/yr). It is **paid**, which conflicts with the all-free rule.
-- Free alternatives: browse **Dribbble**, **Mobbin (free tier)**, **Godly.website** or **Linear/Vercel/Raycast's** own sites, then describe the look in a prompt. Suggested reference for Cortex: *"Linear-style dark minimal, Vercel-like typography, Raycast-style command bar."*
-
-## 5. Prompt pattern
-
-```
-Build the Cortex chat + trace screen (see docs/04-INTERFACES.md).
-Visual reference: <pasted prompt / description>.
-Use Motion for step reveals in the trace panel, shadcn/ui primitives,
-follow Impeccable + UI UX Pro Max guidance. Minimal, one accent colour.
-```
+MotionSites is paid, so Cortex uses free references instead: Linear (density, restraint), Vercel (typography, monochrome), Raycast (command bar) and Attio (calm data surfaces).

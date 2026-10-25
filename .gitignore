@@ -10,3 +10,5 @@ __pycache__/
 *.pyc
 wallet/
 .DS_Store
+.cache/
+services/memory/data/
