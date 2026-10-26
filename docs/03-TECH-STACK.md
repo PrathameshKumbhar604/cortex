@@ -4,18 +4,18 @@ Everything is TypeScript except the memory sidecar, which uses Python because Or
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Monorepo | **pnpm workspaces + Turborepo** | One repo for web, agent, connectors, llm and the Python sidecar |
-| Web | **Next.js (App Router) + React + TypeScript** | SSR, API routes, streaming, free Vercel hosting |
-| Styling/UI | **Tailwind CSS v4 + shadcn/ui** | Minimal, accessible primitives that you own |
+| Monorepo | **npm workspaces** | One repo for web, agent, connectors, llm and the Python sidecar |
+| Web | **Next.js 16 (App Router) + React 19 + TypeScript** | SSR, route handlers, SSE streaming, free Vercel hosting |
+| Styling/UI | **Tailwind CSS v4** + hand-built components, **lucide-react** icons | Minimal; design system in apps/web/DESIGN.md |
 | Animation | **Motion** (`motion/react`, formerly Framer Motion) | Trace-step reveals, layout animations, micro-interactions |
 | Agent orchestration | **Hand-written orchestrator** (TypeScript async generator) | Explicit, bounded steps (LLM-call, tool-call and time budgets), parallel fan-out, streamed events; traced with LangSmith `traceable` |
-| LLMs | **Puter.js** (user-pays) + free-tier pool (Gemini, Groq, Cerebras, OpenRouter) | $0 to the developer; see the router in the architecture doc |
-| Connectors | **Composio TS SDK** (managed OAuth) | One-click connect for Gmail, Calendar, Drive, Notion, Slack, GitHub |
+| LLMs | Free-tier pool (Groq, Gemini, Cerebras, OpenRouter) with **Puter** as last-resort fallback, all via OpenAI-compatible APIs | $0; see the router in the architecture doc |
+| Connectors | **Composio** (managed OAuth): hosted MCP for consumer keys, TS SDK for project keys; any MCP server via config | One-click connect for Gmail, Calendar, Drive, Notion, Slack, GitHub |
 | Web data | **Firecrawl** (`@mendable/firecrawl-js` / MCP) | Scrape/search/crawl/extract for web evidence |
-| Memory | **Oracle Agent Memory** (`oracleagentmemory==26.4.0`) in **FastAPI** | Short- and long-term memory with automatic extraction |
-| Database | **Oracle Autonomous AI Database 26ai — Always Free** | Memory, evidence snapshots and vector search in one DB |
+| Memory | **Oracle Agent Memory** (`oracleagentmemory` 26.x) in **FastAPI**, SQLite ledger/fallback | Long-term memory with Cortex's salience policy (automatic extraction off), short-term threads |
+| Database | **Oracle AI Database Free** (local Docker) or **Autonomous AI Database Always Free** (cloud) | Memory storage and vector search |
 | Embeddings | **Gemini `gemini-embedding-001`** (free tier) | Supported by Oracle Agent Memory |
-| Auth | **Puter sign-in** as identity (MVP) | One sign-in gives both identity and an LLM budget; swappable later |
+| Identity | Anonymous per-browser cookie set in `proxy.ts` (MVP) | No sign-up needed; Composio links accounts to this id |
 | Validation | **Zod** | Typed tool I/O and structured LLM outputs |
 | Observability | **LangSmith** (free) + in-app trace store | Required for the "show the whole flow" demo |
 | Tests/evals | **Vitest** + custom eval runner on the seeded dataset | Resume metrics: groundedness, citation precision, latency |
@@ -33,7 +33,7 @@ cortex/
 │  └─ shared/              # Zod schemas, types
 ├─ services/
 │  └─ memory/              # Python FastAPI + Oracle Agent Memory
-├─ evals/                  # Seeded "Northwind Labs" dataset + runner
+├─ evals/                  # 12-question eval over the sample workspace + runner
 └─ docs/
 ```
 
