@@ -16,7 +16,7 @@
 ┌──────▼───────────┐  ┌────────▼──────────────────┐  ┌──────▼──────────────┐
 │ services/memory  │  │ packages/connectors       │  │ packages/llm        │
 │ FastAPI          │  │ Registry: Composio (6     │  │ Free-tier router:   │
-│ Oracle Agent     │  │ apps), Firecrawl (web),   │  │ Gemini → Groq →     │
+│ Oracle Agent     │  │ apps), Firecrawl (web),   │  │ Groq → Gemini →     │
 │ Memory + SQLite  │  │ any MCP server, sample    │  │ Cerebras → Open-    │
 │ ledger/fallback  │  │ workspace                 │  │ Router → Puter      │
 └──────────────────┘  └───────────────────────────┘  └─────────────────────┘
@@ -31,7 +31,7 @@ The orchestrator is hand-written rather than built on a graph framework. Every b
 |------|-----------|-----------|-----------|
 | understand | Check which connectors are live; report the ones that are down | same | 0 |
 | recall | Search memory (pinned memories always included) | same | 0 |
-| plan | Strong model writes 2–5 sub-questions, sources, keyword queries, time window | One sub-question over every source, window parsed locally | 1 / 0 |
+| plan | Fast-tier model writes 2–5 sub-questions, sources, keyword queries, time window | One sub-question over every source, window parsed locally | 1 / 0 |
 | search | All (sub-question × source) pairs in parallel, deduplicated, cached 90 s; one broadened retry for empty sub-questions | Same, no retry | 0 |
 | synthesize | Strong model, streamed; answer plus `CONFLICTS / MISSING / ACTIONS / MEMORY` sections | Fast model, shorter | 1 |
 | verify | Lexical claim check (citations exist, content overlap, numbers match); LLM re-check only for doubtful claims | Lexical only | 0–1 / 0 |
@@ -79,7 +79,7 @@ Oracle's automatic extraction is **off**. Cortex's policy decides what is kept: 
 ## LLM router (`packages/llm`)
 
 - Every provider is OpenAI-compatible, so one client covers them all.
-- Failover order: Gemini → Groq → Cerebras → OpenRouter `:free` → Puter (fallback).
+- Failover order: Groq → Gemini → Cerebras → OpenRouter `:free` → Puter (fallback).
 - Cooldowns: 429 → `retry-after` or 60 s; bad key → 10 min; out of credit → 1 h.
 - Two tiers: `strong` for planning and synthesis, `fast` for verification and Fast Mode.
 - An LRU response cache (6 h by default, persisted to `.cache/`) means identical prompts cost nothing.

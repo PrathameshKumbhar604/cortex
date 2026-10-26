@@ -8,7 +8,7 @@ Everything is TypeScript except the memory sidecar, which uses Python because Or
 | Web | **Next.js (App Router) + React + TypeScript** | SSR, API routes, streaming, free Vercel hosting |
 | Styling/UI | **Tailwind CSS v4 + shadcn/ui** | Minimal, accessible primitives that you own |
 | Animation | **Motion** (`motion/react`, formerly Framer Motion) | Trace-step reveals, layout animations, micro-interactions |
-| Agent orchestration | **LangGraph.js** | Explicit graph, parallel fan-out, `interrupt()` for HITL plan editing, native LangSmith tracing |
+| Agent orchestration | **Hand-written orchestrator** (TypeScript async generator) | Explicit, bounded steps (LLM-call, tool-call and time budgets), parallel fan-out, streamed events; traced with LangSmith `traceable` |
 | LLMs | **Puter.js** (user-pays) + free-tier pool (Gemini, Groq, Cerebras, OpenRouter) | $0 to the developer; see the router in the architecture doc |
 | Connectors | **Composio TS SDK** (managed OAuth) | One-click connect for Gmail, Calendar, Drive, Notion, Slack, GitHub |
 | Web data | **Firecrawl** (`@mendable/firecrawl-js` / MCP) | Scrape/search/crawl/extract for web evidence |
@@ -27,7 +27,7 @@ cortex/
 ├─ apps/
 │  └─ web/                 # Next.js UI + API routes (agent runs server-side)
 ├─ packages/
-│  ├─ agent/               # LangGraph graph, nodes, prompts, AgentEvent types
+│  ├─ agent/               # Orchestrator, prompts, verification, actions, memory client
 │  ├─ connectors/          # Composio + Firecrawl tool wrappers → Evidence
 │  ├─ llm/                 # Free-LLM router (Puter + failover pool)
 │  └─ shared/              # Zod schemas, types
