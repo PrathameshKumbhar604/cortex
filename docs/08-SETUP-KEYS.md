@@ -25,7 +25,18 @@ Gemini on its own is enough to run Cortex. Each extra provider adds headroom bef
 
 ## Memory: Oracle AI Database + Oracle Agent Memory
 
-**Option A, local (fastest for development, uses Docker):**
+**Option A1, local Windows install (what this project uses):**
+1. Install **Oracle AI Database 26ai Free** for Windows and note the password you set.
+2. Check it is up: `npm run oracle:local` (verifies the `OracleServiceFREE` service and port 1521).
+3. Create a least-privilege app user once, as SYSTEM in SQL*Plus or SQL Developer, connected to `FREEPDB1`:
+   ```sql
+   CREATE USER cortex IDENTIFIED BY "<strong password>" DEFAULT TABLESPACE users QUOTA UNLIMITED ON users;
+   GRANT DB_DEVELOPER_ROLE, CREATE SESSION TO cortex;
+   ```
+4. In `.env`: `ORACLE_DB_USER=cortex`, `ORACLE_DB_PASSWORD=<that password>`, `ORACLE_DB_DSN=localhost:1521/FREEPDB1`.
+5. `npm run memory`, then `curl localhost:8000/health` should report `"backend":"oracle"`. Tables are created on first start.
+
+**Option A2, local Docker:**
 ```bash
 docker run -d --name cortex-oracle -p 1521:1521 -e ORACLE_PWD=CortexDev_123 \
   container-registry.oracle.com/database/free:latest
