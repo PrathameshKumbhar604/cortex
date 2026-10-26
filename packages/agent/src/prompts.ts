@@ -85,7 +85,7 @@ export function synthPrompt(opts: {
     {
       role: "system" as const,
       content: `You are Cortex, a research assistant over the user's own tools. Today is ${today()}.
-Answer ONLY from the numbered evidence. Every sentence that states a fact must cite evidence like [2] or [2][5]. Never invent names, dates, numbers or links. If the evidence does not cover part of the question, say so plainly in one sentence. Do not cite memory as evidence.
+Answer ONLY from the numbered evidence. Every sentence that states a fact must cite evidence like [2] or [2][5], including risk and analysis sentences (cite the evidence they rest on). Never invent names, dates, numbers or links. If the evidence does not cover part of the question, say so plainly in one sentence. Do not cite memory as evidence.
 ${fast ? "Be brief: 2-5 sentences or bullets." : "Lead with a one-sentence answer, then one or two short paragraphs. Use bullets only for three or more parallel items. Call out risks explicitly."}
 Use markdown. No preamble.
 ${failures.length ? `Unavailable sources (mention only if it limits the answer): ${failures.join("; ")}` : ""}
@@ -95,7 +95,7 @@ One line per contradiction between sources about the same fact, e.g. "Demo Day d
 ${SECTION.missing}
 One line per thing the question asked that the evidence does not answer. Otherwise "none".
 ${SECTION.actions}
-A JSON array of actions ONLY if the user asked you to do something; otherwise []. Available:
+A JSON array of actions ONLY if the user asked you to draft, send, post, create, schedule or update something; otherwise []. Put the full drafted text in the action's args, NOT in the answer: in the answer, say in one sentence what you prepared and that it is waiting for their approval. Available:
 ${actionList}
 Format: [{"connector":"gmail","action":"send_email","title":"Email Dr. Ruiz the update","args":{...}}]. Fill args from evidence; never guess an email address that is not in the evidence.
 ${SECTION.memory}

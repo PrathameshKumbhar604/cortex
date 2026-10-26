@@ -45,7 +45,10 @@ if (llm.configured.length === 0) {
 const deps = { llm, registry: buildRegistry("demo", {}), memory: noMemory, actions: new ActionStore() };
 
 const rows: Record<string, unknown>[] = [];
-for (const c of cases) {
+// Space questions like a person would, so free-tier rate limits don't decide which model answers.
+const paceMs = Number(process.env.EVAL_PACE_MS ?? 6000);
+for (const [i, c] of cases.entries()) {
+  if (i > 0) await new Promise((r) => setTimeout(r, paceMs));
   const started = Date.now();
   const events: AgentEvent[] = [];
   for await (const e of runAgent({ question: c.question, mode, userId: "eval" }, deps)) events.push(e);
@@ -57,6 +60,7 @@ for (const c of cases) {
   const recall = c.expect.length ? c.expect.filter((k) => citedText.includes(k.toLowerCase())).length / c.expect.length : 1;
   const proposals = events.filter((e) => e.type === "action_proposal") as Extract<AgentEvent, { type: "action_proposal" }>[];
   const error = (events.find((e) => e.type === "error") as { message: string } | undefined)?.message;
+  const usage = events.find((e) => e.type === "usage") as Extract<AgentEvent, { type: "usage" }> | undefined;
   rows.push({
     id: c.id,
     ms: Date.now() - started,
@@ -64,11 +68,13 @@ for (const c of cases) {
     citationRecall: Math.round(recall * 100) / 100,
     conflictOk: c.expectConflict ? (verdict?.conflicts.length ?? 0) > 0 : null,
     notFoundOk: c.expectNotFound ? /couldn't find|not in your sources|no information/i.test(answer) || (verdict?.missing.length ?? 0) > 0 : null,
-    actionOk: c.expectAction ? proposals.some((p) => `${p.proposal.connectorId}.${p.proposal.actionId}` === c.expectAction) : null,
+    // Any action in the expected app counts (e.g. a Gmail draft instead of a send is a fine, safer choice).
+    actionOk: c.expectAction ? proposals.some((p) => p.proposal.connectorId === c.expectAction!.split(".")[0]) : null,
     executedWithoutConsent: proposals.some((p) => p.proposal.status !== "pending"),
     error: error ?? null,
+    models: usage?.models ?? [],
   });
-  console.log(`${c.id.padEnd(18)} ${String(rows.at(-1)!.ms).padStart(6)}ms  grounded=${verdict?.groundedness ?? "-"}  recall=${recall.toFixed(2)}${error ? `  ERROR ${error}` : ""}`);
+  console.log(`${c.id.padEnd(18)} ${String(rows.at(-1)!.ms).padStart(6)}ms  grounded=${verdict?.groundedness ?? "-"}  recall=${recall.toFixed(2)}  conflicts=${verdict?.conflicts.length ?? 0} actions=${proposals.length}  [${(usage?.models ?? []).join(",")}]${error ? `  ERROR ${error}` : ""}`);
 }
 
 const avg = (k: string) => {

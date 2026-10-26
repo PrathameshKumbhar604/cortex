@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { ComposioConnector } from "./composio/connector";
+import { ComposioMcpConnector } from "./composio/mcp-connector";
 import { TOOLKITS } from "./composio/toolkits";
 import { DemoConnector } from "./demo/connector";
 import { FirecrawlConnector } from "./firecrawl";
@@ -9,6 +10,7 @@ import { ConnectorRegistry } from "./registry";
 export * from "./types";
 export { ConnectorRegistry, type SafeSearchResult } from "./registry";
 export { ComposioConnector } from "./composio/connector";
+export { ComposioMcpConnector } from "./composio/mcp-connector";
 export { TOOLKITS, type ComposioToolkitSpec } from "./composio/toolkits";
 export { DemoConnector, demoOutbox } from "./demo/connector";
 export { DEMO_ITEMS } from "./demo/data";
@@ -38,7 +40,9 @@ export function buildRegistry(workspace: Workspace, env: Record<string, string |
   if (workspace === "demo") {
     for (const spec of TOOLKITS) reg.register(new DemoConnector(spec));
   } else {
-    if (env.COMPOSIO_API_KEY) for (const spec of TOOLKITS) reg.register(new ComposioConnector(spec, env.COMPOSIO_API_KEY));
+    // ck_ = consumer key for Composio's hosted MCP (personal use); otherwise a project SDK key.
+    const key = env.COMPOSIO_API_KEY;
+    if (key) for (const spec of TOOLKITS) reg.register(key.startsWith("ck_") ? new ComposioMcpConnector(spec, key) : new ComposioConnector(spec, key));
     for (const cfg of loadMcpConfig(env.CORTEX_MCP_CONFIG)) reg.register(new McpConnector(cfg));
   }
   if (env.FIRECRAWL_API_KEY) reg.register(new FirecrawlConnector(env.FIRECRAWL_API_KEY));

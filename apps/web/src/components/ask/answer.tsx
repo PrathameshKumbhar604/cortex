@@ -66,6 +66,13 @@ export function Answer({ text, claims, evidence, verified, streaming, onCite, on
               {renderLine(b.lines[0]!, 0)}
             </h3>
           );
+        // Drafts (code or quoted) are Cortex's own writing, not claims about your data: no weighting.
+        if (b.kind === "code" || b.kind === "quote")
+          return (
+            <blockquote key={i} className="mb-4 border-l border-line-strong pl-4 text-[15px] leading-relaxed whitespace-pre-wrap text-ink-2">
+              {b.lines.join("\n").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[\d+\]/g, "")}
+            </blockquote>
+          );
         if (b.kind === "list")
           return (
             <ul key={i} className="mb-4 flex flex-col gap-1.5 pl-5 marker:text-hair [list-style:disc]">
@@ -91,14 +98,31 @@ export function Answer({ text, claims, evidence, verified, streaming, onCite, on
   );
 }
 
-type Block = { kind: "p" | "list" | "heading"; lines: string[] };
+type Block = { kind: "p" | "list" | "heading" | "code" | "quote"; lines: string[] };
 
 function toBlocks(text: string): Block[] {
   const out: Block[] = [];
+  let fence: Block | null = null;
   for (const raw of text.split("\n")) {
     const line = raw.trimEnd();
+    if (/^\s*```/.test(line)) {
+      if (fence) fence = null;
+      else out.push((fence = { kind: "code", lines: [] }));
+      continue;
+    }
+    if (fence) {
+      fence.lines.push(raw);
+      continue;
+    }
     if (!line.trim()) {
       out.push({ kind: "p", lines: [] });
+      continue;
+    }
+    if (/^\s*>/.test(line)) {
+      const last = out.at(-1);
+      const text = line.replace(/^\s*>\s?/, "");
+      if (last?.kind === "quote") last.lines.push(text);
+      else out.push({ kind: "quote", lines: [text] });
       continue;
     }
     const kind: Block["kind"] = /^\s*(?:[-*•]|\d+\.)\s+/.test(line) ? "list" : /^#+\s/.test(line) ? "heading" : "p";

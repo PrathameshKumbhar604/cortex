@@ -36,7 +36,7 @@ export class LlmUnavailableError extends Error {
 }
 
 const DEFAULT_CACHE_TTL = 1000 * 60 * 60 * 6;
-const REQUEST_TIMEOUT_MS = 45_000;
+const REQUEST_TIMEOUT_MS = 25_000;
 
 interface Health {
   cooldownUntil: number;
@@ -121,6 +121,8 @@ export class LlmRouter {
     }
 
     const attempts: { provider: string; reason: string }[] = [];
+    for (let round = 0; round < 2; round++) {
+    if (round === 1 && !(await this.waitForCapacity(opts.signal))) break;
     for (const p of this.available()) {
       if (opts.signal?.aborted) throw new Error("aborted");
       const model = p.models[opts.tier];
@@ -147,7 +149,26 @@ export class LlmRouter {
         attempts.push({ provider: p.label, reason: this.markFailure(p, err) });
       }
     }
+    }
     throw new LlmUnavailableError(attempts);
+  }
+
+  /**
+   * When every provider is briefly rate-limited, wait for the soonest one
+   * (up to 12s) once, instead of failing a burst of requests outright.
+   */
+  private async waitForCapacity(signal?: AbortSignal): Promise<boolean> {
+    if (this.providers.length === 0) return false;
+    const soonest = Math.min(...this.providers.map((p) => this.health.get(p.id)?.cooldownUntil ?? 0));
+    const wait = soonest - Date.now();
+    if (wait > 12_000) return false;
+    if (wait > 0) {
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, wait);
+        signal?.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
+      });
+    }
+    return !signal?.aborted;
   }
 
   async json<T>(opts: Omit<CompleteOptions, "json">, validate: (v: unknown) => T): Promise<Completion & { data: T }> {
@@ -171,6 +192,8 @@ export class LlmRouter {
       }
     }
     const attempts: { provider: string; reason: string }[] = [];
+    for (let round = 0; round < 2; round++) {
+    if (round === 1 && !(await this.waitForCapacity(opts.signal))) break;
     for (const p of this.available()) {
       const model = p.models[opts.tier];
       let started = false;
@@ -205,6 +228,7 @@ export class LlmRouter {
         if (started) throw new Error(`${p.label} stopped mid-answer (${reason})`);
         attempts.push({ provider: p.label, reason });
       }
+    }
     }
     throw new LlmUnavailableError(attempts);
   }

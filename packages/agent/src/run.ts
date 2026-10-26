@@ -220,7 +220,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         budget.llmCalls++;
         const res = await deps.llm.json(
           {
-            tier: "strong",
+            tier: "fast", // planning is short structured output; keep the strong model's quota for the answer
             messages: planPrompt(
               input.question,
               connected.map((c) => ({ id: c.id, describes: c.describes })),
@@ -357,7 +357,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       signal,
     })) {
       if ("token" in part) {
-        raw += part.token;
+        raw += part.token.replace(/【/g, "[").replace(/】/g, "]");
         const cut = streamCutoff(raw);
         if (cut > forwarded) {
           yield { type: "token", text: raw.slice(forwarded, cut) };

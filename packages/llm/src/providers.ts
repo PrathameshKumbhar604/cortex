@@ -24,19 +24,6 @@ export function loadProviders(env: Env = process.env): ProviderConfig[] {
     return [{ id: "mock", label: "Mock (dev only)", baseURL: env.CORTEX_MOCK_LLM_URL, apiKey: "mock", models: { strong: "mock", fast: "mock" }, supportsJsonMode: true }];
   }
   const candidates: (ProviderConfig | null)[] = [
-    env.GEMINI_API_KEY
-      ? {
-          id: "gemini",
-          label: "Gemini",
-          baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-          apiKey: env.GEMINI_API_KEY,
-          models: {
-            strong: env.GEMINI_MODEL_STRONG ?? "gemini-flash-latest",
-            fast: env.GEMINI_MODEL_FAST ?? "gemini-flash-lite-latest",
-          },
-          supportsJsonMode: true,
-        }
-      : null,
     env.GROQ_API_KEY
       ? {
           id: "groq",
@@ -45,7 +32,20 @@ export function loadProviders(env: Env = process.env): ProviderConfig[] {
           apiKey: env.GROQ_API_KEY,
           models: {
             strong: env.GROQ_MODEL_STRONG ?? "openai/gpt-oss-120b",
-            fast: env.GROQ_MODEL_FAST ?? "llama-3.1-8b-instant",
+            fast: env.GROQ_MODEL_FAST ?? "openai/gpt-oss-20b",
+          },
+          supportsJsonMode: true,
+        }
+      : null,
+    env.GEMINI_API_KEY
+      ? {
+          id: "gemini",
+          label: "Gemini",
+          baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+          apiKey: env.GEMINI_API_KEY,
+          models: {
+            strong: env.GEMINI_MODEL_STRONG ?? "gemini-3.5-flash-lite",
+            fast: env.GEMINI_MODEL_FAST ?? "gemini-flash-lite-latest",
           },
           supportsJsonMode: true,
         }
@@ -70,8 +70,8 @@ export function loadProviders(env: Env = process.env): ProviderConfig[] {
           baseURL: "https://openrouter.ai/api/v1",
           apiKey: env.OPENROUTER_API_KEY,
           models: {
-            strong: env.OPENROUTER_MODEL_STRONG ?? "openai/gpt-oss-120b:free",
-            fast: env.OPENROUTER_MODEL_FAST ?? "meta-llama/llama-3.3-70b-instruct:free",
+            strong: env.OPENROUTER_MODEL_STRONG ?? "nvidia/nemotron-3-super-120b-a12b:free",
+            fast: env.OPENROUTER_MODEL_FAST ?? "google/gemma-4-31b-it:free",
           },
           supportsJsonMode: false,
         }

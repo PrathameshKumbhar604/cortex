@@ -58,7 +58,7 @@ export function splitSections(text: string): Sections {
     return text.slice(start, end);
   };
   return {
-    answer: text.slice(0, answerEnd).trim(),
+    answer: text.slice(0, answerEnd).replace(/(\n\s*(-{3,}|\*{3,}|_{3,})\s*)+$/, "").trim(),
     conflicts: lines(body(SECTION.conflicts)),
     missing: lines(body(SECTION.missing)),
     actions: jsonArray(body(SECTION.actions)),
@@ -82,15 +82,36 @@ const FACTUAL = /\d|[A-Z][a-z]+ [A-Z]|#\d+|\b(?:due|deadline|blocked|moved|merge
  * Cheap claim verification: every factual sentence must cite existing evidence
  * and share enough content words (and every number) with it.
  */
+const HEDGE =
+  /\b(couldn't|could not|can't|cannot|no (?:evidence|data|information|statements?|mention|record)|not (?:found|mentioned|available|contain)|does(?:n't| not) (?:contain|mention|say|include)|make[s]? no mention|speculative|unclear|unknown)\b/i;
+
+function score(text: string, cited: Evidence[]): Claim["status"] {
+  const hay = cited.map((e) => `${e.title} ${e.quote} ${e.author ?? ""} ${e.timestamp ?? ""}`).join(" ");
+  const hayTokens = new Set(contentTokens(hay));
+  const toks = contentTokens(text);
+  const overlap = toks.length ? toks.filter((t) => hayTokens.has(t)).length / toks.length : 1;
+  const numbers = text.replace(/\[\d+\]/g, "").match(/\b\d+(?:[.,]\d+)?%?/g) ?? [];
+  const numbersOk = numbers.every((n) => hay.includes(n.replace(/%$/, "")));
+  return overlap >= 0.4 && numbersOk ? "supported" : overlap >= 0.2 ? "partial" : "unsupported";
+}
+
+/**
+ * Cheap claim verification: every factual sentence must cite existing evidence
+ * and share enough content words (and every number) with it. An uncited
+ * sentence that elaborates the cited sentence before it is checked against
+ * that sentence's evidence instead of being failed outright.
+ */
 export function verifyClaims(answer: string, evidence: Evidence[]): Claim[] {
   const claims: Claim[] = [];
+  let previous: Evidence[] = [];
   for (const text of claimUnits(answer)) {
     const refs = [...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
     if (refs.length === 0) {
-      // Hedges ("I couldn't find…") and connective sentences don't need citations.
-      if (FACTUAL.test(text) && !/\b(couldn't|could not|no (?:evidence|data|information)|not (?:found|mentioned|available))\b/i.test(text)) {
-        claims.push({ text, evidenceIds: [], status: "unsupported" });
-      }
+      // Hedges ("the evidence doesn't mention…") and connective sentences don't need citations.
+      if (!FACTUAL.test(text) || HEDGE.test(text)) continue;
+      // Inherit support only on a strong match; an uncited sentence never earns "partial".
+      const inherited = previous.length && score(text, previous) === "supported";
+      claims.push({ text, evidenceIds: inherited ? previous.map((e) => e.id) : [], status: inherited ? "supported" : "unsupported" });
       continue;
     }
     const cited = refs.map((n) => evidence[n - 1]).filter((e): e is Evidence => !!e);
@@ -98,14 +119,8 @@ export function verifyClaims(answer: string, evidence: Evidence[]): Claim[] {
       claims.push({ text, evidenceIds: [], status: "unsupported" });
       continue;
     }
-    const hay = cited.map((e) => `${e.title} ${e.quote} ${e.author ?? ""} ${e.timestamp ?? ""}`).join(" ");
-    const hayTokens = new Set(contentTokens(hay));
-    const toks = contentTokens(text);
-    const overlap = toks.length ? toks.filter((t) => hayTokens.has(t)).length / toks.length : 1;
-    const numbers = (text.replace(/\[\d+\]/g, "").match(/\b\d+(?:[.,]\d+)?%?/g) ?? []).filter((n) => n.length > 0);
-    const numbersOk = numbers.every((n) => hay.includes(n.replace(/%$/, "")));
-    const status = overlap >= 0.4 && numbersOk ? "supported" : overlap >= 0.2 ? "partial" : "unsupported";
-    claims.push({ text, evidenceIds: cited.map((e) => e.id), status });
+    previous = cited;
+    claims.push({ text, evidenceIds: cited.map((e) => e.id), status: score(text, cited) });
   }
   return claims;
 }

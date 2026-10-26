@@ -149,14 +149,22 @@ export function sourceName(id: string): string {
  * Shared by the verifier and the UI so both agree on what a "claim" is.
  */
 export function claimUnits(markdown: string): string[] {
-  return markdown.split("\n").flatMap(lineUnits);
+  return markdown
+    .replace(/```[\s\S]*?(```|$)/g, "") // drafts and code are not claims
+    .split("\n")
+    .filter((l) => !/^\s*>/.test(l)) // neither are quoted drafts
+    .flatMap(lineUnits)
+    .filter((u) => !META.test(u));
 }
+
+/** Sentences about Cortex's own work (drafts, approvals), not about the user's data. */
+const META = /\b(I(?:'|’)ve prepared|I prepared|I(?:'|’)ve drafted|waiting for your approval|ready for your approval|for you to approve|draft (?:is|below))\b/i;
 
 export function lineUnits(line: string): string[] {
   const l = line.replace(/^\s*(?:[-*•]|\d+\.)\s+/, "").replace(/^#+\s*/, "").trim();
   if (!l) return [];
   return l
-    .split(/(?<=[.!?](?:\s*\[\d+\])*)\s+(?=[A-Z])/)
+    .split(/(?<!\b(?:Dr|Mr|Ms|Mrs|Prof|St|vs|No|e\.g|i\.e)\.)(?<=[.!?](?:\s*\[\d+\])*)\s+(?=[A-Z*])/)
     .map((s) => s.trim())
     .filter((s) => s.length > 12);
 }
