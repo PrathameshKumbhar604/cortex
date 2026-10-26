@@ -20,7 +20,8 @@
     "eval:fast": "tsx evals/run.ts fast",
     "mock-llm": "node scripts/mock-llm.mjs",
     "screenshots": "node scripts/screenshots.mjs",
-    "memory:setup": "cd services/memory && python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt"
+    "memory:setup": "cd services/memory && python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt",
+    "oracle:local": "node scripts/oracle-local.mjs"
   },
   "devDependencies": {
     "@next/env": "^16.4.3",
