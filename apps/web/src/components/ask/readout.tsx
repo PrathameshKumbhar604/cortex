@@ -29,6 +29,9 @@ export function Readout({ turn }: { turn: Turn }) {
   const supported = turn.claims.filter((c) => c.status === "supported").length;
 
   const parts: React.ReactNode[] = [<span key="m" className={turn.mode === "fast" ? "text-ink" : ""}>{turn.mode === "fast" ? "Fast" : "Deep"}</span>];
+  if (turn.route?.route === "general") parts.push(<span key="r" className="text-ink-2">General knowledge · not from your sources</span>);
+  else if (turn.route?.route === "web") parts.push(<span key="r">Web</span>);
+  else if (turn.route?.sources.length) parts.push(<span key="r">{turn.route.sources.map(sourceName).join(" · ")}</span>);
   if (turn.plan && turn.mode === "deep") parts.push(<span key="p">Plan {turn.plan.subQuestions.length}</span>);
   if (searched) parts.push(<span key="s">Searched {searched}{searchMs ? ` · ${seconds(searchMs)}` : ""}</span>);
   if (found) parts.push(<span key="f">{found} found</span>);

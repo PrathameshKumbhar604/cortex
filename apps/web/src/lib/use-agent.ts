@@ -10,6 +10,7 @@ import type {
   Evidence,
   MemoryItem,
   Plan,
+  RouteDecision,
   RunMode,
   SourceFailure,
   StepId,
@@ -34,6 +35,7 @@ export interface Turn {
   startedAt: number;
   steps: Record<StepId, StepState>;
   plan?: Plan;
+  route?: RouteDecision;
   tools: ToolCall[];
   evidence: Evidence[];
   failures: SourceFailure[];
@@ -86,6 +88,8 @@ function reduce(t: Turn, e: AgentEvent): Turn {
         steps: { ...t.steps, [e.step]: { status: e.status, detail: e.detail ?? prev.detail, at, ms: e.status === "active" ? undefined : e.ms ?? now - at } },
       };
     }
+    case "route":
+      return { ...t, route: e.decision };
     case "plan":
       return { ...t, plan: e.plan };
     case "tool_call":

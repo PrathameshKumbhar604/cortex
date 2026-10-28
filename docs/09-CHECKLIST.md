@@ -5,11 +5,11 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 
 ## Decisions needed before building
 
-- ? **D1 Auth provider (#7).** Options: email magic link + Google sign-in with Better Auth (free, self-hosted, data in Oracle), or Clerk free tier (hosted). Recommendation: Better Auth.
-- ? **D2 Admin panel scope (#11).** Minimum: user list, roles (admin/member), disable user, usage per user (LLM calls, searches, actions), connector status, memory counts. Is there one admin (you), or an org with several?
-- ? **D3 "Playful" vs the brand (#8).** PRODUCT.md currently says "must not feel playful". Proposal: playful *motion and micro-interactions* (springs, tactile presses, sounds) while keeping the calm visual world. Update PRODUCT.md once agreed.
-- ? **D4 Composio mode (#4).** The consumer `ck_` key ties every connected account to *your* Composio account. With real multi-user auth (D1) we need a Composio *project* key so each Cortex user connects their own accounts.
-- ? **D5 Router model (#3).** "jev" is unclear: confirm the name/link. Meanwhile research free-tier small models for intent routing.
+- [x] **D1 Auth provider (#7): approved, Better Auth.** Options: email magic link + Google sign-in with Better Auth (free, self-hosted, data in Oracle), or Clerk free tier (hosted). Recommendation: Better Auth.
+- [x] **D2 Admin panel scope (#11): approved minimum scope.** Minimum: user list, roles (admin/member), disable user, usage per user (LLM calls, searches, actions), connector status, memory counts. Is there one admin (you), or an org with several?
+- [x] **D3 "Playful" vs the brand (#8): approved, playful motion on a calm visual world.** PRODUCT.md currently says "must not feel playful". Proposal: playful *motion and micro-interactions* (springs, tactile presses, sounds) while keeping the calm visual world. Update PRODUCT.md once agreed.
+- [x] **D4 Composio mode (#4): approved, project key for multi-user.** The consumer `ck_` key ties every connected account to *your* Composio account. With real multi-user auth (D1) we need a Composio *project* key so each Cortex user connects their own accounts.
+- [x] **D5 Router model (#3).** Jev (TypeSafe's decision model) is available only as OpenRouter's `typesafe/jev-router`, which bills the model it picks; a test restricted to free models still routed to a paid one ($0.000082). Not free-tier safe, so the same idea is built on free models: rules first, then Groq gpt-oss-20b with low reasoning.
 
 ## 1. Dark mode (#1)
 
@@ -28,11 +28,11 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 ## 3. Intent routing: when to search, which model (#3)
 
 Root cause today: only Deep mode can classify "chat" intent, and only after spending the planner call; Fast mode always searches every connector.
-- [ ] Add a cheap router step before planning (fast model or rules + small model) that returns one of: `general` (answer directly, no connectors), `research` (search connectors), `action` (research then propose), `web` (Firecrawl), `memory` (about the user).
-- [ ] Router also picks the model tier and the connectors to touch (e.g. "my emails" → Gmail only).
-- [ ] General questions: answered directly, labelled "General knowledge, not from your sources", no "couldn't find" message.
-- [ ] Research free-tier routing models (D5) and record the choice in docs.
-- Tests: [ ] 20-question routing set (general / personal / mixed / action) with ≥90% correct route; [ ] general questions make 0 connector calls; [ ] add router accuracy to `npm run eval`.
+- [x] Add a cheap router step before planning (fast model or rules + small model) that returns one of: `general` (answer directly, no connectors), `research` (search connectors), `action` (research then propose), `web` (Firecrawl), `memory` (about the user).
+- [x] Router also picks the model tier and the connectors to touch (e.g. "my emails" → Gmail only).
+- [x] General questions: answered directly, labelled "General knowledge, not from your sources", no "couldn't find" message.
+- [x] Research free-tier routing models (D5) and record the choice in docs.
+- Tests: [x] 20-question routing set: 20/20 (`npm run eval:routing`); [x] general questions make 0 connector calls (unit test); [x] router accuracy is its own eval script. Main eval after #3: actions 2/2, citation recall 0.92, groundedness 0.75 (stricter checker), median 4.6 s.
 
 ## 4. Live connectors that actually work at scale (#4)
 

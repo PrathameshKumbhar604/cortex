@@ -103,11 +103,22 @@ export interface SourceFailure {
   impact: string;
 }
 
+export type RouteKind = "general" | "personal" | "web" | "action";
+
+export interface RouteDecision {
+  route: RouteKind;
+  sources: SourceId[];
+  tier: "strong" | "fast";
+  reason: string;
+  by: "rules" | "model" | "fallback";
+}
+
 export type StepId = "understand" | "recall" | "plan" | "search" | "synthesize" | "verify" | "remember";
 
 export type AgentEvent =
   | { type: "run"; runId: string; mode: RunMode; threadId: string }
   | { type: "step"; step: StepId; status: "active" | "done" | "skipped"; detail?: string; ms?: number }
+  | { type: "route"; decision: RouteDecision }
   | { type: "memory_used"; items: MemoryItem[] }
   | { type: "plan"; plan: Plan }
   | { type: "tool_call"; id: string; source: SourceId; query: string; subQuestionId?: string }

@@ -13,6 +13,10 @@ export interface CompleteOptions {
   json?: boolean;
   maxTokens?: number;
   temperature?: number;
+  /** Reasoning models only: how much to think. Default medium; use low for tiny classification calls. */
+  reasoning?: "low" | "medium" | "high";
+  /** Provider to try first (spreads load across separate free-tier quotas); others remain as fallback. */
+  prefer?: string;
   /** Cache TTL in ms; 0 disables caching for this call. */
   cacheTtlMs?: number;
   signal?: AbortSignal;
@@ -71,7 +75,13 @@ export class LlmRouter {
     return c;
   }
 
-  private available(): ProviderConfig[] {
+  private available(prefer?: string): ProviderConfig[] {
+    const list = this.ready();
+    const i = prefer ? list.findIndex((p) => p.id === prefer) : -1;
+    return i > 0 ? [list[i]!, ...list.slice(0, i), ...list.slice(i + 1)] : list;
+  }
+
+  private ready(): ProviderConfig[] {
     const now = Date.now();
     const ready = this.providers.filter((p) => (this.health.get(p.id)?.cooldownUntil ?? 0) <= now);
     // If everything is cooling down, try the one that recovers soonest rather than failing outright.
@@ -87,7 +97,9 @@ export class LlmRouter {
     const status = (err as { status?: number })?.status;
     const h = this.health.get(p.id) ?? { cooldownUntil: 0, failures: 0 };
     h.failures += 1;
-    let cooldown = 15_000 * Math.min(h.failures, 4);
+    // A bad output (empty, unparsable, rejected request) says nothing about the provider's health: no cooldown.
+    const contentError = status === 400 || /empty response|not valid JSON|validate/i.test(String((err as Error)?.message));
+    let cooldown = contentError ? 0 : 15_000 * Math.min(h.failures, 4);
     let reason = err instanceof Error ? err.message.slice(0, 120) : "unknown error";
     if (status === 429) {
       const retryAfter = Number((err as { headers?: Record<string, string> })?.headers?.["retry-after"]);
@@ -114,7 +126,7 @@ export class LlmRouter {
 
   async complete(opts: CompleteOptions): Promise<Completion> {
     const ttl = opts.cacheTtlMs ?? DEFAULT_CACHE_TTL;
-    const key = TtlCache.key(opts.tier, opts.messages, !!opts.json, opts.maxTokens);
+    const key = TtlCache.key(opts.tier, opts.messages, !!opts.json, opts.maxTokens, opts.reasoning);
     if (ttl > 0) {
       const hit = this.cache.get(key);
       if (hit) return { ...hit, cached: true };
@@ -123,7 +135,7 @@ export class LlmRouter {
     const attempts: { provider: string; reason: string }[] = [];
     for (let round = 0; round < 2; round++) {
     if (round === 1 && !(await this.waitForCapacity(opts.signal))) break;
-    for (const p of this.available()) {
+    for (const p of this.available(opts.prefer)) {
       if (opts.signal?.aborted) throw new Error("aborted");
       const model = p.models[opts.tier];
       try {
@@ -132,8 +144,9 @@ export class LlmRouter {
             model,
             messages: opts.messages,
             max_tokens: opts.maxTokens ?? 1200,
-            temperature: opts.temperature ?? 0.2,
+            temperature: opts.temperature ?? 0.1,
             ...(opts.json && p.supportsJsonMode ? { response_format: { type: "json_object" as const } } : {}),
+            ...reasoningHint(model, opts.reasoning),
           },
           { signal: opts.signal },
         );
@@ -194,7 +207,7 @@ export class LlmRouter {
     const attempts: { provider: string; reason: string }[] = [];
     for (let round = 0; round < 2; round++) {
     if (round === 1 && !(await this.waitForCapacity(opts.signal))) break;
-    for (const p of this.available()) {
+    for (const p of this.available(opts.prefer)) {
       const model = p.models[opts.tier];
       let started = false;
       let text = "";
@@ -204,8 +217,9 @@ export class LlmRouter {
             model,
             messages: opts.messages,
             max_tokens: opts.maxTokens ?? 1500,
-            temperature: opts.temperature ?? 0.2,
+            temperature: opts.temperature ?? 0.1,
             stream: true,
+            ...reasoningHint(model, opts.reasoning),
           },
           { signal: opts.signal },
         );
@@ -245,4 +259,12 @@ export function parseJsonLoose(text: string): unknown {
     if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
     throw new Error("response was not valid JSON");
   }
+}
+
+/**
+ * Reasoning models (gpt-oss) spend output tokens thinking before they answer;
+ * on quick fast-tier tasks that can exhaust a small budget and return nothing.
+ */
+function reasoningHint(model: string, effort: "low" | "medium" | "high" = "medium"): Record<string, string> {
+  return /gpt-oss/i.test(model) ? { reasoning_effort: effort } : {};
 }

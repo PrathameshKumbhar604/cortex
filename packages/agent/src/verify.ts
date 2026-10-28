@@ -82,8 +82,11 @@ const FACTUAL = /\d|[A-Z][a-z]+ [A-Z]|#\d+|\b(?:due|deadline|blocked|moved|merge
  * Cheap claim verification: every factual sentence must cite existing evidence
  * and share enough content words (and every number) with it.
  */
+/** Uncited suggestions ("Be sure to…", "Consider…") are advice, not claims about the user's data. */
+const ADVICE = /^\W*(be sure|make sure|remember to|consider|you (?:may|might|should|could|can)|it(?:'|’)s (?:worth|a good idea)|try|let me know|feel free|don(?:'|’)t forget)\b/i;
+
 const HEDGE =
-  /\b(couldn't|could not|can't|cannot|no (?:evidence|data|information|statements?|mention|record)|not (?:found|mentioned|available|contain)|does(?:n't| not) (?:contain|mention|say|include)|make[s]? no mention|speculative|unclear|unknown)\b/i;
+  /\b(couldn't|could not|can't|cannot|no (?:evidence|data|information|statements?|mention|record)|not (?:found|mentioned|available|contain)|does(?:n't| not) (?:contain|mention|say|include)|make[s]? no mention|speculative|unclear|unknown|(?:were|was) (?:not )?found)\b|^\W*no\b/i;
 
 function score(text: string, cited: Evidence[]): Claim["status"] {
   const hay = cited.map((e) => `${e.title} ${e.quote} ${e.author ?? ""} ${e.timestamp ?? ""}`).join(" ");
@@ -91,7 +94,7 @@ function score(text: string, cited: Evidence[]): Claim["status"] {
   const toks = contentTokens(text);
   const overlap = toks.length ? toks.filter((t) => hayTokens.has(t)).length / toks.length : 1;
   const numbers = text.replace(/\[\d+\]/g, "").match(/\b\d+(?:[.,]\d+)?%?/g) ?? [];
-  const numbersOk = numbers.every((n) => hay.includes(n.replace(/%$/, "")));
+  const numbersOk = numbers.every((n) => hay.includes(n.replace(/%$/, ""))) && datesOk(text, hay);
   return overlap >= 0.4 && numbersOk ? "supported" : overlap >= 0.2 ? "partial" : "unsupported";
 }
 
@@ -104,14 +107,17 @@ function score(text: string, cited: Evidence[]): Claim["status"] {
 export function verifyClaims(answer: string, evidence: Evidence[]): Claim[] {
   const claims: Claim[] = [];
   let previous: Evidence[] = [];
+  // Everything the answer cites anywhere: a summary sentence often cites in the sentence after it.
+  const allCited = [...new Set([...answer.matchAll(/\[(\d+)\]/g)].map((m) => evidence[Number(m[1]) - 1]).filter((e): e is Evidence => !!e))];
   for (const text of claimUnits(answer)) {
     const refs = [...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
     if (refs.length === 0) {
       // Hedges ("the evidence doesn't mention…") and connective sentences don't need citations.
-      if (!FACTUAL.test(text) || HEDGE.test(text)) continue;
+      if (!FACTUAL.test(text) || HEDGE.test(text) || ADVICE.test(text)) continue;
       // Inherit support only on a strong match; an uncited sentence never earns "partial".
-      const inherited = previous.length && score(text, previous) === "supported";
-      claims.push({ text, evidenceIds: inherited ? previous.map((e) => e.id) : [], status: inherited ? "supported" : "unsupported" });
+      // Inherit support only on a strong match: first the preceding citation, then anything the answer cites.
+      const basis = previous.length && score(text, previous) === "supported" ? previous : allCited.length && score(text, allCited) === "supported" ? allCited : null;
+      claims.push({ text, evidenceIds: basis ? basis.map((e) => e.id) : [], status: basis ? "supported" : "unsupported" });
       continue;
     }
     const cited = refs.map((n) => evidence[n - 1]).filter((e): e is Evidence => !!e);
@@ -139,4 +145,19 @@ export function toConflicts(linesIn: string[], evidence: Evidence[]): Conflict[]
       .map((m) => evidence[Number(m[1]) - 1]?.id)
       .filter((id): id is string => !!id),
   }));
+}
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const DATE = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b/gi;
+
+function dates(s: string): Set<string> {
+  return new Set([...s.matchAll(DATE)].map((m) => `${MONTHS.indexOf(m[1]!.toLowerCase().slice(0, 3))}-${Number(m[2])}`));
+}
+
+/** Every month-and-day a claim states must appear as that same date in its evidence. */
+function datesOk(claim: string, hay: string): boolean {
+  const said = dates(claim);
+  if (said.size === 0) return true;
+  const known = dates(hay);
+  return [...said].every((d) => known.has(d));
 }

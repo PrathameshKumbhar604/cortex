@@ -5,19 +5,22 @@ import type { AgentEvent, MemoryItem } from "@cortex/shared";
 import { ActionStore } from "./actions";
 import type { MemoryBackend } from "./memory";
 import { runAgent } from "./run";
+import { routeByRules } from "./route";
 import { parseWindow } from "./time";
 import { splitSections, streamCutoff, verifyClaims } from "./verify";
 
-function stubLlm(answer: string, plan?: object) {
-  const calls = { complete: 0, stream: 0 };
+function stubLlm(answer: string, plan?: object, route: object = { route: "personal", sources: [], complex: false }) {
+  const calls = { complete: 0, stream: 0, route: 0 };
   const llm = {
     async complete() {
       calls.complete++;
       return { text: JSON.stringify(plan), provider: "stub", model: "m", cached: false };
     },
-    async json(_o: unknown, validate: (v: unknown) => unknown) {
-      calls.complete++;
-      const text = JSON.stringify(plan ?? { results: [] });
+    async json(o: { messages: { content: string }[] }, validate: (v: unknown) => unknown) {
+      const isRoute = o.messages[0]?.content.startsWith("Classify a question");
+      if (isRoute) calls.route++;
+      else calls.complete++;
+      const text = JSON.stringify(isRoute ? route : (plan ?? { results: [] }));
       return { text, provider: "stub", model: "m", cached: false, data: validate(JSON.parse(text)) };
     },
     async *stream() {
@@ -72,7 +75,8 @@ describe("runAgent", () => {
     const events = await collect(
       runAgent({ question: "Did demo day move?", mode: "fast", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions }),
     );
-    expect(calls.complete + calls.stream).toBe(1);
+    expect(calls.complete + calls.stream).toBe(1); // plus at most one router call
+    expect(calls.route).toBeLessThanOrEqual(1);
     expect(events.find((e) => e.type === "plan")).toBeTruthy();
     expect(events.filter((e) => e.type === "tool_call").length).toBeGreaterThan(0);
     const tokens = events.filter((e) => e.type === "token").map((e) => (e as { text: string }).text).join("");
@@ -113,7 +117,7 @@ describe("runAgent", () => {
     const events = await collect(runAgent({ question: "quantum chromodynamics lecture", mode: "fast", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
     const answer = events.find((e) => e.type === "answer");
     expect(answer && answer.type === "answer" && answer.markdown).toMatch(/couldn't find/);
-    expect(calls.complete + calls.stream).toBe(0);
+    expect(calls.complete + calls.stream).toBe(0); // only the router may run
   });
 
   it("stores explicit 'remember' requests as memory", async () => {
@@ -164,3 +168,54 @@ describe("ActionStore", () => {
 function store() {
   return new ActionStore();
 }
+
+describe("routing", () => {
+  const deps = (llm: LlmRouter) => ({ llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() });
+
+  it("answers general questions directly, without touching any connector", async () => {
+    const { llm, calls } = stubLlm("Paris is the capital of France.", undefined, { route: "general", sources: [], complex: false });
+    const events = await collect(runAgent({ question: "What is the capital of France?", mode: "deep", userId: "u1" }, deps(llm)));
+    expect(events.filter((e) => e.type === "tool_call")).toHaveLength(0);
+    const route = events.find((e) => e.type === "route");
+    expect(route && route.type === "route" && route.decision.route).toBe("general");
+    expect(events.find((e) => e.type === "answer")).toBeTruthy();
+    expect(JSON.stringify(events)).not.toMatch(/couldn't find/);
+    expect(calls.route + calls.complete + calls.stream).toBe(2); // router + answer
+  });
+
+  it("decides obvious cases by rules, with no model call", async () => {
+    const { llm, calls } = stubLlm("Hi! Ask me about your work.");
+    const events = await collect(runAgent({ question: "hello", mode: "fast", userId: "u1" }, deps(llm)));
+    expect(calls.route).toBe(0);
+    expect(events.filter((e) => e.type === "tool_call")).toHaveLength(0);
+  });
+
+  it("searches only the sources the question is about", async () => {
+    const { llm, calls } = stubLlm("You have an email [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]\n<<<MEMORY>>>\n[]");
+    const events = await collect(runAgent({ question: "any new emails in my inbox from Dr. Ruiz?", mode: "fast", userId: "u1" }, deps(llm)));
+    expect(calls.route).toBe(0);
+    const sources = new Set(events.filter((e) => e.type === "tool_call").map((e) => (e as { source: string }).source));
+    expect([...sources]).toEqual(["gmail"]);
+  });
+
+  it("classifies with rules", () => {
+    const ids = ["gmail", "calendar", "slack", "github", "notion", "drive", "web"];
+    expect(routeByRules("thanks!", ids)?.route).toBe("general");
+    expect(routeByRules("what meetings do I have tomorrow", ids)).toMatchObject({ route: "personal", sources: ["calendar"] });
+    expect(routeByRules("draft an email to my advisor about the report", ids)?.route).toBe("action");
+    expect(routeByRules("Email Dr. Ruiz to confirm I'll submit the report on time", ids)?.route).toBe("action");
+    expect(routeByRules("Remind the team about the standup", ids)?.route).toBe("action");
+    expect(routeByRules("summarize https://example.com/post", ids)?.route).toBe("web");
+    expect(routeByRules("explain how transformers work", ids)).toBeNull(); // ambiguous → model decides
+  });
+});
+
+describe("date verification", () => {
+  it("rejects a claim whose date differs from its evidence", () => {
+    const ev = [{ id: "e1", source: "gmail", title: "Demo Day: schedule change", quote: "Demo Day has moved to Fri, Nov 13, 2-5pm, Engineering Hall." }];
+    const [ok] = verifyClaims("Demo Day has moved to Fri, Nov 13 in Engineering Hall [1].", ev);
+    const [bad] = verifyClaims("Demo Day has moved to Sun, Nov 15 in Engineering Hall [1].", ev);
+    expect(ok?.status).toBe("supported");
+    expect(bad?.status).not.toBe("supported");
+  });
+});

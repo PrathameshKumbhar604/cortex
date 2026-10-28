@@ -12,11 +12,13 @@ import type {
   Plan,
   RunMode,
   SourceFailure,
+  StepId,
   SubQuestion,
 } from "@cortex/shared";
 import type { ActionStore } from "./actions";
 import { explicitMemory, type MemoryBackend } from "./memory";
-import { chatPrompt, planPrompt, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
+import { actionPrompt, chatPrompt, generalPrompt, planPrompt, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
+import { decideRoute } from "./route";
 import { keywords, parseWindow } from "./time";
 import { traced, withTracing } from "./tracing";
 import { groundedness, splitSections, streamCutoff, toConflicts, verifyClaims } from "./verify";
@@ -24,7 +26,7 @@ import { groundedness, splitSections, streamCutoff, toConflicts, verifyClaims } 
 export const LIMITS = {
   maxSubQuestions: 5,
   maxToolCalls: 18,
-  maxLlmCalls: { fast: 2, deep: 4 },
+  maxLlmCalls: { fast: 3, deep: 5 }, // includes the router call, which is skipped when rules decide
   maxEvidence: { fast: 8, deep: 16 },
   runTimeoutMs: 90_000,
 } as const;
@@ -83,7 +85,7 @@ class Budget {
 }
 
 function heuristicPlan(question: string, connected: Connector[]): Plan {
-  const sources = connected.filter((c) => c.id !== "web" || WEB_HINT.test(question)).map((c) => c.id);
+  const sources = connected.filter((c) => c.id !== "web" || WEB_HINT.test(question) || connected.length === 1).map((c) => c.id);
   return {
     intent: "research",
     rewritten: question,
@@ -210,11 +212,73 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "step", step: "recall", status: "skipped", detail: "memory offline" };
     }
 
+    // 2b. Route: does this need the user's sources at all, which ones, and which model?
+    const routed = await decideRoute(
+      input.question,
+      history,
+      connected.map((c) => ({ id: c.id, describes: c.describes })),
+      deps.llm,
+      signal,
+    );
+    const route = routed.decision;
+    if (routed.llm) {
+      budget.llmCalls++;
+      if (routed.llm.cached) budget.cachedCalls++;
+      budget.models.add(`${routed.llm.provider}/${routed.llm.model}`);
+    }
+    yield { type: "route", decision: route };
+
+    if (route.route === "general") {
+      yield* skip(["plan", "search", "verify"]);
+      yield { type: "step", step: "synthesize", status: "active" };
+      budget.llmCalls++;
+      let text = "";
+      for await (const part of deps.llm.stream({
+        tier: fast ? "fast" : route.tier,
+        messages: generalPrompt(input.question, history, memories),
+        maxTokens: 900,
+        signal,
+      })) {
+        if ("token" in part) {
+          text += part.token;
+          yield { type: "token", text: part.token };
+        } else {
+          if (part.done.cached) budget.cachedCalls++;
+          budget.models.add(`${part.done.provider}/${part.done.model}`);
+        }
+      }
+      yield { type: "answer", markdown: text };
+      yield { type: "step", step: "synthesize", status: "done" };
+      const written: MemoryItem[] = [];
+      const explicit = explicitMemory(input.question);
+      if (explicit && !failures.some((f) => f.source === "memory")) {
+        try {
+          const item = await deps.memory.add({ userId: input.userId, ...explicit, salience: 0.95, reason: "You asked me to keep this in mind", source: "conversation", runId });
+          if (item) written.push(item);
+        } catch {
+          // memory offline: already reported
+        }
+      }
+      if (written.length) yield { type: "memory_written", items: written };
+      yield { type: "step", step: "remember", status: written.length ? "done" : "skipped" };
+      yield usage(budget, started);
+      yield { type: "done" };
+      return;
+    }
+
+    // Only the sources the router picked (all connected ones when it named none).
+    const scoped =
+      route.route === "web"
+        ? connected.filter((c) => c.id === "web")
+        : route.sources.length
+          ? connected.filter((c) => route.sources.includes(c.id))
+          : connected;
+
     // 3. Plan.
     yield { type: "step", step: "plan", status: "active" };
     let plan: Plan;
-    if (fast || connected.length === 0) {
-      plan = heuristicPlan(input.question, connected);
+    if (fast || scoped.length === 0) {
+      plan = heuristicPlan(input.question, scoped);
     } else {
       try {
         budget.llmCalls++;
@@ -223,22 +287,24 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
             tier: "fast", // planning is short structured output; keep the strong model's quota for the answer
             messages: planPrompt(
               input.question,
-              connected.map((c) => ({ id: c.id, describes: c.describes })),
+              scoped.map((c) => ({ id: c.id, describes: c.describes })),
               memories,
               history,
             ),
-            maxTokens: 700,
+            maxTokens: 1500, // room for a reasoning model to think before the JSON
             signal,
           },
           (v) => PlanSchema.parse(v),
         );
         if (res.cached) budget.cachedCalls++;
         budget.models.add(`${res.provider}/${res.model}`);
-        plan = sanitizePlan(res.data, input.question, connected);
-        if (plan.intent !== "chat" && plan.subQuestions.length === 0) plan = heuristicPlan(input.question, connected);
+        plan = sanitizePlan(res.data, input.question, scoped);
+        // The router already decided this needs sources; the planner may not overrule it into small talk.
+        if (plan.intent === "chat") plan = { ...plan, intent: route.route === "action" ? "action" : "research" };
+        if (plan.intent !== "chat" && plan.subQuestions.length === 0) plan = heuristicPlan(input.question, scoped);
       } catch (err) {
         if (err instanceof LlmUnavailableError) throw err;
-        plan = heuristicPlan(input.question, connected); // planner output unusable → degrade, don't fail
+        plan = heuristicPlan(input.question, scoped); // planner output unusable → degrade, don't fail
       }
     }
     yield { type: "plan", plan };
@@ -272,6 +338,14 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     yield { type: "step", step: "search", status: "active" };
     const evidence: Evidence[] = [];
     const calls = new Map<string, { source: string; query: string; subQuestionId: string }>();
+    // Deep mode: the whole question over every in-scope source first, so a narrow plan can't miss the obvious hit.
+    if (!fast && plan.subQuestions.length > 1) {
+      const baseline = keywords(input.question);
+      for (const c of scoped) {
+        if (c.id === "web" && route.route !== "web") continue;
+        calls.set(`${c.id}|${baseline}`, { source: c.id, query: baseline, subQuestionId: plan.subQuestions[0]!.id });
+      }
+    }
     for (const q of plan.subQuestions) {
       for (const source of q.sources) {
         const key = `${source}|${q.query}`;
@@ -391,6 +465,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
               })),
             ),
             maxTokens: 400,
+            reasoning: "low", // a per-claim yes/no judgement
             signal,
           },
           (v) => z.object({ results: z.array(z.object({ i: z.number(), status: z.enum(["supported", "partial", "unsupported"]) })) }).parse(v),
@@ -412,8 +487,29 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     };
     yield { type: "step", step: "verify", status: "done", detail: `${Math.round(score * 100)}% grounded` };
 
-    // 8. Actions are proposed, never executed here.
-    for (const a of sections.actions.slice(0, 3)) {
+    // 8. Actions are proposed, never executed here. When the router said "action" but the answer
+    // left the ACTIONS section empty, draft it with a dedicated call instead of silently skipping.
+    let proposedActions = sections.actions;
+    if (route.route === "action" && proposedActions.length === 0 && budget.canCallLlm()) {
+      try {
+        budget.llmCalls++;
+        const res = await deps.llm.json(
+          {
+            tier: "strong",
+            messages: actionPrompt(input.question, ranked, actionBriefs(scoped.length ? scoped : connected)),
+            maxTokens: 1200,
+            cacheTtlMs: 0,
+            signal,
+          },
+          (v) => (Array.isArray(v) ? v : (v as { actions?: unknown[] })?.actions ?? [v]),
+        );
+        budget.models.add(`${res.provider}/${res.model}`);
+        proposedActions = res.data;
+      } catch {
+        // no draft possible; the answer still explains what was found
+      }
+    }
+    for (const a of proposedActions.slice(0, 3)) {
       const p = deps.actions.propose(input.userId, deps.registry, a);
       if ("id" in p) yield { type: "action_proposal", proposal: p };
     }
@@ -466,7 +562,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
   }
 }
 
-function* skip(steps: ("search" | "synthesize" | "verify" | "remember")[]): Generator<AgentEvent> {
+function* skip(steps: StepId[]): Generator<AgentEvent> {
   for (const step of steps) yield { type: "step", step, status: "skipped" };
 }
 

@@ -121,6 +121,38 @@ export function verifyPrompt(items: { i: number; claim: string; evidence: string
   ];
 }
 
+/** Drafts the action the user asked for, from evidence only. Never executed without approval. */
+export function actionPrompt(question: string, evidence: Evidence[], actions: ActionBrief[]) {
+  return [
+    {
+      role: "system" as const,
+      content: `Draft the single action the user asked for. It will be shown to them for approval before anything is sent.
+Available actions:
+${actions.map((a) => `- ${a.connector}.${a.action}(${a.params}): ${a.title}`).join("\n") || "- none"}
+Use only facts from the evidence; never invent email addresses, dates or names. Write the text the user would send, in a natural, concise voice.
+Return only JSON: {"connector":"...","action":"...","title":"short description","args":{...}}`,
+    },
+    { role: "user" as const, content: `Evidence:
+${evidenceBlock(evidence)}
+
+Request: ${question}` },
+  ];
+}
+
+/** Questions that don't need the user's sources: answer directly. */
+export function generalPrompt(question: string, history: ChatTurn[], memories: MemoryItem[]) {
+  return [
+    {
+      role: "system" as const,
+      content: `You are Cortex, a helpful assistant. Today is ${today()}. This question does not need the user's own tools, so answer it directly from general knowledge, clearly and concisely, in markdown.
+Never state facts about the user's own emails, files, meetings, projects or teammates here; if the question turns out to need them, say you can look it up in their connected apps.
+Respect the user's preferences:
+${memoryBlock(memories.filter((m) => m.kind === "preference"))}`,
+    },
+    { role: "user" as const, content: `Conversation so far:\n${historyBlock(history)}\n\n${question}` },
+  ];
+}
+
 export function chatPrompt(question: string, history: ChatTurn[]) {
   return [
     {

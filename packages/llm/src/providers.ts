@@ -34,7 +34,7 @@ export function loadProviders(env: Env = process.env): ProviderConfig[] {
             strong: env.GROQ_MODEL_STRONG ?? "openai/gpt-oss-120b",
             fast: env.GROQ_MODEL_FAST ?? "openai/gpt-oss-20b",
           },
-          supportsJsonMode: true,
+          supportsJsonMode: false, // Groq's strict JSON mode rejects valid gpt-oss output; we parse leniently instead,
         }
       : null,
     env.GEMINI_API_KEY
