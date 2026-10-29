@@ -2,7 +2,8 @@
 
 import { Check, CircleSlash, Loader2, PenLine, TriangleAlert } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { play } from "@/lib/sound";
 import { sourceName, type ActionProposal } from "@cortex/shared";
 import { cn } from "@/lib/ui";
 import { SourceMark } from "./sources";
@@ -33,6 +34,15 @@ export function ActionCard({
   const stamp = STAMP[proposal.status];
   const verb = proposal.risk === "high" ? "Approve & send" : "Approve";
 
+  // Sound only when the status changes while you watch, not when an old chat is reopened.
+  const seen = useRef(proposal.status);
+  useEffect(() => {
+    if (seen.current === proposal.status) return;
+    seen.current = proposal.status;
+    if (proposal.status === "executed") play("done");
+    else if (proposal.status === "failed") play("error");
+  }, [proposal.status]);
+
   const decide = async (d: "approve" | "reject") => {
     setBusy(d);
     try {
@@ -60,10 +70,16 @@ export function ActionCard({
           </p>
         </div>
         {stamp && (
-          <span className={cn("readout flex items-center gap-1", stamp.cls)}>
+          <motion.span
+            key={proposal.status}
+            initial={{ opacity: 0, scale: 0.85, filter: "blur(3px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ type: "spring", duration: 0.45, bounce: 0.35 }}
+            className={cn("readout flex items-center gap-1", stamp.cls)}
+          >
             <stamp.icon className="size-3.5" aria-hidden />
             {stamp.label}
-          </span>
+          </motion.span>
         )}
       </div>
 
@@ -111,7 +127,7 @@ export function ActionCard({
             type="button"
             onClick={() => decide("approve")}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-ink-2 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-on-ink hover:bg-ink-2 disabled:opacity-60"
           >
             {busy === "approve" && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             {verb}

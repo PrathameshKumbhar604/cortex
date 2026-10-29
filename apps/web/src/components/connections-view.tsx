@@ -135,7 +135,7 @@ export function ConnectionsView() {
 
         {connected && <p className="mt-6 rounded-md bg-accent-soft px-3 py-2 text-[14px] text-accent-ink">Connected. Cortex can search it now.</p>}
         {error && (
-          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-[#7a3d00]">
+          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-warn-ink">
             {error}
           </p>
         )}
@@ -164,7 +164,7 @@ export function ConnectionsView() {
                   type="button"
                   onClick={() => connect(c.id)}
                   disabled={pending === c.id || waiting === c.id || info?.workspace !== "live"}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-ink-2 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-on-ink hover:bg-ink-2 disabled:opacity-50"
                 >
                   {(pending === c.id || waiting === c.id) && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
                   {c.detail ? "Reconnect" : "Connect"}

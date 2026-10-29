@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
-import { Brain, Cable, Menu, MessageSquareText, MoreHorizontal, Newspaper, Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { motion, MotionConfig } from "motion/react";
+import { Brain, Cable, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
+import { play } from "@/lib/sound";
 import { deleteThread, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 
@@ -37,7 +40,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-sm transition-colors",
-                active ? "bg-[#eceef3] font-[550] text-ink" : "text-muted hover:bg-[#f0f1f5] hover:text-ink",
+                active ? "bg-pressed font-[550] text-ink" : "text-muted hover:bg-hover hover:text-ink",
               )}
             >
               <Icon className="size-4" strokeWidth={1.75} aria-hidden />
@@ -87,9 +90,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Suspense fallback={null}>
               <RecentThreads onNavigate={() => setOpen(false)} />
             </Suspense>
+            <div className="mt-3 flex items-center gap-2 border-t border-line px-1 pt-3">
+              <ThemeSwitch />
+              <SoundSwitch />
+            </div>
           </div>
         )}
-        <main className="min-h-0 flex-1 bg-surface">{children}</main>
+        <main className="min-h-0 flex-1 bg-surface">
+          {/* Each page eases in when you move between them; MotionConfig makes springs follow reduced motion too. */}
+          <MotionConfig reducedMotion="user">
+            <div key={path} className="page-enter h-full">
+              {children}
+            </div>
+          </MotionConfig>
+        </main>
       </div>
     </div>
   );
@@ -110,11 +124,71 @@ function WorkspaceFooter() {
       live = false;
     };
   }, [path]);
-  if (!info) return null;
   return (
-    <Link href="/connections" className="readout mt-4 truncate rounded-md px-2.5 py-2 text-muted hover:text-ink">
-      {info.workspace === "demo" ? "Sample" : "Live"} · {info.count} sources
-    </Link>
+    <div className="mt-4 flex flex-col items-start gap-1.5">
+      {info && (
+        <Link href="/connections" className="readout max-w-full truncate rounded-md px-2.5 py-1.5 text-muted hover:text-ink">
+          {info.workspace === "demo" ? "Sample" : "Live"} · {info.count} sources
+        </Link>
+      )}
+      <div className="flex items-center gap-2 px-1.5">
+        <ThemeSwitch />
+        <SoundSwitch />
+      </div>
+    </div>
+  );
+}
+
+const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
+  { value: "system", label: "Match system", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+];
+
+function ThemeSwitch() {
+  const theme = useSyncExternalStore(onSettings, readTheme, () => "system" as Theme);
+  const id = useId(); // the switch is mounted twice (sidebar and phone menu); each pill slides on its own
+  return (
+    <div role="radiogroup" aria-label="Theme" className="flex shrink-0 rounded-[8px] border border-line p-0.5">
+      {THEMES.map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={theme === value}
+          aria-label={label}
+          title={label}
+          onClick={() => writeTheme(value)}
+          className={cn("relative grid size-6 place-items-center rounded-[6px] transition-colors", theme === value ? "text-ink" : "text-hair hover:text-ink")}
+        >
+          {theme === value && (
+            <motion.span layoutId={`theme-${id}`} className="absolute inset-0 rounded-[6px] bg-pressed" transition={{ type: "spring", duration: 0.35, bounce: 0.2 }} />
+          )}
+          <Icon className="relative size-3.5" strokeWidth={1.75} aria-hidden />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SoundSwitch() {
+  const on = useSyncExternalStore(onSettings, readSound, () => true);
+  const Icon = on ? Volume2 : VolumeX;
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Sounds"
+      title={on ? "Sounds on" : "Sounds off"}
+      onClick={() => {
+        writeSound(!on);
+        if (!on) play("send"); // a sample, so turning sound on is heard
+      }}
+      className={cn("grid size-7 place-items-center rounded-[8px] border border-line transition-colors", on ? "text-ink-2 hover:text-ink" : "text-hair hover:text-ink")}
+    >
+      <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
+    </button>
   );
 }
 
@@ -189,7 +263,7 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
             {g.list.map((t) => {
               const active = path === "/" && current === t.id;
               return (
-                <li key={t.id} className="group relative" data-thread-menu={menu === t.id ? "" : undefined}>
+                <li key={t.id} className="enter group relative" data-thread-menu={menu === t.id ? "" : undefined}>
                   {renaming === t.id ? (
                     <input
                       autoFocus
@@ -211,7 +285,7 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "block truncate rounded-md py-1.5 pr-7 pl-2.5 text-[13px]",
-                        active ? "bg-[#eceef3] text-ink" : "text-muted hover:bg-[#f0f1f5] hover:text-ink",
+                        active ? "bg-pressed text-ink" : "text-muted hover:bg-hover hover:text-ink",
                       )}
                     >
                       {t.title}
@@ -235,13 +309,13 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
                   )}
                   {menu === t.id && (
                     <div role="menu" data-thread-menu className="absolute top-full right-0 z-10 mt-1 flex w-36 flex-col rounded-md border border-line bg-surface py-1 text-[13px]">
-                      <button type="button" role="menuitem" onClick={() => (setMenu(null), setRenaming(t.id))} className="flex items-center gap-2 px-3 py-1.5 text-left text-ink-2 hover:bg-[#f0f1f5]">
+                      <button type="button" role="menuitem" onClick={() => (setMenu(null), setRenaming(t.id))} className="flex items-center gap-2 px-3 py-1.5 text-left text-ink-2 hover:bg-hover">
                         <Pencil className="size-3.5" aria-hidden /> Rename
                       </button>
-                      <button type="button" role="menuitem" onClick={() => (setMenu(null), updateThread(t.id, { pinned: !t.pinned }))} className="flex items-center gap-2 px-3 py-1.5 text-left text-ink-2 hover:bg-[#f0f1f5]">
+                      <button type="button" role="menuitem" onClick={() => (setMenu(null), updateThread(t.id, { pinned: !t.pinned }))} className="flex items-center gap-2 px-3 py-1.5 text-left text-ink-2 hover:bg-hover">
                         {t.pinned ? <PinOff className="size-3.5" aria-hidden /> : <Pin className="size-3.5" aria-hidden />} {t.pinned ? "Unpin" : "Pin"}
                       </button>
-                      <button type="button" role="menuitem" onClick={() => remove(t.id)} className="flex items-center gap-2 px-3 py-1.5 text-left text-risk hover:bg-[#fdf2f2]">
+                      <button type="button" role="menuitem" onClick={() => remove(t.id)} className="flex items-center gap-2 px-3 py-1.5 text-left text-risk hover:bg-risk-soft">
                         <Trash2 className="size-3.5" aria-hidden /> Delete
                       </button>
                     </div>
@@ -253,7 +327,7 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
         </section>
       ))}
       {removed && (
-        <p role="status" className="mx-1 flex items-center justify-between gap-2 rounded-md bg-[#f0f1f5] px-2.5 py-2 text-[13px] text-ink-2">
+        <p role="status" className="enter mx-1 flex items-center justify-between gap-2 rounded-md bg-hover px-2.5 py-2 text-[13px] text-ink-2">
           <span className="truncate">Chat deleted</span>
           <button
             type="button"

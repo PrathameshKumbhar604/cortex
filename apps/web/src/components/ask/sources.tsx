@@ -21,16 +21,17 @@ export function Sources({ evidence, citedIds, hovered }: { evidence: Evidence[];
         {rest.length > 0 && cited.length > 0 && <span>{rest.length} more searched</span>}
       </div>
       <ol className="grid grid-cols-1 gap-y-px border-y border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((e) => {
+        {items.map((e, i) => {
           const n = evidence.indexOf(e) + 1;
           const dim = hovered && hovered !== e.id;
           return (
             <li
               key={e.id}
               id={`ev-${e.id}`}
+              style={{ "--i": i } as React.CSSProperties}
               className={cn(
-                "scroll-mt-24 bg-surface py-3 pr-4 transition-[opacity,background-color] duration-300",
-                hovered === e.id && "bg-[#f4f5ff]",
+                "rise scroll-mt-24 bg-surface py-3 pr-4 transition-[opacity,background-color] duration-300",
+                hovered === e.id && "bg-accent-wash",
                 dim && "opacity-40",
               )}
             >

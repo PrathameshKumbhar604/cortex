@@ -3,6 +3,7 @@
 import { ArrowUp, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { RunMode } from "@cortex/shared";
+import { motion } from "motion/react";
 import { cn } from "@/lib/ui";
 
 export function Composer({
@@ -72,17 +73,21 @@ export function Composer({
               aria-checked={mode === m}
               onClick={() => onMode(m)}
               title={m === "fast" ? "Fast Mode: one pass, quickest answer" : "Deep: plans sub-questions and verifies every claim"}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-[12.5px] transition-colors",
-                mode === m ? "bg-surface font-medium text-ink shadow-[0_1px_2px_rgba(14,17,22,0.08)]" : "text-muted hover:text-ink",
-              )}
+              className={cn("relative rounded-md px-2.5 py-1 text-[12.5px] transition-colors", mode === m ? "font-medium text-ink" : "text-muted hover:text-ink")}
             >
-              {m === "fast" ? "Fast" : "Deep"}
+              {mode === m && (
+                <motion.span
+                  layoutId="depth-pill"
+                  className="absolute inset-0 rounded-md bg-surface shadow-[0_1px_2px_rgba(14,17,22,0.08)]"
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
+                />
+              )}
+              <span className="relative">{m === "fast" ? "Fast" : "Deep"}</span>
             </button>
           ))}
         </div>
         {busy ? (
-          <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-ink text-white hover:bg-ink-2">
+          <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-ink text-on-ink hover:bg-ink-2">
             <Square className="size-3 fill-current" aria-hidden />
           </button>
         ) : (
@@ -90,7 +95,7 @@ export function Composer({
             type="submit"
             aria-label="Ask"
             disabled={!value.trim()}
-            className="grid size-8 place-items-center rounded-full bg-accent text-white transition-opacity hover:bg-accent-ink disabled:bg-line-strong disabled:text-muted"
+            className="grid size-8 place-items-center rounded-full bg-accent text-on-ink transition-opacity hover:bg-accent-ink disabled:bg-line-strong disabled:text-muted"
           >
             <ArrowUp className="size-4" aria-hidden />
           </button>

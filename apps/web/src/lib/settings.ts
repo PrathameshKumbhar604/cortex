@@ -32,3 +32,49 @@ export function onSettings(fn: () => void) {
     window.removeEventListener("storage", fn);
   };
 }
+
+export type Theme = "system" | "light" | "dark";
+const THEME = "cortex.theme";
+
+export function readTheme(): Theme {
+  try {
+    const t = localStorage.getItem(THEME);
+    return t === "light" || t === "dark" ? t : "system";
+  } catch {
+    return "system";
+  }
+}
+
+/** "system" follows the OS; light or dark is an explicit choice (also applied before paint, see layout.tsx). */
+export function writeTheme(t: Theme) {
+  try {
+    if (t === "system") localStorage.removeItem(THEME);
+    else localStorage.setItem(THEME, t);
+  } catch {
+    // storage blocked: the choice lasts for this page only
+  }
+  if (t === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  window.dispatchEvent(new Event(EVENT));
+}
+
+const SOUND = "cortex.sound";
+
+/** Interface sounds are on (and quiet) unless the user switched them off. */
+export function readSound(): boolean {
+  try {
+    return localStorage.getItem(SOUND) !== "off";
+  } catch {
+    return false;
+  }
+}
+
+export function writeSound(on: boolean) {
+  try {
+    if (on) localStorage.removeItem(SOUND);
+    else localStorage.setItem(SOUND, "off");
+  } catch {
+    // storage blocked: the choice lasts for this page only
+  }
+  window.dispatchEvent(new Event(EVENT));
+}

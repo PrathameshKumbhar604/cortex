@@ -209,6 +209,9 @@ A cool, nearly colourless field where a single indigo and seven small source mar
 ### Source marks
 Gmail red (#e5484d), Calendar teal (#12a594), Drive amber (#e5a000), Notion graphite (#646b78), Slack violet (#8e4ec6), GitHub ink (#0e1116), Web blue (#3e63dd), Memory indigo (#4353ff).
 
+### Dark theme
+Every token in `globals.css` is one `light-dark(light, dark)` value, so the two palettes cannot drift apart; never hard-code a colour in a component, add a token instead. Dark is a near-black shell (#0d0f12) and surface (#14161a) with ink #e9ebf0; Indigo lifts to #7c88ff (ink #a9b0ff) and source marks lighten one step. Text on an ink or indigo fill uses On Ink, which flips with the theme. Every text/background pair stays at 4.5:1 or more in both themes. The user picks System, Light or Dark in the sidebar footer; the choice is applied before first paint.
+
 ### Named Rules
 **The One Voice Rule.** Indigo is the only accent. It marks what is cited, focused or primary, and nothing else; it never fills a panel or a heading.
 
@@ -295,7 +298,16 @@ Left rail items: 14px Geist with a 16px line icon (1.75 stroke), 6px corners, Sl
 One wrapping line of uppercase mono under the question: mode, plan count, searches with duration, found, "Verified n/m" in Indigo Ink, total time, and a Trace disclosure. While working, a pulsing 6px indigo dot and the current step lead in Indigo Ink. Trace expands (280ms) into a step list and tool-call table set off by a left rule.
 
 ### Claims and citations
-Answer text renders claim by claim under the Weight-Is-Truth Rule. Citations are raised mono numerals in Indigo Ink, each preceded by its source's 5px mark; hovering or focusing one tints it Indigo Wash, lifts its source row and dims the others to 40%. While streaming, an indigo block caret blinks at the end of the text.
+Answer text renders claim by claim under the Weight-Is-Truth Rule. Citations are raised mono numerals in Indigo Ink, each preceded by its source's 5px mark; hovering or focusing one tints it Indigo Wash, lifts its source row and dims the others to 40%. While streaming, an indigo block caret blinks at the end of the text. Answers are full markdown (numbered and nested lists, tables in a hairline frame that scrolls sideways, quotes, rules).
+
+### Terminal panel
+Code always renders in a terminal panel, dark in both themes (#0f1115, text #d5d8df, 13px Geist Mono, 1.65 line height). A header carries the language in mono ("terminal" for shell code) and a Copy button that becomes "Copied" with a green check for 1.5s. Long lines scroll sideways; code never wraps. The panel ignores the answer's verification weight.
+
+### Motion and sound
+Motion confirms, it never decorates something seen dozens of times a day. Easing tokens: `--ease-out` (0.23, 1, 0.32, 1) for anything arriving, `--ease-spring` for things that settle; UI feedback stays under 300ms and animates only opacity, translate and scale. Every button scales to 0.97 on press (160ms). Arriving lists rise 6px and fade, 40ms apart, capped at 8 steps. Selections slide (a spring pill, bounce 0.2); the action stamp springs in through a 3px blur. Reduced motion removes movement and delays but keeps state changes. Sounds are synthesised (send tick, two-note answer chime, three-note done, two low notes for errors) at gain 0.045, never in a hidden tab, and switch off from the sidebar.
+
+### Thread scrolling
+The whole thread stays on the page, one ruled section per question. While an answer streams the view follows it; scrolling up stops the follow and shows a "Jump to latest" pill (surface, pill radius, soft shadow) that rises in over 200ms. On desktop a small stacked pair of chevrons moves to the previous or next question (also Alt+↑ / Alt+↓). Scrolling is smooth unless reduced motion is on.
 
 ### Conflict band
 A full-width ruled band: ink rule on top, Rule grey below and between entries, 12px vertical padding. A fixed 80px "Conflict" label in Risk Red at 600, then the plain statement with its citations. Unsupported counts and missing data follow as plain Slate sentences, the count in red.

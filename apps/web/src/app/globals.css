@@ -1,32 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --shell: #f7f8fa;
-  --surface: #ffffff;
-  --ink: #0e1116;
-  --ink-2: #2b303a;
-  --muted: #5e6573;
-  --hair: #646b79;
-  --line: #e6e8ee;
-  --line-strong: #d9dce3;
-  --accent: #4353ff;
-  --accent-soft: #eef0ff;
-  --accent-ink: #2f3ce0;
-  --risk: #d93a3f;
-  --risk-soft: #fdf2f2;
-  --warn: #b35a00;
-  --warn-soft: #fff6ea;
-  --ok: #0f8a63;
+  /* Each colour holds its light and its dark value; the theme picks one (light-dark() follows color-scheme). */
+  color-scheme: light dark;
+  --shell: light-dark(#f7f8fa, #0d0f12);
+  --surface: light-dark(#ffffff, #14161a);
+  --ink: light-dark(#0e1116, #e9ebf0);
+  --ink-2: light-dark(#2b303a, #c9cdd6);
+  --muted: light-dark(#5e6573, #9aa0ab);
+  --hair: light-dark(#646b79, #8b919d);
+  --line: light-dark(#e6e8ee, #24272e);
+  --line-strong: light-dark(#d9dce3, #30343d);
+  --hover: light-dark(#f0f1f5, #1c1f25);
+  --pressed: light-dark(#eceef3, #22262d);
+  --on-ink: light-dark(#ffffff, #0e1116);
+  --accent: light-dark(#4353ff, #7c88ff);
+  --accent-soft: light-dark(#eef0ff, #1d2142);
+  --accent-wash: light-dark(#f4f5ff, #181b31);
+  --accent-ink: light-dark(#2f3ce0, #a9b0ff);
+  --risk: light-dark(#d93a3f, #ff6b70);
+  --risk-soft: light-dark(#fdf2f2, #2b1517);
+  --warn: light-dark(#b35a00, #f5a04f);
+  --warn-soft: light-dark(#fff6ea, #2a1d0f);
+  --warn-ink: light-dark(#7a3d00, #ffcf9c);
+  --ok: light-dark(#0b7a57, #3dd68c);
 
   /* Source marks: colour is information, used only at mark scale. */
-  --src-gmail: #e5484d;
-  --src-calendar: #12a594;
-  --src-drive: #e5a000;
-  --src-notion: #646b78;
-  --src-slack: #8e4ec6;
-  --src-github: #0e1116;
-  --src-web: #3e63dd;
-  --src-memory: #4353ff;
+  --src-gmail: light-dark(#e5484d, #ff6369);
+  --src-calendar: light-dark(#12a594, #2ebdab);
+  --src-drive: light-dark(#e5a000, #f5b52e);
+  --src-notion: light-dark(#646b78, #9aa0ab);
+  --src-slack: light-dark(#8e4ec6, #b07ee6);
+  --src-github: light-dark(#0e1116, #e9ebf0);
+  --src-web: light-dark(#3e63dd, #6e8df5);
+  --src-memory: light-dark(#4353ff, #7c88ff);
+}
+/* An explicit choice overrides the system setting (set before paint by the script in layout.tsx). */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -46,6 +60,11 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-ok: var(--ok);
+  --color-hover: var(--hover);
+  --color-pressed: var(--pressed);
+  --color-on-ink: var(--on-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-warn-ink: var(--warn-ink);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -101,6 +120,78 @@ a {
   color: var(--muted);
 }
 
+/* Motion vocabulary (Emil): strong ease-out for things arriving, a soft spring for things that settle. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* Every button answers the press. `scale` (not transform) composes with Tailwind's translate utilities. */
+@layer base {
+  button {
+    transition: scale 160ms var(--ease-out);
+  }
+}
+button:not(:disabled):active {
+  scale: 0.97;
+}
+/* Buttons that also fade or slide keep the press transition alongside it. */
+.press {
+  transition:
+    scale 160ms var(--ease-out),
+    translate 200ms var(--ease-out),
+    opacity 200ms var(--ease-out),
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+/* Arriving content rises 6px and fades in; lists stagger 40ms apart (set --i), capped so long lists never wait. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.rise {
+  animation: rise 280ms var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+.page-enter {
+  animation: rise 220ms var(--ease-out) backwards;
+}
+/* Items added to a list (sidebar chats, undo notice) ease in once, the first time they render. */
+.enter {
+  transition:
+    opacity 200ms var(--ease-out),
+    translate 200ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+/* "Verified": the check draws itself once checking finishes. */
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.draw path {
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: draw 420ms var(--ease-out) 120ms forwards;
+}
+
+/* Code panels keep their own colours whatever the answer's verification weight is. */
+.terminal {
+  font-weight: 400;
+}
+.terminal ::selection {
+  background: #2f3b66;
+  color: #fff;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
@@ -134,8 +225,8 @@ a {
     opacity: 0;
   }
 }
-.streaming > :last-child:not(ul)::after,
-.streaming > ul:last-child > li:last-child::after {
+.streaming > :last-child:is(p, h3, h4, blockquote)::after,
+.streaming > :is(ul, ol):last-child > li:last-child::after {
   content: "";
   display: inline-block;
   width: 0.45em;
@@ -152,5 +243,9 @@ a {
   *::after {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+    animation-delay: 0ms !important; /* staggered items appear at once, not after a wait */
+  }
+  button:not(:disabled):active {
+    scale: none;
   }
 }

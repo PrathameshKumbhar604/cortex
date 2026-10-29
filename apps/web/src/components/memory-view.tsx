@@ -77,7 +77,7 @@ export function MemoryView() {
           />
           <span
             aria-hidden
-            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-line-strong transition-colors duration-200 peer-checked:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-200 peer-checked:after:translate-x-4"
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-line-strong transition-colors duration-200 peer-checked:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-[260ms] after:ease-[var(--ease-spring)] peer-checked:after:translate-x-4"
           />
           <span className="flex flex-col gap-0.5">
             <span className="text-[15px] font-[550] text-ink">Use my other chats</span>
@@ -131,7 +131,7 @@ export function MemoryView() {
             </select>
             <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
             </span>
-            <button type="submit" disabled={draft.trim().length < 3} className="rounded-[10px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-white disabled:border-line-strong disabled:bg-transparent disabled:text-muted">
+            <button type="submit" disabled={draft.trim().length < 3} className="rounded-[10px] border border-ink bg-ink px-3 py-1.5 text-[13px] font-medium text-on-ink disabled:border-line-strong disabled:bg-transparent disabled:text-muted">
               Remember
             </button>
           </div>
@@ -139,7 +139,7 @@ export function MemoryView() {
         )}
 
         {error && (
-          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-[#7a3d00]">
+          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-warn-ink">
             {error}
           </p>
         )}
@@ -183,7 +183,7 @@ function MemoryRow({ m, onPin, onEdit, onForget }: { m: MemoryItem; onPin: () =>
   const [text, setText] = useState(m.content);
   const [confirm, setConfirm] = useState(false);
   return (
-    <li className="grid grid-cols-[1fr_auto] gap-4 border-b border-line py-4">
+    <li className="rise grid grid-cols-[1fr_auto] gap-4 border-b border-line py-4">
       <div className="min-w-0">
         {editing ? (
           <form

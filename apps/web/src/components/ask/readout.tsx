@@ -37,7 +37,11 @@ export function Readout({ turn }: { turn: Turn }) {
   if (found) parts.push(<span key="f">{found} found</span>);
   if (verified && turn.claims.length)
     parts.push(
-      <span key="v" className="text-accent-ink">
+      <span key="v" className="flex items-center gap-1 text-accent-ink">
+        {/* Checking finished: the tick draws itself once. */}
+        <svg viewBox="0 0 12 12" className="draw size-3" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M2.5 6.5 5 9l4.5-6" />
+        </svg>
         Verified {supported}/{turn.claims.length}
       </span>,
     );

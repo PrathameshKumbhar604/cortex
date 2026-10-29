@@ -42,7 +42,7 @@ export function TurnView({
       {turn.failures.length > 0 && (
         <ul className="mb-5 flex flex-col gap-1.5">
           {turn.failures.map((f) => (
-            <li key={f.source} className="flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] leading-snug text-[#7a3d00]">
+            <li key={f.source} className="flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] leading-snug text-warn-ink">
               <CloudOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               <span>
                 <strong className="font-[600]">{f.name} is unavailable</strong>: {f.reason}. {f.impact}
@@ -119,9 +119,17 @@ export function TurnView({
           <Brain className="size-3 text-accent" aria-hidden />
           {turn.memoryUsed.length > 0 && <span>Used {turn.memoryUsed.length} memor{turn.memoryUsed.length > 1 ? "ies" : "y"}</span>}
           {turn.memoryWritten.filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i).map((m) => (
-            <Link key={m.id} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
-              Learned: “{m.content}”
-            </Link>
+            <motion.span
+              key={m.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+              className="origin-left"
+            >
+              <Link href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
+                Learned: “{m.content}”
+              </Link>
+            </motion.span>
           ))}
         </p>
       )}

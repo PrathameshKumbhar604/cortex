@@ -2,10 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronRight, Plus } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
 import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
+import { useThreadScroll } from "@/lib/use-thread-scroll";
+import { play } from "@/lib/sound";
 import { cn } from "@/lib/ui";
 import { Composer } from "./composer";
 import { TurnView } from "./turn-view";
@@ -47,10 +49,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
   const [saveTick, setSaveTick] = useState(0);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<RunMode>("deep");
-  const [expanded, setExpanded] = useState<string | null>(null);
   const params = useSearchParams();
   const router = useRouter();
-  const bottom = useRef<HTMLDivElement>(null);
+  const { scroller, content, away, canPrev, canNext, step, toLatest, follow } = useThreadScroll();
 
   useEffect(() => setMode(readMode()), []);
   const changeMode = (m: RunMode) => {
@@ -64,12 +65,13 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     const question = q.trim();
     if (!question || busy) return;
     setDraft("");
-    setExpanded(null);
+    follow();
     if (turns.length === 0) {
       router.replace(`/?t=${localId}`);
       nameThread(localId, question);
     }
     asked.current = true;
+    play("send");
     void ask(question, mode);
   };
 
@@ -77,7 +79,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     asked.current = false;
     load();
     setLocalId(crypto.randomUUID());
-    setExpanded(null);
     router.push("/");
   };
 
@@ -91,7 +92,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       // A turn saved mid-run never finishes; show it as stopped.
       load(saved?.turns.map((x) => (x.done ? x : { ...x, done: true, error: x.error ?? "Stopped before it finished." })), saved?.serverThreadId);
       setLocalId(t);
-      setExpanded(null);
+      follow();
     } else if (!t && !q && turns.length) {
       newThread();
     }
@@ -107,10 +108,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns.length, busy, saveTick]);
 
-  useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns.length]);
-
   const onDecide = (turnId: string) => async (id: string, d: "approve" | "reject", e?: Record<string, unknown>) => {
     await decide(turnId, id, d, e);
     asked.current = true;
@@ -118,13 +115,23 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
   };
 
   const latest = turns.at(-1);
-  const earlier = turns.slice(0, -1);
+
+  // A run just ended: a soft chime for an answer, a low one for an error; nothing when the user pressed Stop.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy && latest) {
+      if (latest.error && latest.error !== "Stopped.") play("error");
+      else if (latest.answer && !latest.error) play("answer");
+    }
+    wasBusy.current = busy;
+  }, [busy, latest]);
   const suggestions = workspace === "demo" ? DEMO_SUGGESTIONS : LIVE_SUGGESTIONS;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[720px] px-4 pt-10 pb-10 sm:px-6 md:pt-16">
+      <div className="relative min-h-0 flex-1">
+      <div ref={scroller} className="h-full overflow-y-auto">
+        <div ref={content} className="mx-auto w-full max-w-[720px] px-4 pt-10 pb-10 sm:px-6 md:pt-16">
           {!latest && (
             <div className="pt-[8vh]">
               <h1 className="text-balance text-[38px] font-[250] leading-[1.1] tracking-[-0.04em] text-ink sm:text-[52px]">
@@ -135,8 +142,8 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
                 checks each one before you rely on it.
               </p>
               <ul className="mt-10 flex flex-col border-t border-line">
-                {suggestions.map((s) => (
-                  <li key={s} className="border-b border-line">
+                {suggestions.map((s, i) => (
+                  <li key={s} className="rise border-b border-line" style={{ "--i": i + 1 } as React.CSSProperties}>
                     <button
                       type="button"
                       onClick={() => submit(s)}
@@ -151,38 +158,48 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             </div>
           )}
 
-          {earlier.length > 0 && (
-            <ol className="mb-10 flex flex-col border-b border-line">
-              {earlier.map((t) =>
-                expanded === t.id ? (
-                  <li key={t.id} className="border-t border-line py-6">
-                    <TurnView turn={t} latest={false} onDecide={onDecide(t.id)} onFollowup={submit} />
-                    <button type="button" onClick={() => setExpanded(null)} className="readout mt-4 text-muted hover:text-ink">
-                      Collapse
-                    </button>
-                  </li>
-                ) : (
-                  <li key={t.id} className="border-t border-line">
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(t.id)}
-                      className="flex w-full items-center justify-between gap-4 py-3 text-left text-[14px] text-muted hover:text-ink"
-                    >
-                      <span className="truncate">{t.question}</span>
-                      <span className="readout shrink-0 text-hair">
-                        {t.mode}
-                        {t.groundedness != null && t.claims.length ? ` · ${Math.round(t.groundedness * 100)}%` : ""}
-                      </span>
-                    </button>
-                  </li>
-                ),
-              )}
-            </ol>
-          )}
-
-          {latest && <TurnView turn={latest} latest onDecide={onDecide(latest.id)} onFollowup={submit} />}
-          <div ref={bottom} />
+          {turns.map((t, i) => (
+            <section key={t.id} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
+              <TurnView turn={t} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} />
+            </section>
+          ))}
         </div>
+      </div>
+
+        {/* Reading history while an answer streams: offer the way back instead of yanking the view down. */}
+        <button
+          type="button"
+          onClick={toLatest}
+          tabIndex={away ? 0 : -1}
+          aria-hidden={!away}
+          className={cn(
+            "press absolute bottom-4 left-1/2 flex items-center gap-1.5 rounded-full border border-line-strong bg-surface py-1.5 pr-3.5 pl-3 text-[13px] text-ink-2 shadow-[0_4px_16px_-6px_rgb(14_17_22/0.18)] transition-[opacity,translate] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:text-ink",
+            away ? "-translate-x-1/2 opacity-100" : "pointer-events-none -translate-x-1/2 translate-y-2 opacity-0",
+          )}
+        >
+          <ArrowDown className="size-3.5" aria-hidden /> {busy ? "Follow the answer" : "Jump to latest"}
+        </button>
+
+        {turns.length > 1 && (
+          <div className="absolute right-3 bottom-4 hidden flex-col overflow-hidden sm:flex rounded-[10px] border border-line bg-surface shadow-[0_4px_16px_-8px_rgb(14_17_22/0.16)] sm:right-5">
+            {([
+              [-1, ChevronUp, "Previous question", canPrev],
+              [1, ChevronDown, "Next question", canNext],
+            ] as const).map(([dir, Icon, label, enabled]) => (
+              <button
+                key={dir}
+                type="button"
+                onClick={() => step(dir)}
+                disabled={!enabled}
+                aria-label={`${label} (Alt+${dir < 0 ? "↑" : "↓"})`}
+                title={`${label} (Alt+${dir < 0 ? "↑" : "↓"})`}
+                className="press grid size-8 place-items-center text-muted hover:bg-shell hover:text-ink disabled:pointer-events-none disabled:text-line-strong [&+&]:border-t [&+&]:border-line"
+              >
+                <Icon className="size-4" aria-hidden />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="border-t border-line bg-surface/90 backdrop-blur-sm">

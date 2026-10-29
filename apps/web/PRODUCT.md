@@ -43,7 +43,7 @@ Cortex is an agentic research assistant over the user's *live* tools. It breaks 
 - Look: clean, premium, in the style of a YC-backed startup.
 - User steer (binding): "it should have intelligent colors and futuristic. it's a product and not a project."
 - User steer (binding): "minimalistic, thoughtful, have broad vision, insightful, cleaner, mature yet modern."
-- Must not feel like: a generic AI-chat clone, a dense dashboard, noisy reasoning, or anything playful.
+- Must not feel like: a generic AI-chat clone, a dense dashboard, noisy reasoning, or toy-like visuals. Motion and sound may be playful (springs, a soft chime when an answer lands, a stamp when an action is done) as long as the visual world stays calm (decision D3).
 - First screen is ask-first. Laptop first; mobile fully usable.
 
 ## Evidence on Hand

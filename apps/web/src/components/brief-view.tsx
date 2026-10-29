@@ -77,7 +77,7 @@ export function BriefView() {
         {today && <p className="text-[12.5px] text-muted mt-3">{today}</p>}
 
         {brief?.failures.map((f) => (
-          <p key={f.source} className="mt-5 flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] text-[#7a3d00]">
+          <p key={f.source} className="mt-5 flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] text-warn-ink">
             <CloudOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>
               <strong className="font-[600]">{f.name} is unavailable</strong>: {f.reason}. {f.impact}

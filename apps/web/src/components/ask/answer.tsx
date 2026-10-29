@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment } from "react";
-import { lineUnits, type Claim, type Evidence } from "@cortex/shared";
+import { Children, isValidElement, useState, type ReactElement, type ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Check, Copy } from "lucide-react";
+import type { Claim, Evidence } from "@cortex/shared";
 import { cn, sourceColor } from "@/lib/ui";
-
-const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 
 interface Props {
   text: string;
@@ -17,159 +18,130 @@ interface Props {
 }
 
 /**
- * Renders the answer claim by claim. Each claim's weight is its verification
- * state: hairline while unchecked, full weight once supported.
+ * Renders the answer as full markdown (lists, tables, code). Its weight is its verification state: hairline while
+ * it is being checked, full weight once checked; sentences only partly backed by their source get a dotted underline.
  */
 export function Answer({ text, claims, evidence, verified, streaming, onCite, onJump }: Props) {
-  const status = new Map(claims.map((c) => [norm(c.text), c.status]));
-  const blocks = toBlocks(text);
+  const partial = claims.filter((c) => c.status === "partial").map((c) => plain(c.text)).filter((t) => t.length > 12);
+  const mark = (children: ReactNode) => (partial.length ? Children.map(children, (c) => (typeof c === "string" ? markPartial(c, partial) : c)) : children);
 
-  const renderLine = (line: string, key: number) => {
-    const body = line.replace(/^\s*(?:[-*•]|\d+\.)\s+/, "").replace(/^#+\s*/, "");
-    const units = lineUnits(line);
-    const parts: React.ReactNode[] = [];
-    let cursor = 0;
-    units.forEach((u, i) => {
-      const at = body.indexOf(u, cursor);
-      if (at < 0) return;
-      if (at > cursor) parts.push(<Inline key={`g${i}`} text={body.slice(cursor, at)} evidence={evidence} onCite={onCite} onJump={onJump} />);
-      const state = verified ? status.get(norm(u)) ?? "plain" : "pending";
-      parts.push(
-        <span
-          key={`u${i}`}
-          className="claim"
-          data-state={state}
-          title={state === "unsupported" ? "Not supported by your sources" : state === "partial" ? "Only partly supported by the cited source" : undefined}
-        >
-          <Inline text={u} evidence={evidence} onCite={onCite} onJump={onJump} />
-        </span>,
+  const components: Components = {
+    p: ({ children }) => <p className="mb-4 text-pretty">{mark(children)}</p>,
+    li: ({ children }) => <li className="pl-1 [&>p]:mb-1">{mark(children)}</li>,
+    ul: ({ children }) => <ul className="mb-4 flex list-disc flex-col gap-1.5 pl-5 marker:text-hair [&_ul]:mt-1.5 [&_ul]:mb-0">{children}</ul>,
+    ol: ({ children }) => <ol className="mb-4 flex list-decimal flex-col gap-1.5 pl-6 marker:text-muted [&_ol]:mt-1.5 [&_ol]:mb-0">{children}</ol>,
+    h1: ({ children }) => <h3 className="mt-7 mb-2 text-[20px] font-[600] tracking-[-0.015em] text-ink">{children}</h3>,
+    h2: ({ children }) => <h3 className="mt-6 mb-2 text-[17px] font-[600] tracking-[-0.01em] text-ink">{children}</h3>,
+    h3: ({ children }) => <h4 className="mt-5 mb-2 text-[15px] font-[600] text-ink">{children}</h4>,
+    h4: ({ children }) => <h4 className="mt-4 mb-1.5 text-[15px] font-[600] text-ink-2">{children}</h4>,
+    strong: ({ children }) => <strong className="font-[600]">{children}</strong>,
+    blockquote: ({ children }) => <blockquote className="mb-4 border-l-2 border-line-strong pl-4 text-ink-2 [&>p]:mb-2">{children}</blockquote>,
+    hr: () => <hr className="my-6 border-line" />,
+    table: ({ children }) => (
+      <div className="mb-5 overflow-x-auto rounded-[10px] border border-line">
+        <table className="w-full border-collapse text-left text-[14.5px] leading-snug">{children}</table>
+      </div>
+    ),
+    th: ({ children }) => <th className="border-b border-line bg-shell px-3 py-2 font-[600] whitespace-nowrap text-ink">{children}</th>,
+    td: ({ children }) => <td className="border-b border-line px-3 py-2 align-top text-ink-2 [tr:last-child_&]:border-b-0">{mark(children)}</td>,
+    a: ({ href, children }) => {
+      const n = href?.startsWith("#cite-") ? Number(href.slice(6)) : 0;
+      if (n) {
+        const ev = evidence[n - 1];
+        return ev ? <Cite n={n} ev={ev} onCite={onCite} onJump={onJump} /> : null; // a citation to nothing is dropped
+      }
+      return (
+        <a href={href} target="_blank" rel="noreferrer" className="text-accent-ink underline decoration-accent/40 underline-offset-2 hover:decoration-accent">
+          {children}
+        </a>
       );
-      cursor = at + u.length;
-    });
-    if (cursor < body.length) {
-      const rest = body.slice(cursor);
-      parts.push(
-        <span key="rest" className="claim" data-state={verified ? "plain" : "pending"}>
-          <Inline text={rest} evidence={evidence} onCite={onCite} onJump={onJump} />
-        </span>,
-      );
-    }
-    return <Fragment key={key}>{parts}</Fragment>;
+    },
+    code: ({ children }) => <code className="rounded bg-shell px-1 py-px font-mono text-[0.86em] text-ink-2">{children}</code>,
+    pre: ({ children }) => {
+      const code = Children.toArray(children).find(isValidElement) as ReactElement<{ className?: string; children?: ReactNode }> | undefined;
+      const lang = code?.props.className?.match(/language-([\w+#-]+)/)?.[1];
+      return <Terminal lang={lang} code={String(code?.props.children ?? "").replace(/\n$/, "")} />;
+    },
   };
 
   return (
-    <div className={cn("text-[17px] leading-[1.7] text-ink", streaming && "streaming")}>
-      {blocks.map((b, i) => {
-        if (b.kind === "heading")
-          return (
-            <h3 key={i} className="mt-6 mb-2 text-[15px] font-[600] tracking-[-0.01em] text-ink">
-              {renderLine(b.lines[0]!, 0)}
-            </h3>
-          );
-        // Drafts (code or quoted) are Cortex's own writing, not claims about your data: no weighting.
-        if (b.kind === "code" || b.kind === "quote")
-          return (
-            <blockquote key={i} className="mb-4 border-l border-line-strong pl-4 text-[15px] leading-relaxed whitespace-pre-wrap text-ink-2">
-              {b.lines.join("\n").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[\d+\]/g, "")}
-            </blockquote>
-          );
-        if (b.kind === "list")
-          return (
-            <ul key={i} className="mb-4 flex flex-col gap-1.5 pl-5 marker:text-hair [list-style:disc]">
-              {b.lines.map((l, j) => (
-                <li key={j} className="pl-1">
-                  {renderLine(l, j)}
-                </li>
-              ))}
-            </ul>
-          );
-        return (
-          <p key={i} className="mb-4 text-pretty">
-            {b.lines.map((l, j) => (
-              <Fragment key={j}>
-                {j > 0 && " "}
-                {renderLine(l, j)}
-              </Fragment>
-            ))}
-          </p>
-        );
-      })}
+    <div className={cn("claim text-[17px] leading-[1.7] text-ink", streaming && "streaming")} data-state={verified ? "plain" : "pending"}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {withCitationLinks(text)}
+      </ReactMarkdown>
     </div>
   );
 }
 
-type Block = { kind: "p" | "list" | "heading" | "code" | "quote"; lines: string[] };
+const SHELL = new Set(["bash", "sh", "shell", "zsh", "console", "powershell", "ps1", "pwsh", "cmd", "bat", "terminal"]);
 
-function toBlocks(text: string): Block[] {
-  const out: Block[] = [];
-  let fence: Block | null = null;
-  for (const raw of text.split("\n")) {
-    const line = raw.trimEnd();
-    if (/^\s*```/.test(line)) {
-      if (fence) fence = null;
-      else out.push((fence = { kind: "code", lines: [] }));
-      continue;
+/** Code is shown the way it will be used: a terminal panel, copyable in one click. */
+function Terminal({ lang, code }: { lang?: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard blocked: the text is still selectable
     }
-    if (fence) {
-      fence.lines.push(raw);
-      continue;
-    }
-    if (!line.trim()) {
-      out.push({ kind: "p", lines: [] });
-      continue;
-    }
-    if (/^\s*>/.test(line)) {
-      const last = out.at(-1);
-      const text = line.replace(/^\s*>\s?/, "");
-      if (last?.kind === "quote") last.lines.push(text);
-      else out.push({ kind: "quote", lines: [text] });
-      continue;
-    }
-    const kind: Block["kind"] = /^\s*(?:[-*•]|\d+\.)\s+/.test(line) ? "list" : /^#+\s/.test(line) ? "heading" : "p";
-    const last = out.at(-1);
-    if (kind === "heading") out.push({ kind, lines: [line] });
-    else if (last && last.kind === kind && last.lines.length) last.lines.push(line);
-    else out.push({ kind, lines: [line] });
-  }
-  return out.filter((b) => b.lines.length);
+  };
+  return (
+    <div className="terminal mb-5 overflow-hidden rounded-[10px] border border-[#23262d] bg-[#0f1115] text-[#d5d8df]">
+      <div className="flex items-center justify-between gap-3 border-b border-[#23262d] py-1.5 pr-1.5 pl-3">
+        <span className="font-mono text-[11.5px] tracking-[0.02em] text-[#8b919c]">{!lang ? "code" : SHELL.has(lang.toLowerCase()) ? "terminal" : lang}</span>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={copied ? "Copied" : "Copy code"}
+          className="press inline-flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-[12px] text-[#a9aeb8] hover:bg-[#1d2027] hover:text-white"
+        >
+          {copied ? <Check className="size-3.5 text-[#3dd68c]" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-[1.65] [tab-size:2]">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
 }
 
-const TOKEN = /(\*\*[^*]+\*\*|`[^`]+`|\[\d+\]|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g;
+/** "[3]" becomes a link the renderer turns into a citation; code (fenced or inline) is left alone. */
+function withCitationLinks(md: string) {
+  return md
+    .split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/)
+    .map((part, i) => (i % 2 ? part : part.replace(/((?:\s*\[\d+\])+)([.,;:])/g, "$2$1").replace(/\[(\d+)\](?!\()/g, "[$1](#cite-$1)")))
+    .join("");
+}
 
-function Inline({
-  text,
-  evidence,
-  onCite,
-  onJump,
-}: {
-  text: string;
-  evidence: Evidence[];
-  onCite: (id: string | null) => void;
-  onJump: (id: string) => void;
-}) {
-  return (
-    <>
-      {text.replace(/((?:\s*\[\d+\])+)([.,;:])/g, "$2$1").split(TOKEN).map((part, i) => {
-        if (!part) return null;
-        const cite = part.match(/^\[(\d+)\]$/);
-        if (cite) {
-          const ev = evidence[Number(cite[1]) - 1];
-          if (!ev) return null; // a citation to nothing is dropped, and verification flags the claim
-          return <Cite key={i} n={Number(cite[1])} ev={ev} onCite={onCite} onJump={onJump} />;
-        }
-        if (part.startsWith("**")) return <strong key={i} className="font-[600]">{part.slice(2, -2)}</strong>;
-        if (part.startsWith("`")) return <code key={i} className="rounded bg-shell px-1 font-mono text-[0.88em]">{part.slice(1, -1)}</code>;
-        const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
-        if (link)
-          return (
-            <a key={i} href={link[2]} target="_blank" rel="noreferrer" className="text-accent-ink underline decoration-accent/40 hover:decoration-accent">
-              {link[1]}
-            </a>
-          );
-        return <Fragment key={i}>{part}</Fragment>;
-      })}
-    </>
-  );
+/** A claim as it reads on screen: no markdown, citations or list markers. */
+function plain(s: string) {
+  return s
+    .replace(/\s*\[\d+\]/g, "")
+    .replace(/\*\*|__|`/g, "")
+    .replace(/^\s*(?:[-*•]|\d+\.)\s+/, "")
+    .replace(/[.,;:]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function markPartial(s: string, partial: string[]): ReactNode {
+  for (const p of partial) {
+    const at = s.indexOf(p);
+    if (at < 0) continue;
+    return (
+      <>
+        {s.slice(0, at)}
+        <span className="claim" data-state="partial" title="Only partly supported by the cited source">
+          {p}
+        </span>
+        {markPartial(s.slice(at + p.length), partial)}
+      </>
+    );
+  }
+  return s;
 }
 
 export function Cite({ n, ev, onCite, onJump }: { n: number; ev: Evidence; onCite: (id: string | null) => void; onJump: (id: string) => void }) {

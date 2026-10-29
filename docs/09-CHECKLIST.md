@@ -13,10 +13,10 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 
 ## 1. Dark mode (#1)
 
-- [ ] Dark tokens for every colour in `globals.css` (shell, surface, ink, lines, accent, source marks, state colours), meeting WCAG AA.
-- [ ] Theme switch in the sidebar footer: System / Light / Dark; remembered per user; no flash on load (theme set before paint).
-- [ ] Claim-weight states, conflict band, action card, citations and focus ring re-checked in dark.
-- Tests: [ ] screenshot all 4 pages × light/dark × desktop/mobile; [ ] contrast check on every text token; [ ] no flash on hard reload.
+- [x] Dark tokens for every colour in `globals.css` (2026-10-29): each token is one `light-dark(light, dark)` value, so the palettes can't drift apart; the hard-coded colours in components became tokens (`hover`, `pressed`, `on-ink`, `accent-wash`, `warn-ink`). Light "ok" green darkened to #0b7a57 (it was 4.34:1).
+- [x] Theme switch in the sidebar footer and the phone menu: System / Light / Dark; remembered in this browser (per user once #7 lands); an inline script applies the choice before paint, so there is no flash. `theme-color` follows the system theme.
+- [x] Claim weights, citations, sources, action card, terminal panels and focus ring checked in dark.
+- Tests: [x] screenshots of all 4 pages in light and dark at desktop, plus Ask on a phone; [x] contrast script over 16 text/background pairs in both themes: all ≥ 4.5:1; [x] saved dark with a light system: the page is dark at DOMContentLoaded; picking Light, then System, updates the page and storage; 0 console errors.
 
 ## 2. Chat management in the sidebar (#2)
 
@@ -75,12 +75,12 @@ Root cause today: only Deep mode can classify "chat" intent, and only after spen
 ## 8. Motion, sound and delight (#8)
 
 Use `emil-design-eng`, `animate`, `find-animation-opportunities`, `review-animations`.
-- [ ] Motion audit and plan (`improve-animations`) before coding.
-- [ ] Signature moments: claim weight settle, evidence arriving, action stamp (approve → "Done"), sidebar chat enter/exit, page transitions, composer send.
-- [ ] Tactile controls: press scale on buttons, spring on toggles, smooth trace expand.
-- [ ] Subtle sounds (send, answer verified, action done, error), quiet by default, with a Sound on/off setting; respect `prefers-reduced-motion`.
-- [ ] Playful but restrained components per D3 (e.g. empty states, first answer celebration).
-- Tests: [ ] `review-animations` pass with no blocking issues; [ ] all motion ≤ 300 ms for UI feedback, runs at 60 fps (animation-performance check); [ ] reduced motion disables non-essential motion; [ ] sounds off means zero audio.
+- [x] Motion audit and plan before coding (2026-10-29): existing motion was turn fade-in, trace expand, action card entry and the claim-weight settle; missing were press feedback, arriving evidence, sliding selections, page and list entry, the action stamp, and sound. Plan reviewed against `emil-design-eng` (custom ease-out, ≤ 300 ms for UI feedback, transform/opacity only, springs only where things settle).
+- [x] Signature moments: evidence rises in staggered 40 ms apart (280 ms, ease-out); "Done"/"Declined"/"Failed" stamps in with a spring and a blur that clears; "Verified n/m" draws its tick once; "Learned: …" pops in with a spring; pages ease in on navigation (220 ms); new sidebar chats and the undo notice ease in (`@starting-style`); the claim-weight settle stays.
+- [x] Tactile controls: every button scales to 0.97 on press (160 ms, uses `scale` so it composes with translate utilities); Fast/Deep and the theme switch have a sliding pill (spring, bounce 0.2); the "Use my other chats" knob springs; the trace expand already eases.
+- [x] Subtle sounds, synthesised with Web Audio (no files): send (one soft tick), answer (two-note chime), action done (three-note pluck), error (two low notes). Gain 0.045, silent in hidden tabs and when Stop was pressed. Sound switch next to the theme switch (on by default, quiet); turning it on plays a sample.
+- [x] Playful but restrained (D3, PRODUCT.md updated): suggestion rows stagger in on the empty Ask page, the drawn tick, the stamp and the memory pop. No confetti or mascots.
+- Tests: [x] browser check with a canned answer stream: sound on = 3 oscillators (send + answer), sound off = 0; [x] reduced motion: animation duration and stagger delay both 0, press scale off, Motion springs follow it (`MotionConfig reducedMotion="user"`); [x] every button carries the press transition; 0 page errors. [~] 60 fps: all new motion uses opacity, translate and scale only (plus a 3 px blur on one small stamp); not profiled with a trace. [ ] `review-animations` pass.
 
 ## 9. Onboarding and a clearer Brief (#9)
 
@@ -101,6 +101,13 @@ Depends on D1 and D2.
 - [ ] Global settings: allowed connectors, per-user daily limits, model order.
 - [ ] Audit log of admin actions and every executed user action.
 - Tests: [ ] non-admins get 403 on all admin routes; [ ] disabling a user ends their sessions; [ ] audit log records each change.
+
+## 12. Answer rendering and thread scrolling (#12)
+
+- [x] Answers render as full markdown with `react-markdown` + `remark-gfm` (already installed), replacing the hand-written parser: numbered and nested lists, tables (scroll sideways on narrow screens), italics, links, headings, rules, quotes. Citations `[n]` still become source marks; code is left untouched.
+- [x] Code renders in a terminal panel: dark, language label ("terminal" for shell), Copy with "Copied" feedback, scrolls sideways instead of wrapping. Its colours stay fixed whatever the answer's verification weight. Not done: syntax colouring (needs a new dependency).
+- [x] The whole thread is shown and scrolls, instead of earlier turns collapsing into one-line rows. While an answer streams the view follows it, but scrolling up stops the follow (160 px to stop, 40 px to resume) and shows "Jump to latest". Previous/next question buttons (desktop) and Alt+↑/Alt+↓ (skipped while typing in a non-empty field); smooth scrolling unless reduced motion is on.
+- Tests: [x] browser check (2026-10-29, Playwright on a saved 3-question thread): opens at the end; previous moves up twice; Alt+↓ moves down; "Jump to latest" shows when reading history; 2 terminal panels labelled terminal/python; nested list, 3 table rows, 2 citation marks and no literal "[1]"; long code line scrolls; Copy puts the code on the clipboard; 0 console errors. [ ] check during a live streaming answer; [ ] phone widths.
 
 ## Cross-cutting checks (every release)
 
