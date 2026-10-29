@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, Pin, PinOff, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { ChevronDown, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import type { MemoryItem, MemoryKind } from "@cortex/shared";
+import { onSettings, readUseOtherChats, writeUseOtherChats } from "@/lib/settings";
 import { cn, relativeDays } from "@/lib/ui";
 
 const KIND_LABEL: Record<MemoryKind, string> = {
@@ -21,6 +22,8 @@ export function MemoryView() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [kind, setKind] = useState<MemoryKind>("priority");
+  const [adding, setAdding] = useState(false);
+  const otherChats = useSyncExternalStore(onSettings, readUseOtherChats, () => false);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/memory");
@@ -49,6 +52,7 @@ export function MemoryView() {
     if (draft.trim().length < 3) return;
     await mutate("/api/memory", { method: "POST", body: JSON.stringify({ content: draft, kind }) });
     setDraft("");
+    setAdding(false);
   };
 
   const groups = ORDER.map((k) => ({ k, list: (items ?? []).filter((m) => m.kind === k) })).filter((g) => g.list.length);
@@ -58,10 +62,39 @@ export function MemoryView() {
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
         <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">What Cortex remembers</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
-          Cortex keeps only what is likely to matter later: things you ask it to remember and durable priorities you mention. Each memory shows why it
-          was kept. Pinned memories never fade; everything else fades unless it comes up again.
+          As you chat, Cortex saves what will still matter next week: your priorities, preferences, people and decisions. Small talk, one-off questions
+          and anything that looks like a password or code are never saved. Each memory shows why it was kept. Pinned memories never fade; everything
+          else fades unless it comes up again.
         </p>
 
+        <label className="mt-6 flex max-w-[60ch] cursor-pointer items-start gap-3 border-y border-line py-4">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={otherChats}
+            onChange={(e) => writeUseOtherChats(e.target.checked)}
+            className="peer sr-only"
+          />
+          <span
+            aria-hidden
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-line-strong transition-colors duration-200 peer-checked:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-200 peer-checked:after:translate-x-4"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[15px] font-[550] text-ink">Use my other chats</span>
+            <span className="text-[13.5px] leading-snug text-muted">
+              Cortex can look back at your past chats when they help, and says which chat it used. Off unless you turn it on. Deleting a chat removes it
+              for good.
+            </span>
+          </span>
+        </label>
+
+        {!adding && (
+          <button type="button" onClick={() => setAdding(true)} className="mt-6 inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink">
+            <Plus className="size-3.5" aria-hidden /> Add a memory yourself
+          </button>
+        )}
+
+        {adding && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -74,6 +107,8 @@ export function MemoryView() {
           </label>
           <input
             id="teach"
+            autoFocus
+            onKeyDown={(e) => e.key === "Escape" && setAdding(false)}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={500}
@@ -101,6 +136,7 @@ export function MemoryView() {
             </button>
           </div>
         </form>
+        )}
 
         {error && (
           <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-[#7a3d00]">
@@ -110,7 +146,7 @@ export function MemoryView() {
 
         {items && items.length === 0 && !error && (
           <p className="mt-12 border-t border-line pt-6 text-[15px] text-muted">
-            Nothing yet. Try “Orbit is my top priority this month”, or say “remember that…” while asking a question.
+            Nothing yet. Mention a priority or preference while you chat (“Orbit is my top priority this month”), or say “remember that…”.
           </p>
         )}
 
@@ -134,7 +170,7 @@ export function MemoryView() {
         ))}
         {backend && (
           <p className="text-[12.5px] text-muted mt-12">
-            Saved {backend === "oracle" ? "the cloud, encrypted" : "on this device"}.
+            Saved {backend === "oracle" ? "in the cloud, encrypted" : "on this device"}.
           </p>
         )}
       </div>

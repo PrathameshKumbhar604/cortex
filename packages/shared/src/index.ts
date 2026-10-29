@@ -150,6 +150,7 @@ export const SOURCE_NAMES: Record<string, string> = {
   github: "GitHub",
   web: "Web",
   memory: "Memory",
+  chat: "Your chats",
   llm: "Language model",
 };
 

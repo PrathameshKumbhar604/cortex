@@ -1,4 +1,5 @@
 import type { ChatTurn, Evidence, MemoryItem, Plan } from "@cortex/shared";
+import type { PastChat } from "./memory";
 
 export interface SourceBrief {
   id: string;
@@ -21,11 +22,36 @@ function memoryBlock(memories: MemoryItem[]): string {
   return memories.length ? memories.map((m) => `- (${m.kind}) ${m.content}`).join("\n") : "- none";
 }
 
-function historyBlock(history: ChatTurn[]): string {
-  return history.length
-    ? history.slice(-4).map((t) => `${t.role}: ${t.content.slice(0, 300)}`).join("\n")
-    : "none";
+/**
+ * The whole current chat within a fixed budget (~2k tokens): the newest messages in full, older ones cut to
+ * their opening lines, the oldest dropped only once the budget is spent. No model call, so it costs nothing per turn.
+ */
+export function historyBlock(history: ChatTurn[], budget = 8000): string {
+  if (!history.length) return "none";
+  const lines: string[] = [];
+  let left = budget;
+  for (let i = history.length - 1; i >= 0 && left > 0; i--) {
+    const t = history[i]!;
+    const recent = history.length - i <= 4; // the last two exchanges carry most follow-ups
+    const text = t.content.replace(/\s+/g, " ").trim();
+    const cut = text.slice(0, Math.min(recent ? 1500 : 240, left));
+    lines.unshift(`${t.role}: ${cut}${cut.length < text.length ? "…" : ""}`);
+    left -= cut.length;
+  }
+  const dropped = history.length - lines.length;
+  if (!dropped) return lines.join("\n");
+  // The opening message usually sets the topic, so it stays even in a very long chat.
+  const first = history[0]!;
+  return `${first.role}: ${first.content.replace(/\s+/g, " ").slice(0, 240)}\n(${dropped - 1} earlier messages not shown)\n${lines.join("\n")}`;
 }
+
+export function pastChatsBlock(chats: PastChat[]): string {
+  return chats
+    .map((c) => `- Chat on ${shortDate(c.createdAt)}: user asked "${c.question.slice(0, 200)}"; Cortex answered: ${c.answer.slice(0, 400).replace(/\s+/g, " ")}`)
+    .join("\n");
+}
+
+export const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export function planPrompt(question: string, sources: SourceBrief[], memories: MemoryItem[], history: ChatTurn[]) {
   return [
@@ -100,9 +126,6 @@ ${SECTION.actions}
 A JSON array of actions ONLY if the user asked you to draft, send, post, create, schedule or update something; otherwise []. Put the full drafted text in the action's args, NOT in the answer: in the answer, say in one sentence what you prepared and that it is waiting for their approval. Available:
 ${actionList}
 Format: [{"connector":"gmail","action":"send_email","title":"Email Dr. Ruiz the update","args":{...}}]. Fill args from evidence; never guess an email address that is not in the evidence.
-${SECTION.memory}
-A JSON array (max 2) of durable facts about the user's priorities or preferences, stated in the USER's own words in this conversation, worth remembering next week. Otherwise [].
-Format: [{"content":"...","kind":"priority|preference|fact|person|decision","salience":0.0-1.0,"reason":"..."}]
 ${SECTION.next}
 Up to 3 short follow-up questions the user is likely to ask next, one per line, each under 60 characters.`,
     },
@@ -153,14 +176,28 @@ Request: ${question}`,
 }
 
 /** Questions that don't need the user's sources: answer directly. */
-export function generalPrompt(question: string, history: ChatTurn[], memories: MemoryItem[]) {
+export function generalPrompt(
+  question: string,
+  history: ChatTurn[],
+  memories: MemoryItem[],
+  pastChats: PastChat[] = [],
+  otherChats: { on: boolean; asked: boolean } = { on: false, asked: false },
+) {
+  const past = pastChats.length
+    ? `\nThe user allowed you to use their other chats. Related ones (use only if relevant, and then say "from your chat on <date>"):\n${pastChatsBlock(pastChats)}`
+    : !otherChats.asked
+      ? ""
+      : otherChats.on
+        ? "\nThe user asked about their other chats, but none are saved yet or none relate to this. Say so plainly."
+        : `\nThe user asked about their other chats, but reading them is switched off. Don't claim this is your first chat: say you can't see other chats, and that they can turn on "Use my other chats" on the Memory page.`;
   return [
     {
       role: "system" as const,
-      content: `You are Cortex, a helpful assistant. Today is ${today()}. This question does not need the user's own tools, so answer it directly from general knowledge, clearly and concisely, in markdown.
-Never state facts about the user's own emails, files, meetings, projects or teammates here; if the question turns out to need them, say you can look it up in their connected apps.
-Respect the user's preferences:
-${memoryBlock(memories.filter((m) => m.kind === "preference"))}`,
+      content: `You are Cortex, a helpful assistant. Today is ${today()}. This question does not need the user's own tools, so answer it directly, clearly and concisely, in markdown.
+Questions about this conversation ("what did I ask?") are answered from the conversation below; questions about the user ("what's my name?") from what you remember about them. If neither has it, say you don't know yet.
+Never state facts about the user's own emails, files, meetings, projects or teammates beyond what is below; if the question needs them, say you can look it up in their connected apps.
+What you remember about the user (follow their preferences):
+${memoryBlock(memories)}${past}`,
     },
     { role: "user" as const, content: `Conversation so far:\n${historyBlock(history)}\n\n${question}` },
   ];

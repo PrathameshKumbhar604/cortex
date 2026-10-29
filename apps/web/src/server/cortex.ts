@@ -10,7 +10,6 @@ const root = process.env.CORTEX_ROOT ?? path.resolve(process.cwd(), "../..");
 interface Singletons {
   llm: LlmRouter;
   actions: ActionStore;
-  memory: MemoryClient;
   registries: Partial<Record<Workspace, ConnectorRegistry>>;
 }
 
@@ -20,7 +19,6 @@ function singletons(): Singletons {
   g.__cortex ??= {
     llm: new LlmRouter({ cachePath: path.join(root, ".cache", "llm-cache.json") }),
     actions: new ActionStore(),
-    memory: new MemoryClient(),
     registries: {},
   };
   return g.__cortex;
@@ -51,7 +49,8 @@ export async function setWorkspace(workspace: Workspace) {
 export function deps(workspace: Workspace): AgentDeps {
   const s = singletons();
   s.registries[workspace] ??= buildRegistry(workspace);
-  return { llm: s.llm, registry: s.registries[workspace]!, memory: s.memory, actions: s.actions };
+  // The memory client is stateless; not cached, so a dev hot reload never leaves an old copy behind.
+  return { llm: s.llm, registry: s.registries[workspace]!, memory: new MemoryClient(), actions: s.actions };
 }
 
 /** Memory is per workspace so sample-data memories never mix with real ones. */

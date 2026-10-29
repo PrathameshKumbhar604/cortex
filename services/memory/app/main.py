@@ -17,6 +17,10 @@ from pydantic import BaseModel, Field
 
 from .ledger import TTL_DAYS, Ledger
 
+# shortcut: measured 2026-10-29: rewordings 0.15-0.26, unrelated from 0.34, so only near-identical wording merges here;
+# looser paraphrases are caught by the extraction model, which sees related memories. Re-tune with more data.
+DUPLICATE_DISTANCE = 0.15
+
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("cortex.memory")
@@ -46,6 +50,7 @@ class MemoryIn(BaseModel):
     salience: float = Field(default=0.6, ge=0, le=1)
     run_id: str | None = None
     expires_at: str | None = None
+    replaces: str | None = None  # id of a memory this one updates ("moved to Nov 14" replaces "is on Nov 12")
 
 
 class SearchIn(BaseModel):
@@ -81,7 +86,15 @@ def list_memories(user_id: str):
 
 @app.post("/memories")
 def add_memory(m: MemoryIn):
-    dup = ledger.find_duplicate(m.user_id, m.content)
+    # An update looks like what it replaces, so it skips the duplicate check.
+    dup = None if m.replaces else ledger.find_duplicate(m.user_id, m.content)
+    if dup is None and oracle and not m.replaces:
+        # Same meaning in other words ("Prefers short answers" / "Likes brief replies") reinforces too.
+        try:
+            near = oracle.search(m.user_id, m.content, 1, max_distance=DUPLICATE_DISTANCE)
+            dup = ledger.get(near[0][0]) if near else None
+        except Exception as exc:
+            log.warning("oracle duplicate check failed: %s", exc)
     if dup is not None:
         return ledger.reinforce(dup, m.salience)
     item = ledger.add(m.user_id, m.content.strip(), m.kind, m.source, m.reason, m.salience, m.run_id, m.expires_at)
@@ -90,18 +103,28 @@ def add_memory(m: MemoryIn):
             oracle.add(item["id"], m.user_id, item["content"], m.kind, TTL_DAYS.get(m.kind))
         except Exception as exc:
             log.warning("oracle add failed: %s", exc)
+    old = ledger.get(m.replaces) if m.replaces else None
+    replaced = [old["id"]] if old is not None and old["user_id"] == m.user_id and not old["pinned"] else []
+    for gone in replaced:
+        ledger.delete(gone)
+    for gone in replaced + ledger.trim(m.user_id):
+        if oracle:
+            try:
+                oracle.delete(gone)
+            except Exception as exc:
+                log.warning("oracle delete failed: %s", exc)
     return item
 
 
 @app.post("/search")
 def search(q: SearchIn):
-    hits: list[tuple[str, float]] = []
+    hits: list[tuple[str, float]] | None = None
     if oracle:
         try:
             hits = oracle.search(q.user_id, q.query, q.limit * 2)
         except Exception as exc:
             log.warning("oracle search failed, using keyword search: %s", exc)
-    if not hits:
+    if hits is None:  # no Oracle, or it failed; an empty Oracle result means "nothing relevant"
         hits = ledger.keyword_search(q.user_id, q.query, q.limit * 2)
 
     results: dict[str, dict] = {m["id"]: m for m in ledger.pinned(q.user_id)}
@@ -151,6 +174,25 @@ def append_messages(thread_id: str, body: MessagesIn):
             oracle.append_messages(thread_id, body.user_id, msgs)
         except Exception as exc:
             log.warning("oracle thread append failed: %s", exc)
+    return Response(status_code=204)
+
+
+class ChatSearchIn(BaseModel):
+    user_id: str
+    query: str
+    exclude_thread: str | None = None
+    limit: int = Field(default=3, ge=1, le=10)
+    recent: bool = False  # no topic named: return the latest chats
+
+
+@app.post("/threads/search")
+def search_chats(body: ChatSearchIn):
+    return ledger.search_chats(body.user_id, body.query, body.exclude_thread, body.limit, body.recent)
+
+
+@app.delete("/threads/{thread_id}", status_code=204)
+def delete_thread(thread_id: str, user_id: str):
+    ledger.delete_thread(thread_id, user_id)
     return Response(status_code=204)
 
 

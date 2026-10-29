@@ -20,6 +20,16 @@ DB_PATH = os.environ.get("MEMORY_LEDGER_PATH", os.path.join(os.path.dirname(__fi
 # How long each kind of memory lives unless pinned (None = until forgotten).
 TTL_DAYS = {"priority": 45, "decision": 120, "fact": 90, "person": None, "preference": None}
 HALF_LIFE_DAYS = 30.0
+# Unpinned memories kept per user; beyond this the least salient go first.
+MAX_PER_USER = 200
+# Words too common to link one chat to another.
+STOPWORDS = {
+    "the", "and", "for", "you", "your", "are", "was", "were", "what", "when", "where", "which", "who", "why", "how",
+    "did", "does", "this", "that", "with", "from", "about", "have", "has", "had", "can", "could", "would", "should",
+    "will", "there", "their", "them", "they", "any", "all", "out", "get", "got", "tell", "said", "say", "last", "time",
+    "chat", "chats", "talk", "talked", "discuss", "discussed", "earlier", "before", "remember", "other", "our", "not",
+    "previous", "past", "conversation", "conversations", "ask", "asked", "yesterday", "week", "ago", "were", "been",
+}
 
 
 def now() -> datetime:
@@ -119,6 +129,18 @@ class Ledger:
             self._db.commit()
         return self.to_item(self.get(memory_id))  # type: ignore[arg-type]
 
+    def trim(self, user_id: str, keep: int = MAX_PER_USER) -> list[str]:
+        """Drops expired memories and the least salient unpinned ones beyond `keep`; returns removed ids."""
+        ts = now().isoformat()
+        with self._lock:
+            rows = self._db.execute("SELECT * FROM memories WHERE user_id = ? AND pinned = 0", (user_id,)).fetchall()
+        expired = {r["id"] for r in rows if r["expires_at"] and r["expires_at"] <= ts}
+        live = sorted((r for r in rows if r["id"] not in expired), key=lambda r: -self.effective_salience(r))
+        gone = [*expired, *(r["id"] for r in live[keep:])]
+        for memory_id in gone:
+            self.delete(memory_id)
+        return gone
+
     def reinforce(self, row: sqlite3.Row, salience: float) -> dict:
         """A repeated memory is a signal: refresh its age and keep the higher salience."""
         with self._lock:
@@ -181,6 +203,56 @@ class Ledger:
                 "INSERT INTO messages VALUES (?,?,?,?,?)",
                 [(thread_id, user_id, m["role"], m["content"][:4000], now().isoformat()) for m in messages],
             )
+            self._db.commit()
+
+    def search_chats(self, user_id: str, query: str, exclude_thread: str | None, limit: int = 3, recent: bool = False) -> list[dict]:
+        """Past question/answer pairs of this user's other chats that share words with the query.
+        With `recent` (the user asked about their past chats without naming a topic), their latest chats instead."""
+        terms = {t for t in "".join(c if c.isalnum() else " " for c in query.lower()).split() if len(t) > 2} - STOPWORDS
+        if not terms:
+            return self.recent_chats(user_id, exclude_thread, 5) if recent else []
+        # shortcut: keyword overlap over the newest 2,000 turns; move to Oracle vectors once chats are stored server-side (#7).
+        with self._lock:
+            rows = self._db.execute(
+                """SELECT q.thread_id, q.content AS question, a.content AS answer, q.created_at
+                   FROM messages q JOIN messages a ON a.rowid = q.rowid + 1 AND a.thread_id = q.thread_id AND a.role = 'assistant'
+                   WHERE q.user_id = ? AND q.role = 'user' AND q.thread_id != ?
+                   ORDER BY q.rowid DESC LIMIT 2000""",
+                (user_id, exclude_thread or ""),
+            ).fetchall()
+        need = max(1, math.ceil(len(terms) / 3))  # one shared word is noise in a long question
+        scored = []
+        for r in rows:
+            words = set("".join(c if c.isalnum() else " " for c in f"{r['question']} {r['answer']}".lower()).split())
+            hits = sum(1 for t in terms if t in words)
+            if hits >= need:
+                scored.append((hits, r))
+        scored.sort(key=lambda x: -x[0])  # stable: newest first among equals
+        return [
+            {"thread_id": r["thread_id"], "question": r["question"][:300], "answer": r["answer"][:600], "created_at": r["created_at"]}
+            for _, r in scored[:limit]
+        ]
+
+    def recent_chats(self, user_id: str, exclude_thread: str | None, limit: int) -> list[dict]:
+        """How each of the latest chats began: the opening question and answer, newest chat first."""
+        with self._lock:
+            rows = self._db.execute(
+                """SELECT q.thread_id, q.content AS question, a.content AS answer, t.last AS created_at
+                   FROM (SELECT thread_id, MIN(rowid) AS first, MAX(created_at) AS last FROM messages
+                         WHERE user_id = ? AND thread_id != ? GROUP BY thread_id ORDER BY last DESC LIMIT ?) t
+                   JOIN messages q ON q.rowid = t.first
+                   LEFT JOIN messages a ON a.rowid = t.first + 1 AND a.thread_id = t.thread_id
+                   ORDER BY t.last DESC""",
+                (user_id, exclude_thread or "", limit),
+            ).fetchall()
+        return [
+            {"thread_id": r["thread_id"], "question": r["question"][:300], "answer": (r["answer"] or "")[:300], "created_at": r["created_at"]}
+            for r in rows
+        ]
+
+    def delete_thread(self, thread_id: str, user_id: str) -> None:
+        with self._lock:
+            self._db.execute("DELETE FROM messages WHERE thread_id = ? AND user_id = ?", (thread_id, user_id))
             self._db.commit()
 
     def recent_messages(self, thread_id: str, limit: int = 6) -> list[dict]:

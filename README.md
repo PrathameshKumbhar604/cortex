@@ -8,7 +8,7 @@ Ask *"What changed in Orbit this week, and what's at risk?"*. Cortex:
 2. **searches** every connected source in parallel;
 3. **recalls** what you told it matters;
 4. writes an answer where **every claim is cited**;
-5. **verifies each claim** against its source. Unsupported claims are struck through, and contradictions between sources are flagged.
+5. **verifies each claim** against its source. Claims it cannot match carry no citation, and contradictions between sources are flagged.
 
 If you ask it to *do* something, it drafts the action and waits for **Approve**.
 

@@ -21,9 +21,9 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 ## 2. Chat management in the sidebar (#2)
 
 - [~] Persist chats server-side (thread id, title, turns, created/updated) per user, not just a localStorage list. Interim (2026-10-29): whole threads (title, turns, server thread id) saved in localStorage, 20 newest; server-side waits for auth (#7).
-- [ ] Sidebar: rename (inline), delete (with undo toast), pin; auto-title from the first question.
+- [x] Sidebar: rename (inline), delete (with undo), pin (own "Pinned" group); auto-title: the fast model names a new chat from its first message (2–5 words, once, alongside the answer; the message stays the title if that fails); a rename survives later questions. Also in the phone menu.
 - [x] Open a past chat restores the full conversation, not a re-run (`/?t=<id>`; sidebar shows one entry per thread).
-- Tests: [ ] rename/delete/pin persist across reload and devices; [ ] deleting a chat removes its stored turns; [ ] undo restores it; [ ] user A cannot see or delete user B's chats.
+- Tests: [~] rename/delete/pin persist across reload (browser check 2026-10-29); across devices waits for server storage; [x] deleting a chat removes its stored turns; [x] undo restores it; [x] opening a saved chat makes 0 `/api/ask` calls and no console errors; [ ] user A cannot see or delete user B's chats (needs #7).
 
 ## 3. Intent routing: when to search, which model (#3)
 
@@ -51,18 +51,19 @@ Root cause today: only Deep mode can classify "chat" intent, and only after spen
 
 ## 5. Automatic, optimised memory (#5)
 
-- [ ] Remove "Teach Cortex" as the primary path (keep as an optional "add" behind a menu).
-- [ ] Automatic extraction after each chat, using the fast model: candidates classified as priority, preference, fact, person or decision, each with salience and TTL.
-- [ ] Write policy: skip small talk, one-off facts, secrets/credentials, and anything already known (semantic de-dup via Oracle vector search); merge or supersede contradicting memories (Oracle memory links `supersedes`/`contradicts`).
-- [ ] Storage optimisation: decay plus periodic consolidation (merge near-duplicates, drop expired, cap per user), summaries for old threads instead of raw turns.
-- [ ] Memory page stays the place to review, pin, edit and forget, and gains "why it was saved".
-- Tests: [ ] 30-message scripted conversation: expected memories saved, small talk and secrets not; [ ] repeating a fact reinforces instead of duplicating; [ ] a contradicting fact supersedes the old one; [ ] memory count stays bounded after 500 messages.
+- [x] Remove "Teach Cortex" as the primary path: now "Add a memory yourself" behind a link; the page says memory is automatic.
+- [x] Automatic extraction after each answer (`packages/agent/src/remember.ts`): a rules gate first (questions, commands, small talk and secrets never reach the model), then one fast-model call that classifies into priority, preference, fact, person or decision with salience; TTL per kind as before. Replaces the old MEMORY section in the answer prompt, which saved chit-chat.
+- [x] Write policy: skip small talk, one-off requests, secrets (gate + output filter); skip what is known (extraction sees related memories; service merges near-identical text and Oracle distance <= 0.15); updates replace the old memory in one service call (`replaces`), never a pinned one.
+- [~] Storage optimisation: decay (existing), expired dropped and at most 200 unpinned memories per user (least salient first). Not done: consolidation of near-duplicates already stored, thread summaries (moves to #6).
+- [x] Recall only relevant memories: Oracle results beyond distance 0.35 are dropped (unrelated questions were pulling in every memory, "Used 2 memories" on "hello").
+- [x] Memory page stays the place to review, pin, edit and forget, and shows why each memory was saved.
+- Tests: [x] 30-message scripted conversation (`npm run eval:memory`, 2026-10-29): 12/12 expected memories, 0 from small talk/questions, 0 secrets, 12 model calls; [x] repeating a fact reinforces instead of duplicating; [x] a contradicting fact supersedes the old one; [~] bounded count: cap tested on the ledger directly, not over 500 live messages. Unit tests cover gate, secrets, replace and pinned.
 
 ## 6. Context window and cross-chat reference (#6)
 
-- [ ] (Compulsory) Full current-chat context: rolling window of recent turns plus Oracle thread summary for older turns, within a token budget.
-- [ ] (Opt-in) "Use my other chats" setting: when on, retrieve relevant snippets from past chats via vector search and cite them as "From your chat on …". Off by default, togglable per user and per chat.
-- Tests: [ ] follow-ups resolve pronouns from 10+ turns back; [ ] with the opt-in off, no other chat is ever read (asserted in trace); [ ] with it on, the answer cites the past chat.
+- [x] (Compulsory) Full current-chat context (2026-10-29): the browser sends the whole chat (40 turns); `historyBlock` fits it in ~8k chars: last 2 exchanges in full, older messages cut to their opening lines, the first message always kept, the rest dropped with a count. No model call per turn, so no Oracle summary (it needs an LLM call each time); revisit if long chats lose detail.
+- [x] (Opt-in) "Use my other chats" switch on the Memory page, off by default. When on, the 3 most related past turns (keyword match; shortcut: not vectors yet) join the evidence as "Your chat on Oct 20, 2026" and are cited like any source; general answers say "from your chat on …". Every answered turn is now saved server-side (the general path didn't before). Deleting a chat deletes its server copy once the undo window closes. Not done: per-chat toggle; setting is per browser until auth (#7). Deciding when other chats matter (researched ChatGPT "Reference chat history", Claude chat search, BM25-vs-agentic retrieval studies): once opted in, every question runs the free keyword match, so the user never has to ask; questions about past chats with no topic ("what were my previous chats about?") get the latest 5 chats; with the switch off, Cortex says where to turn it on. The recall line shows "N from other chats" or "no related chats". A failing chat search no longer marks memory as down.
+- Tests: [x] a fact 12 exchanges back stays in context, within budget (unit); [x] with the opt-in off, other chats are never searched on either path (unit, counts calls); [x] with it on, the past chat becomes citable evidence (unit); [x] service: search skips the current chat and other users, delete only removes the owner's rows; [ ] live: not yet tried in the browser.
 
 ## 7. Authentication (#7)
 

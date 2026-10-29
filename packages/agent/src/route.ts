@@ -4,6 +4,16 @@ import type { ChatTurn, RouteDecision, RouteKind } from "@cortex/shared";
 
 const GREETING = /^\s*(hi|hello|hey|yo|thanks|thank you|thx|ok(ay)?|cool|great|nice|good (morning|afternoon|evening))\b[\s!.,]*$/i;
 const ABOUT_CORTEX = /\b(who are you|what can you do|what are you|how do you work|help me get started)\b/i;
+/** Telling Cortex something to keep ("remember my name is…") needs no search, only a saved memory. */
+const TELLING = /^\s*(please\s+)?(remember|keep in mind|note that|from now on|call me|my name is)\b/i;
+// "I like badminton", "I usually work late": about the user, but nothing to look up (unless it names a source).
+const ABOUT_ME = /^\s*(i (like|love|enjoy|hate|prefer|usually|always|never)|i'?m (a|an) )\b/i;
+// About this conversation or what Cortex knows of the user: the chat and memory answer it, not the user's apps.
+const ABOUT_CHAT =
+  /\b(what (did|have) (i|you) (just )?(ask|asked|say|said|tell|told|mention|mentioned)|(my|your) (last|previous|first|earlier) (question|message|answer|reply)|(this|our) (chat|conversation)|so far|what('s| is) my name|who am i|do you (know|remember) (me|my|who))\b/i;
+/** Points at earlier chats ("what were my previous chats about?", "what did we discuss last time?"). */
+export const ABOUT_PAST_CHATS =
+  /\b((previous|past|other|earlier|old|last|recent) (chats?|conversations?|sessions?)|last time|the other day|(we|i) (talked|spoke|discussed|chatted)|(you|i) (said|told|mentioned|asked)( me| you)? (yesterday|before|last week|last time|the other day))\b/i;
 const URL = /https?:\/\/\S+/i;
 const WEB = /\b(search the web|on the (web|internet)|online|latest news|news (about|on)|look (it )?up online)\b/i;
 const ACTION =
@@ -31,6 +41,8 @@ function hintedSources(q: string, available: string[]): string[] {
 export function routeByRules(question: string, available: string[]): RouteDecision | null {
   const q = question.trim();
   if (GREETING.test(q) || ABOUT_CORTEX.test(q)) return { route: "general", sources: [], tier: "fast", reason: "greeting or question about Cortex", by: "rules" };
+  if ((ABOUT_CHAT.test(q) || ABOUT_PAST_CHATS.test(q)) && !SOURCE_WORDS.test(q)) return { route: "general", sources: [], tier: "fast", reason: "about this chat or you", by: "rules" };
+  if ((TELLING.test(q) || (ABOUT_ME.test(q) && !SOURCE_WORDS.test(q))) && !/\?\s*$/.test(q)) return { route: "general", sources: [], tier: "fast", reason: "something to remember", by: "rules" };
   if (URL.test(q) && available.includes("web")) return { route: "web", sources: ["web"], tier: "fast", reason: "contains a link", by: "rules" };
   const hinted = hintedSources(q, available);
   if (IMPERATIVE.test(q) || (ACTION.test(q) && (hinted.length || PERSONAL.test(q)))) {
@@ -57,7 +69,7 @@ function routePrompt(question: string, history: ChatTurn[], sources: { id: strin
       content: `Classify a question for an assistant connected to the user's own work tools.
 Tools: ${sources.map((s) => `${s.id} (${s.describes})`).join("; ") || "none"}.
 Return only JSON {"route":"general"|"personal"|"web"|"action","sources":[tool ids],"complex":boolean}.
-- general: answerable from general knowledge (facts, explanations, coding, writing help, maths) and not about the user's own emails, files, meetings, projects, people or tasks.
+- general: answerable from general knowledge (facts, explanations, coding, writing help, maths) and not about the user's own emails, files, meetings, projects, people or tasks. Also questions about this conversation itself ("what did I ask?", "summarise our chat") or about what the assistant knows of the user ("what's my name?").
 - personal: needs the user's own data. Projects, people or product names the user mentions without "my" are usually theirs.
 - web: needs current public information from the internet.
 - action: asks to send, draft, post, create, schedule or update something in their tools.

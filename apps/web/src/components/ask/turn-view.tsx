@@ -32,7 +32,6 @@ export function TurnView({
     }
     return ids;
   }, [turn.answer, turn.evidence]);
-  const unsupported = turn.claims.filter((c) => c.status === "unsupported").length;
   const jump = (id: string) => document.getElementById(`ev-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
   return (
@@ -101,13 +100,8 @@ export function TurnView({
         </div>
       )}
 
-      {verified && (unsupported > 0 || turn.missing.length > 0) && (
+      {verified && turn.missing.length > 0 && (
         <div className="mb-5 flex flex-col gap-1 text-[13.5px] leading-snug text-muted">
-          {unsupported > 0 && (
-            <p>
-              <span className="text-risk">{unsupported} claim{unsupported > 1 ? "s" : ""}</span> could not be matched to your sources and {unsupported > 1 ? "are" : "is"} struck through.
-            </p>
-          )}
           {turn.missing.map((m, i) => (
             <p key={i}>Not in your sources: {m}</p>
           ))}
@@ -124,8 +118,8 @@ export function TurnView({
         <p className="readout mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
           <Brain className="size-3 text-accent" aria-hidden />
           {turn.memoryUsed.length > 0 && <span>Used {turn.memoryUsed.length} memor{turn.memoryUsed.length > 1 ? "ies" : "y"}</span>}
-          {turn.memoryWritten.map((m, i) => (
-            <Link key={`${m.id}:${i}`} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
+          {turn.memoryWritten.filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i).map((m) => (
+            <Link key={m.id} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
               Learned: “{m.content}”
             </Link>
           ))}

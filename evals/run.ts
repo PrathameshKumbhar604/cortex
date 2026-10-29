@@ -33,6 +33,8 @@ const noMemory: MemoryBackend = {
   },
   remove: async () => {},
   appendThread: async () => {},
+  searchChats: async () => [],
+  deleteThread: async () => {},
 };
 
 const mode: RunMode = process.argv.includes("fast") ? "fast" : "deep";

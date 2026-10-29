@@ -7,6 +7,7 @@ interface AskBody {
   mode?: RunMode;
   threadId?: string;
   history?: ChatTurn[];
+  useOtherChats?: boolean;
 }
 
 /** Streams AgentEvents as server-sent events. */
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
   const sess = await session();
   const d = deps(sess.workspace);
-  const history = (body.history ?? []).slice(-6).map((t) => ({ role: t.role, content: String(t.content).slice(0, 1500), needsDetails: t.needsDetails === true }));
+  const history = (body.history ?? []).slice(-80).map((t) => ({ role: t.role, content: String(t.content).slice(0, 4000), needsDetails: t.needsDetails === true }));
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
             userId: sess.userId,
             threadId: body.threadId,
             history,
+            useOtherChats: body.useOtherChats === true,
             signal: req.signal,
           },
           { ...d, memory: scopedMemory(d.memory, memoryUser(sess)) },
@@ -62,5 +64,7 @@ function scopedMemory(memory: ReturnType<typeof deps>["memory"], memUser: string
     update: (id, p) => memory.update(id, p),
     remove: (id) => memory.remove(id),
     appendThread: (t, _u, turns) => memory.appendThread(t, memUser, turns),
+    searchChats: (_u, q, exclude, recent) => memory.searchChats(memUser, q, exclude, recent),
+    deleteThread: (t) => memory.deleteThread(t, memUser),
   };
 }

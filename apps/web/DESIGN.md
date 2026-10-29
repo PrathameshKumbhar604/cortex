@@ -202,7 +202,7 @@ A cool, nearly colourless field where a single indigo and seven small source mar
 - **Rail Tints** (#eceef3 active, #f0f1f5 hover): left-rail navigation states only.
 
 ### Status
-- **Risk Red** (#d93a3f) with wash (#fdf2f2): the "Conflict" label, struck-claim decoration, errors, failed actions, destructive confirm.
+- **Risk Red** (#d93a3f) with wash (#fdf2f2): the "Conflict" label, errors, failed actions, destructive confirm.
 - **Amber** (#b35a00), wash (#fff6ea) and ink (#7a3d00): unavailable-source notices and warnings, set as text on the wash.
 - **Verified Green** (#0f8a63): "Done" stamps and connected status only.
 
@@ -235,7 +235,7 @@ Gmail red (#e5484d), Calendar teal (#12a594), Drive amber (#e5a000), Notion grap
 - **Cite** (mono 11.5px, 500): raised citation numerals preceded by a source mark.
 
 ### Named Rules
-**The Weight-Is-Truth Rule.** A claim's weight is its verification state: pending 200 in Hairline Grey; partial 330 in Ink Two with a dotted indigo underline (40% accent, 1.5px, 5px offset); supported and plain 460 in Ink; unsupported 280 in Hairline Grey struck through in red (75% risk, 1.5px). Weight interpolates over 900ms (cubic-bezier(0.16, 1, 0.3, 1)), colour over 600ms ease-out; reduced motion snaps. Do not use these weights or treatments for anything else.
+**The Weight-Is-Truth Rule.** A claim's weight is its verification state: pending 200 in Hairline Grey; partial 330 in Ink Two with a dotted indigo underline (40% accent, 1.5px, 5px offset); supported and plain 460 in Ink; unsupported looks the same as supported (no strikethrough: it confused people), it simply carries no citation. Weight interpolates over 900ms (cubic-bezier(0.16, 1, 0.3, 1)), colour over 600ms ease-out; reduced motion snaps. Do not use these weights or treatments for anything else.
 
 **The Instrument Rule.** Geist Mono appears only for measurements: readouts, numerals, citations, code and queries. Headings, labels on controls and prose stay in Geist.
 
@@ -306,7 +306,7 @@ Hairline grid of cited evidence: each cell carries a readout line (mark, Indigo 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** let claim weight carry verification: 200 pending, 330 partial with dotted indigo underline, 460 supported, 280 struck in red.
+- **Do** let claim weight carry verification: 200 pending, 330 partial with dotted indigo underline, 460 supported; unsupported reads as plain text without a citation.
 - **Do** draw structure with 1px rules (#e6e8ee) and open sections on a 1px ink rule.
 - **Do** keep indigo (#4353ff) to citations, focus, the Ask button and live verification.
 - **Do** set every measurement (counts, durations, dates, step names) as a 12px uppercase Geist Mono readout with tabular numerals.
@@ -319,4 +319,4 @@ Hairline grid of cited evidence: each cell carries a readout line (mark, Indigo 
 - **Don't** stack answers or list items in rounded cards; use ruled rows.
 - **Don't** use chat bubbles or sparkle accents.
 - **Don't** use Geist Mono for prose, headings or control labels.
-- **Don't** reuse the claim weights or the strikethrough treatment for emphasis or decoration.
+- **Don't** reuse the claim weights for emphasis or decoration.

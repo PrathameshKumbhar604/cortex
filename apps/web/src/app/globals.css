@@ -116,7 +116,8 @@ a {
   color: var(--hair);
 }
 .claim[data-state="supported"],
-.claim[data-state="plain"] {
+.claim[data-state="plain"],
+.claim[data-state="unsupported"] {
   font-weight: 460;
   color: var(--ink);
 }
@@ -126,13 +127,6 @@ a {
   text-decoration: underline dotted color-mix(in srgb, var(--accent) 40%, transparent);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 5px;
-}
-.claim[data-state="unsupported"] {
-  font-weight: 280;
-  color: var(--hair);
-  text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--risk) 75%, transparent);
-  text-decoration-thickness: 1.5px;
 }
 
 @keyframes caret {

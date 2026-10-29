@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
-import { readThread, saveThread } from "@/lib/recent";
+import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 import { Composer } from "./composer";
 import { TurnView } from "./turn-view";
@@ -23,6 +23,14 @@ const LIVE_SUGGESTIONS = [
   "Summarize unread emails that need a reply",
   "What's blocking my open pull requests?",
 ];
+
+/** Names a new chat from its first message, alongside the answer; the message itself stays the title if this fails. */
+function nameThread(id: string, question: string) {
+  fetch("/api/title", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question }) })
+    .then((r) => r.json() as Promise<{ title?: string | null }>)
+    .then((b) => b.title && setAutoTitle(id, question, b.title))
+    .catch(() => {});
+}
 
 function readMode(): RunMode {
   try {
@@ -57,7 +65,10 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     if (!question || busy) return;
     setDraft("");
     setExpanded(null);
-    if (turns.length === 0) router.replace(`/?t=${localId}`);
+    if (turns.length === 0) {
+      router.replace(`/?t=${localId}`);
+      nameThread(localId, question);
+    }
     asked.current = true;
     void ask(question, mode);
   };

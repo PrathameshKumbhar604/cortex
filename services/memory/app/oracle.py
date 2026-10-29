@@ -8,6 +8,10 @@ import os
 log = logging.getLogger("cortex.memory.oracle")
 
 
+# shortcut: measured on few memories (related <= 0.31, unrelated >= 0.39, 2026-10-29); re-tune with a recall eval.
+MAX_DISTANCE = 0.35
+
+
 class OracleStore:
     """Semantic storage + search on Oracle AI Database via Oracle Agent Memory.
 
@@ -70,15 +74,16 @@ class OracleStore:
     def delete(self, memory_id: str) -> None:
         self._client.delete_memory(memory_id)
 
-    def search(self, user_id: str, query: str, limit: int) -> list[tuple[str, float]]:
+    def search(self, user_id: str, query: str, limit: int, max_distance: float = MAX_DISTANCE) -> list[tuple[str, float]]:
         results = self._client.search(query, user_id=user_id, max_results=limit, record_types=["memory", "fact", "preference"])
         out: list[tuple[str, float]] = []
-        for rank, r in enumerate(results):
+        for r in results:
             record = getattr(r, "record", r)
             mid = getattr(record, "memory_id", None) or getattr(record, "id", None) or getattr(r, "id", None)
-            score = getattr(r, "score", None)
-            if mid:
-                out.append((str(mid), float(score) if isinstance(score, (int, float)) else 1.0 / (rank + 1)))
+            distance = getattr(r, "distance", None)
+            # The nearest memory is returned even when it is unrelated; keep only real matches.
+            if mid and isinstance(distance, (int, float)) and distance <= max_distance:
+                out.append((str(mid), 1.0 - float(distance)))
         return out
 
     # short-term ------------------------------------------------------------

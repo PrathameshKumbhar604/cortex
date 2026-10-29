@@ -14,6 +14,7 @@ export const SOURCE_COLOR: Record<string, string> = {
   github: "var(--src-github)",
   web: "var(--src-web)",
   memory: "var(--src-memory)",
+  chat: "var(--src-memory)",
 };
 
 export function sourceColor(id: string) {

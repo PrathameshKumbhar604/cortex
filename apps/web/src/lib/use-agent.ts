@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { readUseOtherChats } from "./settings";
 import type {
   ActionProposal,
   AgentEvent,
@@ -140,7 +141,7 @@ export function useAgent() {
       const turn = newTurn(question.trim(), mode);
       const history: ChatTurn[] = turns
         .filter((t) => t.done && t.answer)
-        .slice(-3)
+        .slice(-40) // the whole chat; the agent fits it into its context budget
         .flatMap((t) => [
           { role: "user" as const, content: t.question },
           { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails },
@@ -153,7 +154,7 @@ export function useAgent() {
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history }),
+          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats() }),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {

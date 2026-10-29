@@ -3,14 +3,17 @@ import { buildRegistry, ConnectorRegistry, DemoConnector, TOOLKITS } from "@cort
 import type { LlmRouter } from "@cortex/llm";
 import type { AgentEvent, MemoryItem } from "@cortex/shared";
 import { ActionStore } from "./actions";
-import type { MemoryBackend } from "./memory";
+import type { MemoryBackend, MemoryWrite, PastChat } from "./memory";
+import { historyBlock } from "./prompts";
 import { runAgent } from "./run";
+import { cleanTitle } from "./title";
+import { mightHoldMemory, remember } from "./remember";
 import { routeByRules } from "./route";
 import { parseWindow } from "./time";
 import { splitSections, streamCutoff, verifyClaims } from "./verify";
 
 function stubLlm(answer: string, plan?: object, route: object = { route: "personal", sources: [], complex: false }) {
-  const calls = { complete: 0, stream: 0, route: 0 };
+  const calls = { complete: 0, stream: 0, route: 0, prompt: "" };
   const llm = {
     async complete() {
       calls.complete++;
@@ -23,8 +26,9 @@ function stubLlm(answer: string, plan?: object, route: object = { route: "person
       const text = JSON.stringify(isRoute ? route : (plan ?? { results: [] }));
       return { text, provider: "stub", model: "m", cached: false, data: validate(JSON.parse(text)) };
     },
-    async *stream() {
+    async *stream(o: { messages: { content: string }[] }) {
       calls.stream++;
+      calls.prompt = o.messages.map((m) => m.content).join("\n");
       for (const chunk of answer.match(/.{1,7}/gs) ?? []) yield { token: chunk };
       yield { done: { text: answer, provider: "stub", model: "m", cached: false } };
     },
@@ -32,13 +36,15 @@ function stubLlm(answer: string, plan?: object, route: object = { route: "person
   return { llm: llm as unknown as LlmRouter, calls };
 }
 
-function memStub(): MemoryBackend & { added: string[] } {
+function memStub(past: PastChat[] = []): MemoryBackend & { added: string[]; chatSearches: number; recentAsked: boolean } {
   const added: string[] = [];
-  return {
+  const stub = {
     added,
+    chatSearches: 0,
+    recentAsked: false,
     health: async () => ({ ok: true, backend: "test" }),
     recall: async () => [],
-    add: async (m) => {
+    add: async (m: MemoryWrite) => {
       added.push(m.content);
       return { id: "m1", userId: m.userId, content: m.content, kind: m.kind, source: m.source, reason: m.reason, salience: m.salience, pinned: false, createdAt: "" } as MemoryItem;
     },
@@ -48,7 +54,14 @@ function memStub(): MemoryBackend & { added: string[] } {
     },
     remove: async () => {},
     appendThread: async () => {},
+    searchChats: async (_u: string, _q: string, _t?: string, recent?: boolean) => {
+      stub.chatSearches++;
+      stub.recentAsked = !!recent;
+      return past;
+    },
+    deleteThread: async () => {},
   };
+  return stub;
 }
 
 async function collect(gen: AsyncGenerator<AgentEvent>) {
@@ -128,11 +141,15 @@ describe("runAgent", () => {
   });
 
   it("lists a memory once when two candidates reinforce the same stored memory", async () => {
-    const withMemory = ANSWER.replace(
-      /<<<MEMORY>>>\n\[\]/,
-      '<<<MEMORY>>>\n[{"content":"Orbit is the top priority","kind":"priority","salience":0.9,"reason":"stated"}]',
-    );
-    const { llm } = stubLlm(withMemory, { intent: "research", rewritten: "x", window: null, subQuestions: [{ id: "q1", question: "demo day", sources: ["slack"], query: "demo day" }] });
+    // The stub answers every JSON call with this object: the plan, and the extracted memory.
+    const planAndMemory = {
+      intent: "research",
+      rewritten: "x",
+      window: null,
+      subQuestions: [{ id: "q1", question: "demo day", sources: ["slack"], query: "demo day" }],
+      memories: [{ content: "Orbit is the top priority", kind: "priority", salience: 0.9, reason: "stated" }],
+    };
+    const { llm } = stubLlm(ANSWER, planAndMemory);
     const mem = memStub(); // returns the same id for every add, like a reinforced memory
     const events = await collect(runAgent({ question: "Remember that Orbit is my top priority. What changed with demo day?", mode: "deep", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }));
     expect(mem.added).toHaveLength(2);
@@ -214,6 +231,13 @@ describe("routing", () => {
   it("classifies with rules", () => {
     const ids = ["gmail", "calendar", "slack", "github", "notion", "drive", "web"];
     expect(routeByRules("thanks!", ids)?.route).toBe("general");
+    expect(routeByRules("remember my name is prathamesh", ids)).toMatchObject({ route: "general", sources: [] });
+    expect(routeByRules("i like to play badminton on weekends", ids)?.route).toBe("general");
+    for (const q of ["what did i ask you?", "what is my name?", "summarise our chat so far", "what was my first question"]) {
+      expect(routeByRules(q, ids), q).toMatchObject({ route: "general", sources: [] });
+    }
+    expect(routeByRules("what did I ask in my email to Rahul?", ids)?.route).not.toBe("general"); // names a source
+    expect(routeByRules("I usually skip the Monday standup", ids)?.route).toBe("personal"); // names a source: still searches
     expect(routeByRules("what meetings do I have tomorrow", ids)).toMatchObject({ route: "personal", sources: ["calendar"] });
     expect(routeByRules("draft an email to my advisor about the report", ids)?.route).toBe("action");
     expect(routeByRules("Email Dr. Ruiz to confirm I'll submit the report on time", ids)?.route).toBe("action");
@@ -291,5 +315,151 @@ describe("action requests", () => {
     const route = events.find((e) => e.type === "route");
     expect(route && route.type === "route" && route.decision).toMatchObject({ route: "action", sources: ["calendar"] });
     expect(calls.route).toBe(0);
+  });
+});
+
+describe("chat titles", () => {
+  it("keeps a short, clean title from whatever the model returns", () => {
+    expect(cleanTitle('Title: "Latest PDFs in Drive."\nextra line')).toBe("Latest PDFs in Drive");
+    expect(cleanTitle("**Calendar event for tomorrow**")).toBe("Calendar event for tomorrow");
+    expect(cleanTitle("one two three four five six seven eight")).toBe("One two three four five six");
+    expect(cleanTitle("  \n ")).toBeNull();
+    expect(cleanTitle("I’m sorry, but I can’t help with that")).toBeNull(); // a refusal never becomes the title
+    expect(cleanTitle("I can't label that")).toBeNull();
+  });
+});
+
+describe("automatic memory", () => {
+  const fakeLlm = (memories: object[]) => {
+    const calls = { n: 0 };
+    const llm = {
+      async json(_o: unknown, validate: (v: unknown) => unknown) {
+        calls.n++;
+        return { text: "", provider: "stub", model: "m", cached: false, data: validate({ memories }) };
+      },
+    } as unknown as LlmRouter;
+    return { llm, calls };
+  };
+  const base = { userId: "u1", runId: "r1", related: [] as MemoryItem[], allowLlm: true };
+
+  it("only considers messages that say something about the user", () => {
+    for (const m of ["hello budyy", "chal nikal madarchod", "what's due this week?", "fetch me the latest pdf from drive", "get my emails from Rahul"]) {
+      expect(mightHoldMemory(m), m).toBe(false);
+    }
+    for (const m of ["I'm the PM for Orbit and we ship on Friday", "My manager is Priya Shah", "From now on keep answers short", "What's due? I'm on leave next week."]) {
+      expect(mightHoldMemory(m), m).toBe(true);
+    }
+  });
+
+  it("makes no model call for questions and never stores secrets", async () => {
+    const { llm, calls } = fakeLlm([{ content: "Gmail password is hunter2", kind: "fact", salience: 0.9, reason: "x" }]);
+    const mem = memStub();
+    await remember("what is due this week?", { ...base, memory: mem, llm });
+    expect(calls.n).toBe(0);
+    await remember("My gmail password is hunter2", { ...base, memory: mem, llm });
+    expect(calls.n).toBe(0); // the gate already refuses messages with secrets
+    expect(mem.added).toEqual([]);
+  });
+
+  it("replaces a memory the user contradicted", async () => {
+    const old = { id: "old-1", content: "Demo Day is Nov 12", kind: "fact", pinned: false } as MemoryItem;
+    const { llm } = fakeLlm([{ content: "Demo Day moved to Nov 14", kind: "fact", salience: 0.8, reason: "date changed", replaces: "old-1" }]);
+    const writes: MemoryWrite[] = [];
+    const mem = { ...memStub(), add: async (m: MemoryWrite) => (writes.push(m), { ...old, id: "new-1", content: m.content }) };
+    const res = await remember("Our Demo Day moved to Nov 14", { ...base, related: [old], memory: mem as unknown as MemoryBackend, llm });
+    expect(res.written.map((m) => m.content)).toEqual(["Demo Day moved to Nov 14"]);
+    expect(writes[0]?.replaces).toBe("old-1"); // the service swaps them in one step
+  });
+
+  it("never replaces a pinned memory", async () => {
+    const old = { id: "pin-1", content: "Demo Day is Nov 12", kind: "fact", pinned: true } as MemoryItem;
+    const { llm } = fakeLlm([{ content: "Demo Day moved to Nov 14", kind: "fact", salience: 0.8, reason: "x", replaces: "pin-1" }]);
+    const writes: MemoryWrite[] = [];
+    const mem = { ...memStub(), add: async (m: MemoryWrite) => (writes.push(m), { ...old, id: "new-1", content: m.content }) };
+    await remember("Our Demo Day moved to Nov 14", { ...base, related: [old], memory: mem as unknown as MemoryBackend, llm });
+    expect(writes[0]?.replaces).toBeUndefined();
+  });
+});
+
+describe("chat context", () => {
+  it("keeps the whole chat within a budget, newest in full", () => {
+    const history = Array.from({ length: 24 }, (_, i) =>
+      i === 0 ? { role: "user" as const, content: "I'm planning the Orbit launch" } : { role: (i % 2 ? "assistant" : "user") as "user" | "assistant", content: `turn ${i} ${"x".repeat(900)}` },
+    );
+    const block = historyBlock(history);
+    expect(block).toContain("Orbit launch"); // 12 exchanges back, still there
+    expect(block.length).toBeLessThan(9000);
+    expect(block).toContain(`turn 23 ${"x".repeat(900)}`); // the newest message is not cut
+  });
+
+  it("drops the oldest messages only when the budget runs out", () => {
+    const history = Array.from({ length: 200 }, (_, i) => ({ role: "user" as const, content: `m${i} ${"y".repeat(300)}` }));
+    const block = historyBlock(history);
+    expect(block).toMatch(/^user: m0 y+\n\(\d+ earlier messages not shown\)/); // the opening message is kept
+    expect(block).toContain("m199");
+  });
+});
+
+describe("other chats (opt-in)", () => {
+  const past: PastChat[] = [{ threadId: "t-old", question: "what's the Orbit beta channel?", answer: "It's #orbit-beta on Slack.", createdAt: "2026-10-20T10:00:00Z" }];
+  const answer = "The beta channel is #orbit-beta [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]";
+
+  it("never reads other chats when the user has not opted in", async () => {
+    for (const route of ["general", "personal"]) {
+      const mem = memStub(past);
+      const { llm } = stubLlm(answer, undefined, { route, sources: [], complex: false });
+      await collect(runAgent({ question: "which channel is the orbit beta in", mode: "fast", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }));
+      expect(mem.chatSearches).toBe(0);
+    }
+  });
+
+  it("uses a related past chat as citable evidence when opted in", async () => {
+    const mem = memStub(past);
+    const { llm } = stubLlm(answer);
+    const events = await collect(
+      runAgent({ question: "which channel is the orbit beta in", mode: "fast", userId: "u1", threadId: "t-now", useOtherChats: true }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }),
+    );
+    expect(mem.chatSearches).toBe(1);
+    const ev = events.find((e) => e.type === "evidence");
+    const chat = ev?.type === "evidence" ? ev.items.find((e) => e.source === "chat") : undefined;
+    expect(chat?.title).toBe("Your chat on Oct 20, 2026");
+  });
+});
+
+describe("knowing when other chats matter", () => {
+  const past: PastChat[] = [{ threadId: "t-old", question: "plan a trip to Goa", answer: "Here is a 3-day plan.", createdAt: "2026-10-27T10:00:00Z" }];
+  const run = (question: string, mem: ReturnType<typeof memStub>, useOtherChats: boolean) => {
+    const { llm, calls } = stubLlm("ok");
+    return collect(runAgent({ question, mode: "fast", userId: "u1", useOtherChats }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() })).then((events) => ({ events, calls }));
+  };
+
+  it("answers 'what were my previous chats about?' from the latest chats, without searching apps", async () => {
+    const mem = memStub(past);
+    const { events, calls } = await run("what are previous chats about?", mem, true);
+    expect(mem.recentAsked).toBe(true);
+    expect(events.filter((e) => e.type === "tool_call")).toHaveLength(0);
+    expect(calls.prompt).toContain("plan a trip to Goa");
+  });
+
+  it("checks other chats on every question once opted in, asking for the latest ones only when no topic is named", async () => {
+    const mem = memStub([]);
+    const { events } = await run("what is the capital of France?", mem, true);
+    expect(mem.chatSearches).toBe(1);
+    expect(mem.recentAsked).toBe(false);
+    const recall = events.find((e) => e.type === "step" && e.step === "recall" && e.status === "done");
+    expect(recall && recall.type === "step" && recall.detail).toMatch(/no related chats/);
+  });
+
+  it("says how to turn it on when asked about other chats while it is off", async () => {
+    const mem = memStub(past);
+    const { calls } = await run("what did we discuss last time?", mem, false);
+    expect(mem.chatSearches).toBe(0);
+    expect(calls.prompt).toContain("Use my other chats");
+  });
+
+  it("a failing chat search does not take memory down with it", async () => {
+    const mem = { ...memStub(), searchChats: async () => { throw new Error("404"); } };
+    const { events } = await run("hello there friend", mem as ReturnType<typeof memStub>, true);
+    expect(events.some((e) => e.type === "source_error")).toBe(false);
   });
 });

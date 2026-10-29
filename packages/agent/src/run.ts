@@ -9,7 +9,6 @@ import type {
   Claim,
   Evidence,
   MemoryItem,
-  MemoryKind,
   Plan,
   RunMode,
   SourceFailure,
@@ -17,9 +16,10 @@ import type {
   SubQuestion,
 } from "@cortex/shared";
 import type { ActionStore } from "./actions";
-import { explicitMemory, type MemoryBackend } from "./memory";
-import { actionPrompt, chatPrompt, generalPrompt, planPrompt, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
-import { decideRoute } from "./route";
+import type { MemoryBackend, PastChat } from "./memory";
+import { remember } from "./remember";
+import { actionPrompt, chatPrompt, generalPrompt, planPrompt, shortDate, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
+import { ABOUT_PAST_CHATS, decideRoute } from "./route";
 import { keywords, parseWindow } from "./time";
 import { traced, withTracing } from "./tracing";
 import { groundedness, splitSections, streamCutoff, toConflicts, verifyClaims } from "./verify";
@@ -45,6 +45,8 @@ export interface RunInput {
   userId: string;
   threadId?: string;
   history?: ChatTurn[];
+  /** Opt-in: may read the user's other chats. When false, they are never searched. */
+  useOtherChats?: boolean;
   signal?: AbortSignal;
 }
 
@@ -59,13 +61,6 @@ const PlanSchema = z.object({
   subQuestions: z
     .array(z.object({ id: z.string().catch(""), question: z.string(), sources: z.array(z.string()).catch([]), query: z.string().catch("") }))
     .catch([]),
-});
-
-const MemoryCandidate = z.object({
-  content: z.string().min(4).max(240),
-  kind: z.enum(["priority", "preference", "fact", "person", "decision"]).catch("fact"),
-  salience: z.number().min(0).max(1).catch(0.5),
-  reason: z.string().catch("Mentioned in conversation"),
 });
 
 const WEB_HINT = /https?:\/\/|\b(web|online|internet|news|docs?|documentation|status page|changelog|search the)\b/i;
@@ -197,10 +192,25 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     // 2. Recall memory (pinned memories always come along).
     yield { type: "step", step: "recall", status: "active" };
     let memories: MemoryItem[] = [];
+    let pastChats: PastChat[] = [];
+    const askedAboutPast = ABOUT_PAST_CHATS.test(input.question);
     try {
       memories = await deps.memory.recall(input.userId, input.question, 5);
       if (memories.length) yield { type: "memory_used", items: memories };
-      yield { type: "step", step: "recall", status: "done", detail: memories.length ? `${memories.length} memories` : "nothing relevant" };
+      // Opted in: every question checks the other chats (a cheap keyword match, no model call), so the user never has
+      // to ask for it; only related ones come back. A question about past chats with no topic gets the latest ones.
+      if (input.useOtherChats) {
+        try {
+          pastChats = await deps.memory.searchChats(input.userId, input.question, input.threadId, askedAboutPast);
+        } catch {
+          // other chats are extra context; the answer doesn't need them
+        }
+      }
+      const found = [
+        memories.length && `${memories.length} memories`,
+        input.useOtherChats && (pastChats.length ? `${pastChats.length} from other chats` : "no related chats"),
+      ].filter(Boolean).join(", ");
+      yield { type: "step", step: "recall", status: "done", detail: found || "nothing relevant" };
     } catch (err) {
       const failure: SourceFailure = {
         source: "memory",
@@ -236,7 +246,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       let text = "";
       for await (const part of deps.llm.stream({
         tier: fast ? "fast" : route.tier,
-        messages: generalPrompt(input.question, history, memories),
+        messages: generalPrompt(input.question, history, memories, pastChats, { on: !!input.useOtherChats, asked: askedAboutPast }),
         maxTokens: 900,
         signal,
       })) {
@@ -250,18 +260,9 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       }
       yield { type: "answer", markdown: text };
       yield { type: "step", step: "synthesize", status: "done" };
-      const written: MemoryItem[] = [];
-      const explicit = explicitMemory(input.question);
-      if (explicit && !failures.some((f) => f.source === "memory")) {
-        try {
-          const item = await deps.memory.add({ userId: input.userId, ...explicit, salience: 0.95, reason: "You asked me to keep this in mind", source: "conversation", runId });
-          if (item) written.push(item);
-        } catch {
-          // memory offline: already reported
-        }
-      }
-      if (written.length) yield { type: "memory_written", items: written };
-      yield { type: "step", step: "remember", status: written.length ? "done" : "skipped" };
+      const memoryDown = failures.some((f) => f.source === "memory");
+      yield* rememberStep(input, deps, { runId, memories, budget, signal, memoryDown });
+      if (!memoryDown) saveTurn(deps, threadId, input, text);
       yield usage(budget, started);
       yield { type: "done" };
       return;
@@ -388,6 +389,17 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       if (retry.length) yield* searchRound(retry, undefined);
     }
 
+    // Opted-in past chats compete with the sources for a place in the evidence, and are cited like them.
+    evidence.push(
+      ...pastChats.map((c) => ({
+        id: "",
+        source: "chat",
+        title: `Your chat on ${shortDate(c.createdAt)}`,
+        quote: `You asked: "${c.question}". Cortex answered: ${c.answer.replace(/\s+/g, " ")}`,
+        timestamp: c.createdAt,
+        subQuestionId: plan.subQuestions[0]?.id,
+      })),
+    );
     const ranked = rankEvidence(evidence, `${input.question} ${plan.rewritten}`, LIMITS.maxEvidence[input.mode]).map((e, i) => ({
       ...e,
       id: `e${i + 1}`,
@@ -515,34 +527,10 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       if ("id" in p) yield { type: "action_proposal", proposal: p };
     }
 
-    // 9. Remember selectively: explicit requests always; model suggestions only when salient.
-    yield { type: "step", step: "remember", status: "active" };
-    const written: MemoryItem[] = [];
-    if (!failedSources.has("memory") && !failures.some((f) => f.source === "memory")) {
-      const candidates: { content: string; kind: MemoryKind; salience: number; reason: string }[] = [];
-      const explicit = explicitMemory(input.question);
-      if (explicit) candidates.push({ ...explicit, salience: 0.95, reason: "You asked me to keep this in mind" });
-      for (const m of sections.memory.slice(0, 2)) {
-        const parsed = MemoryCandidate.safeParse(m);
-        if (parsed.success && parsed.data.salience >= 0.6) candidates.push(parsed.data);
-      }
-      for (const c of candidates.slice(0, 2)) {
-        try {
-          const item = await deps.memory.add({ userId: input.userId, ...c, source: "conversation", runId });
-          if (item && !written.some((w) => w.id === item.id)) written.push(item); // a reinforced memory comes back with its existing id
-        } catch {
-          break;
-        }
-      }
-      deps.memory
-        .appendThread(threadId, input.userId, [
-          { role: "user", content: input.question },
-          { role: "assistant", content: sections.answer },
-        ])
-        .catch(() => {});
-    }
-    if (written.length) yield { type: "memory_written", items: written };
-    yield { type: "step", step: "remember", status: "done", detail: written.length ? `saved ${written.length}` : "nothing new worth keeping" };
+    // 9. Remember: automatic, selective (see remember.ts). The answer is already on screen.
+    const memoryDown = failedSources.has("memory") || failures.some((f) => f.source === "memory");
+    yield* rememberStep(input, deps, { runId, memories, budget, signal, memoryDown });
+    if (!memoryDown) saveTurn(deps, threadId, input, sections.answer);
 
     yield usage(budget, started);
     yield { type: "done" };
@@ -594,6 +582,50 @@ async function draftAction(
     if ("id" in p) proposals.push(p);
   }
   return proposals.length ? { proposals } : { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?" };
+}
+
+async function* rememberStep(
+  input: RunInput,
+  deps: AgentDeps,
+  o: { runId: string; memories: MemoryItem[]; budget: Budget; signal: AbortSignal; memoryDown: boolean },
+): AsyncGenerator<AgentEvent> {
+  yield { type: "step", step: "remember", status: "active" };
+  if (o.memoryDown) {
+    yield { type: "step", step: "remember", status: "skipped", detail: "memory offline" };
+    return;
+  }
+  let written: MemoryItem[] = [];
+  try {
+    const res = await remember(input.question, {
+      userId: input.userId,
+      runId: o.runId,
+      related: o.memories,
+      memory: deps.memory,
+      llm: deps.llm,
+      allowLlm: true, // runs after the answer is out and is already gated by rules; the answer budget must not starve it
+      signal: o.signal,
+    });
+    if (res.llm) {
+      o.budget.llmCalls++;
+      if (res.llm.cached) o.budget.cachedCalls++;
+      o.budget.models.add(`${res.llm.provider}/${res.llm.model}`);
+    }
+    written = res.written;
+  } catch {
+    // memory went offline mid-run; the answer stands
+  }
+  if (written.length) yield { type: "memory_written", items: written };
+  yield { type: "step", step: "remember", status: "done", detail: written.length ? `saved ${written.length}` : "nothing new worth keeping" };
+}
+
+/** Keeps the turn server-side, so later chats can refer back to it (only if the user opts in). */
+function saveTurn(deps: AgentDeps, threadId: string, input: RunInput, answer: string) {
+  deps.memory
+    .appendThread(threadId, input.userId, [
+      { role: "user", content: input.question },
+      { role: "assistant", content: answer },
+    ])
+    .catch(() => {});
 }
 
 function* skip(steps: StepId[]): Generator<AgentEvent> {
