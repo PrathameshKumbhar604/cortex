@@ -1,3 +1,4 @@
+import { htmlToText } from "../extract";
 import type { ActionDef, SearchInput } from "../types";
 
 export interface ComposioActionSpec extends ActionDef {
@@ -12,10 +13,74 @@ export interface ComposioToolkitSpec {
   describes: string;
   impact: string;
   search: { slug: string; toArgs(input: SearchInput): Record<string, unknown> };
+  /** Optional second stage: fetch full content for the best few hits only. */
+  detail?: { slug: string; toArgs(ref: string): Record<string, unknown>; top: number; text?(data: unknown): string };
   actions: ComposioActionSpec[];
 }
 
 const day = (iso?: string) => iso?.slice(0, 10);
+
+// Filler and words that name the source itself; as search terms they match everything (Gmail) or nothing (Calendar).
+const GENERIC = new Set(
+  ("email emails mail mails inbox message messages meeting meetings event events calendar schedule drive doc docs file files notion page pages " +
+    "slack channel channels github issue issues pr prs pull request requests me my our the from in on of for to and with any all about").split(" "),
+);
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const terms = (q: string) =>
+  q
+    .split(/\s+/)
+    .map((t) => t.replace(/[^\w@.#:/-]/g, ""))
+    .filter((t) => t.length > 1 && !GENERIC.has(t.toLowerCase()))
+    .slice(0, 6);
+
+/**
+ * Gmail search pushed to the server: operators the planner wrote (from:, label:, is:unread) as-is,
+ * any of the other keywords ({a b} is OR in Gmail), the time window (last 30 days by default),
+ * and no promotions, social, spam or trash.
+ */
+export function gmailQuery(i: SearchInput): string {
+  const all = terms(i.query);
+  const ops = all.filter((t) => /^-?\w+:./.test(t));
+  const words = all.filter((t) => !ops.includes(t));
+  const since = i.since ?? daysAgo(30);
+  return [
+    ...ops,
+    words.length > 1 ? `{${words.join(" ")}}` : words[0],
+    `after:${day(since)!.replaceAll("-", "/")}`,
+    i.until && `before:${day(i.until)!.replaceAll("-", "/")}`,
+    "-category:promotions -category:social -in:spam -in:trash",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+/** Drive: files containing any keyword, changed in the window; with no keywords, recent files. */
+export function driveQuery(i: SearchInput): string {
+  const words = terms(i.query).filter((t) => !RECENCY.has(t.toLowerCase()));
+  const types = words.map((t) => FILE_TYPES[t.toLowerCase()]).filter(Boolean);
+  const any = words.filter((t) => !FILE_TYPES[t.toLowerCase()]).map((t) => `fullText contains '${t}'`); // terms() already strips quotes
+  return [
+    any.length && `(${any.join(" or ")})`,
+    types.length && `(${types.map((m) => `mimeType = '${m}'`).join(" or ")})`,
+    i.since && `modifiedTime > '${i.since}'`,
+    i.until && `modifiedTime < '${i.until}'`,
+    "trashed = false",
+  ]
+    .filter(Boolean)
+    .join(" and ");
+}
+// "latest pdf" = newest first (orderBy), restricted to PDFs, not files containing the words "latest" and "pdf".
+const RECENCY = new Set("latest newest recent recently last new fetch get find show open".split(" "));
+const FILE_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  pdfs: "application/pdf",
+  sheet: "application/vnd.google-apps.spreadsheet",
+  sheets: "application/vnd.google-apps.spreadsheet",
+  spreadsheet: "application/vnd.google-apps.spreadsheet",
+  slides: "application/vnd.google-apps.presentation",
+  presentation: "application/vnd.google-apps.presentation",
+  folder: "application/vnd.google-apps.folder",
+};
+
 const s = (v: unknown) => (v == null ? "" : String(v));
 const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : s(v).split(",").map((x) => x.trim()).filter(Boolean));
 
@@ -33,12 +98,13 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     search: {
       slug: "GMAIL_FETCH_EMAILS",
       toArgs: (i) => ({
-        query: [i.query, i.since && `after:${day(i.since)!.replaceAll("-", "/")}`, i.until && `before:${day(i.until)!.replaceAll("-", "/")}`]
-          .filter(Boolean)
-          .join(" "),
-        max_results: i.limit ?? 8,
+        query: gmailQuery(i),
+        max_results: Math.min(i.limit ?? 8, 10),
+        verbose: false, // metadata + short body only; full bodies of ~200 emails/week would blow the budget
+        include_payload: false,
       }),
     },
+    detail: { slug: "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID", toArgs: (ref) => ({ message_id: ref, format: "full" }), top: 2, text: gmailBody },
     actions: [
       {
         id: "send_email",
@@ -80,7 +146,7 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
       slug: "GOOGLECALENDAR_EVENTS_LIST",
       toArgs: (i) => ({
         calendarId: "primary",
-        q: i.query || undefined,
+        query: terms(i.query).join(" ") || undefined,
         timeMin: i.since,
         timeMax: i.until,
         maxResults: i.limit ?? 10,
@@ -108,6 +174,8 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         toArgs: (a) => ({
           summary: s(a.title),
           start_datetime: s(a.start),
+          // shortcut: the server's time zone stands in for the user's; send the browser's zone once users are multi-region.
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           event_duration_hour: Math.floor(Number(a.durationMinutes ?? 30) / 60),
           event_duration_minutes: Number(a.durationMinutes ?? 30) % 60,
           attendees: list(a.attendees),
@@ -125,8 +193,9 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     search: {
       slug: "GOOGLEDRIVE_FIND_FILE",
       toArgs: (i) => ({
-        q: `fullText contains '${i.query.replaceAll("'", "\\'")}'` + (i.since ? ` and modifiedTime > '${i.since}'` : ""),
-        page_size: i.limit ?? 8,
+        q: driveQuery(i),
+        orderBy: "modifiedTime desc",
+        pageSize: Math.min(i.limit ?? 8, 10),
       }),
     },
     actions: [
@@ -153,7 +222,7 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     impact: "Project goals and specs may be missing, so changes can't be compared to the plan.",
     search: {
       slug: "NOTION_SEARCH_NOTION_PAGE",
-      toArgs: (i) => ({ query: i.query, page_size: i.limit ?? 8 }),
+      toArgs: (i) => ({ query: terms(i.query).join(" "), page_size: Math.min(i.limit ?? 8, 10) }),
     },
     actions: [
       {
@@ -181,8 +250,9 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     search: {
       slug: "SLACK_SEARCH_MESSAGES",
       toArgs: (i) => ({
-        query: [i.query, i.since && `after:${day(i.since)}`, i.until && `before:${day(i.until)}`].filter(Boolean).join(" "),
-        count: i.limit ?? 10,
+        // Slack ANDs every word, so keep only the distinctive ones; last 30 days unless the question says otherwise.
+        query: [...terms(i.query).slice(0, 3), `after:${day(i.since ?? daysAgo(30))}`, i.until && `before:${day(i.until)}`].filter(Boolean).join(" "),
+        count: Math.min(i.limit ?? 10, 10),
         sort: "timestamp",
       }),
     },
@@ -211,8 +281,10 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     search: {
       slug: "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS",
       toArgs: (i) => ({
-        q: [i.query, "involves:@me", i.since && `updated:>=${day(i.since)}`].filter(Boolean).join(" "),
-        per_page: i.limit ?? 10,
+        q: [...terms(i.query).slice(0, 4), "involves:@me", i.since && `updated:>=${day(i.since)}`, i.until && `updated:<=${day(i.until)}`]
+          .filter(Boolean)
+          .join(" "),
+        per_page: Math.min(i.limit ?? 10, 10),
         sort: "updated",
       }),
     },
@@ -254,3 +326,21 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     ],
   },
 ];
+
+type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
+
+/** Gmail's full message: decode the text/plain part (or text/html as a fallback) from base64url. */
+export function gmailBody(data: unknown): string {
+  const payload = (data as { payload?: Part })?.payload;
+  if (!payload) return "";
+  const flat: Part[] = [];
+  const walk = (p: Part) => {
+    flat.push(p);
+    p.parts?.forEach(walk);
+  };
+  walk(payload);
+  const pick = flat.find((p) => p.mimeType === "text/plain" && p.body?.data) ?? flat.find((p) => p.mimeType === "text/html" && p.body?.data);
+  if (!pick?.body?.data) return "";
+  const text = Buffer.from(pick.body.data.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+  return pick.mimeType === "text/html" ? htmlToText(text) : text;
+}

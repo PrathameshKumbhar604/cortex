@@ -8,7 +8,7 @@ import { McpConnector, type McpServerConfig } from "./mcp";
 import { ConnectorRegistry } from "./registry";
 
 export * from "./types";
-export { ConnectorRegistry, type SafeSearchResult } from "./registry";
+export { ConnectorRegistry, describeError, type SafeSearchResult } from "./registry";
 export { ComposioConnector } from "./composio/connector";
 export { ComposioMcpConnector } from "./composio/mcp-connector";
 export { TOOLKITS, type ComposioToolkitSpec } from "./composio/toolkits";

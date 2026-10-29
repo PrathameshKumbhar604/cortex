@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ActionProposal } from "@cortex/shared";
-import type { ConnectorRegistry } from "@cortex/connectors";
+import { describeError, type ConnectorRegistry } from "@cortex/connectors";
 
 interface Stored {
   userId: string;
@@ -80,7 +80,7 @@ export class ActionStore {
       p.result = res.message + (res.url ? ` ${res.url}` : "");
     } catch (err) {
       p.status = "failed";
-      p.result = err instanceof Error ? err.message : "The action failed.";
+      p.result = `${connector.name} didn't accept it: ${describeError(err)}.`;
     }
     return p;
   }

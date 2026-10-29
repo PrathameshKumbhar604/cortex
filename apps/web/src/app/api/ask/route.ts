@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const sess = await session();
   const d = deps(sess.workspace);
-  const history = (body.history ?? []).slice(-6).map((t) => ({ role: t.role, content: String(t.content).slice(0, 1500) }));
+  const history = (body.history ?? []).slice(-6).map((t) => ({ role: t.role, content: String(t.content).slice(0, 1500), needsDetails: t.needsDetails === true }));
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

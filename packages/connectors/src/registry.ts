@@ -19,9 +19,9 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-function describeError(err: unknown): string {
+export function describeError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (/401|403|unauthori[sz]ed|forbidden|expired/i.test(msg)) return "its connection expired; reconnect it";
+  if (/401|403|unauthori[sz]ed|forbidden|expired|invalid_grant|no (active )?connect/i.test(msg)) return "its sign-in expired; reconnect it on the Connections page";
   if (/429|rate/i.test(msg)) return "it is rate-limiting requests";
   if (/timed out|timeout|ETIMEDOUT/i.test(msg)) return "it did not respond in time";
   if (/ENOTFOUND|ECONNREFUSED|fetch failed|network/i.test(msg)) return "it could not be reached";

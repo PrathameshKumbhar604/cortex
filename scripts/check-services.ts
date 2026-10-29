@@ -49,11 +49,11 @@ console.log("\nComposio");
 if (env.COMPOSIO_API_KEY) {
   const c = new Composio({ apiKey: env.COMPOSIO_API_KEY });
   for (const t of TOOLKITS) {
-    for (const slug of [t.search.slug, ...t.actions.map((a) => a.slug)]) {
+    for (const slug of [t.search.slug, ...(t.detail ? [t.detail.slug] : []), ...t.actions.map((a) => a.slug)]) {
       try {
         const tool = await c.tools.getRawComposioToolBySlug(slug);
         const props = Object.keys((tool.inputParameters as { properties?: object })?.properties ?? {});
-        ok(`${t.name}: ${slug} [${props.slice(0, 8).join(", ")}]`);
+        ok(`${t.name}: ${slug} [${props.slice(0, 12).join(", ")}]`);
       } catch (e) {
         bad(`${t.name}: ${slug} (${errMsg(e)})`);
       }

@@ -18,7 +18,7 @@ function str(v: unknown): string | undefined {
   if (typeof v === "number") return String(v);
   if (isObj(v)) {
     // common nested shapes: {login}, {email}, {dateTime}, {plain_text}, title arrays
-    for (const k of ["login", "email", "name", "dateTime", "date", "plain_text", "content"]) {
+    for (const k of ["login", "email", "name", "dateTime", "date", "plain_text", "content", "body"]) {
       const s = str(v[k]);
       if (s) return s;
     }
@@ -72,7 +72,7 @@ function findRecords(data: unknown, depth = 0): Obj[] {
 }
 
 export function compact(text: string, max = 420): string {
-  const clean = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const clean = htmlToText(text).replace(/\s+/g, " ").trim();
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
@@ -83,10 +83,15 @@ export function compact(text: string, max = 420): string {
 export function extractEvidence(source: SourceId, data: unknown, limit = 8): RawEvidence[] {
   const records = findRecords(data);
   const out: RawEvidence[] = [];
+  const threads = new Set<string>();
   for (const r of records) {
     const title = pick(r, TITLE_KEYS);
     const body = pick(r, BODY_KEYS);
     if (!title && !body) continue;
+    // One item per email thread: results come newest first, so the latest reply wins.
+    const thread = str(r.threadId);
+    if (thread && threads.has(thread)) continue;
+    if (thread) threads.add(thread);
     out.push({
       source,
       title: compact(title ?? body ?? "Untitled", 140),
@@ -94,14 +99,39 @@ export function extractEvidence(source: SourceId, data: unknown, limit = 8): Raw
       url: pick(r, URL_KEYS),
       author: pick(r, AUTHOR_KEYS),
       timestamp: toIso(pick(r, TIME_KEYS)),
+      ref: str(r.messageId) ?? str(r.id) ?? undefined,
     });
     if (out.length >= limit) break;
   }
   return out;
 }
 
+/** Orders hits by how many query words appear in their title and snippet, newest first on ties. */
+export function rankByQuery<T extends { title: string; quote: string; timestamp?: string }>(items: T[], query: string): T[] {
+  const words = query.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+  const score = (e: T) => words.filter((w) => `${e.title} ${e.quote}`.toLowerCase().includes(w)).length;
+  return [...items].sort((a, b) => score(b) - score(a) || (b.timestamp ?? "").localeCompare(a.timestamp ?? ""));
+}
+
 /** Fallback when a tool returns plain text instead of records. */
 export function textEvidence(source: SourceId, title: string, text: string, url?: string): RawEvidence[] {
   const t = text.trim();
   return t ? [{ source, title, quote: compact(t, 600), url }] : [];
+}
+
+/** Email bodies often arrive as full HTML documents: keep only the readable text. */
+export function htmlToText(s: string): string {
+  if (!/<[a-z!/]/i.test(s)) return s;
+  return s
+    .replace(/<!DOCTYPE[^>]*>|-\/\/W3C\/\/DTD[^"]*"[^>]*>?/gi, " ")
+    .replace(/<(head|style|script|title)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|li|tr|h\d)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/&[a-z]+;|&#\d+;/gi, " ");
 }

@@ -1,6 +1,6 @@
 import { Composio } from "@composio/core";
 import type { ConnectorStatus } from "@cortex/shared";
-import { extractEvidence } from "../extract";
+import { compact, extractEvidence, rankByQuery } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
 import type { ComposioToolkitSpec } from "./toolkits";
 
@@ -65,7 +65,22 @@ export class ComposioConnector implements Connector {
 
   async search(input: SearchInput, ctx: ConnectorContext) {
     const data = await this.run(this.spec.search.slug, this.spec.search.toArgs(input), ctx);
-    return extractEvidence(this.id, data, input.limit ?? 8);
+    const items = extractEvidence(this.id, data, input.limit ?? 8);
+    const detail = this.spec.detail;
+    if (!detail || items.length === 0) return items;
+    const best = rankByQuery(items, input.query).slice(0, detail.top).filter((e) => e.ref);
+    await Promise.all(
+      best.map(async (e) => {
+        try {
+          const raw = await this.run(detail.slug, detail.toArgs(e.ref!), ctx);
+          const body = detail.text?.(raw) || extractEvidence(this.id, { records: [raw] }, 1)[0]?.quote || "";
+          if (body.length > e.quote.length) e.quote = compact(body, 900);
+        } catch {
+          // keep the snippet
+        }
+      }),
+    );
+    return items;
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

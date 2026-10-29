@@ -42,6 +42,7 @@ export interface Turn {
   memoryUsed: MemoryItem[];
   memoryWritten: MemoryItem[];
   answer: string;
+  needsDetails?: boolean;
   claims: Claim[];
   conflicts: Conflict[];
   missing: string[];
@@ -107,7 +108,7 @@ function reduce(t: Turn, e: AgentEvent): Turn {
     case "token":
       return { ...t, answer: t.answer + e.text };
     case "answer":
-      return { ...t, answer: e.markdown };
+      return { ...t, answer: e.markdown, needsDetails: e.needsDetails };
     case "verdict":
       return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing, followups: e.followups ?? [] };
     case "action_proposal":
@@ -142,7 +143,7 @@ export function useAgent() {
         .slice(-3)
         .flatMap((t) => [
           { role: "user" as const, content: t.question },
-          { role: "assistant" as const, content: t.answer },
+          { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails },
         ]);
       setTurns((all) => [...all, turn]);
       setBusy(true);
@@ -183,8 +184,11 @@ export function useAgent() {
           done: true,
         }));
       } finally {
-        abort.current = null;
-        setBusy(false);
+        // A thread switch may have started a newer run; leave its state alone.
+        if (abort.current === ctrl) {
+          abort.current = null;
+          setBusy(false);
+        }
         patch(turn.id, (t) => (t.done ? t : { ...t, done: true }));
       }
     },
@@ -211,11 +215,14 @@ export function useAgent() {
     [patch],
   );
 
-  const reset = useCallback(() => {
+  /** Opens a saved thread as-is (no new run); an empty list starts a new thread. */
+  const load = useCallback((saved: Turn[] = [], serverThreadId?: string) => {
     abort.current?.abort();
-    threadId.current = undefined;
-    setTurns([]);
+    abort.current = null;
+    setBusy(false);
+    threadId.current = serverThreadId;
+    setTurns(saved);
   }, []);
 
-  return { turns, busy, ask, stop, decide, reset };
+  return { turns, busy, ask, stop, decide, load, threadId };
 }

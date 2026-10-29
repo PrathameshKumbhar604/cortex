@@ -6,7 +6,7 @@ import { ConnectorError, type Connector, type ConnectorContext, type SearchInput
 import type { ComposioToolkitSpec } from "./toolkits";
 
 const ENDPOINT = "https://connect.composio.dev/mcp";
-const STATUS_TTL_MS = 20_000;
+const STATUS_TTL_MS = 5_000; // short so a finished sign-in shows up while the Connections page polls
 
 /**
  * One MCP session to Composio's consumer endpoint (ck_ keys), shared by all
@@ -16,8 +16,8 @@ const STATUS_TTL_MS = 20_000;
 class ComposioMcpSession {
   private client: Client | null = null;
   private connecting: Promise<Client> | null = null;
-  private statusCache: { at: number; active: Set<string> } | null = null;
-  private statusPending: Promise<Set<string>> | null = null;
+  private statusCache: { at: number; states: Map<string, string> } | null = null;
+  private statusPending: Promise<Map<string, string>> | null = null;
 
   constructor(private readonly key: string) {}
 
@@ -51,19 +51,19 @@ class ComposioMcpSession {
     return body.data ?? {};
   }
 
-  /** Toolkit slugs with an ACTIVE account, from one cached list call. */
-  async active(toolkits: string[]): Promise<Set<string>> {
-    if (this.statusCache && Date.now() - this.statusCache.at < STATUS_TTL_MS) return this.statusCache.active;
+  /** Account state per toolkit slug ("ACTIVE" when any account is, else e.g. "EXPIRED"), from one cached list call. */
+  async states(toolkits: string[]): Promise<Map<string, string>> {
+    if (this.statusCache && Date.now() - this.statusCache.at < STATUS_TTL_MS) return this.statusCache.states;
     this.statusPending ??= (async () => {
       const data = await this.call("COMPOSIO_MANAGE_CONNECTIONS", { toolkits: toolkits.map((name) => ({ name, action: "list" })) });
       const results = (data.results ?? {}) as Record<string, { accounts?: { status?: string }[] }>;
-      const active = new Set(
-        Object.entries(results)
-          .filter(([, r]) => (r.accounts ?? []).some((a) => String(a.status).toUpperCase() === "ACTIVE"))
-          .map(([k]) => k.toLowerCase()),
-      );
-      this.statusCache = { at: Date.now(), active };
-      return active;
+      const states = new Map<string, string>();
+      for (const [k, r] of Object.entries(results)) {
+        const all = (r.accounts ?? []).map((a) => String(a.status).toUpperCase());
+        if (all.length) states.set(k.toLowerCase(), all.includes("ACTIVE") ? "ACTIVE" : all[0]!);
+      }
+      this.statusCache = { at: Date.now(), states };
+      return states;
     })().finally(() => (this.statusPending = null));
     return this.statusPending;
   }
@@ -78,11 +78,16 @@ class ComposioMcpSession {
       thought: `Cortex: ${slug}`,
       sync_response_to_workbench: false,
     });
-    const results = (data.results ?? []) as { response?: { successful?: boolean; data?: unknown; error?: unknown }; error?: unknown }[];
+    const results = (data.results ?? []) as {
+      response?: { successful?: boolean; data?: unknown; data_preview?: unknown; error?: unknown };
+      error?: unknown;
+    }[];
     const first = results[0];
     const err = first?.error ?? (first?.response?.successful === false ? first.response.error : null);
     if (err) throw new ConnectorError("composio", String(err).slice(0, 200));
-    return first?.response?.data ?? first ?? data;
+    // Large results come back as a truncated `data_preview`; never fall back to the envelope,
+    // which also holds Composio's structure metadata and would be mistaken for records.
+    return first?.response?.data ?? first?.response?.data_preview ?? {};
   }
 }
 
@@ -112,14 +117,16 @@ export class ComposioMcpConnector implements Connector {
   }
 
   async status(_ctx: ConnectorContext): Promise<ConnectorStatus> {
-    const active = await this.session.active(ALL_TOOLKITS);
+    const state = (await this.session.states(ALL_TOOLKITS)).get(this.spec.toolkit);
     return {
       id: this.id,
       name: this.name,
       kind: this.kind,
-      connected: active.has(this.spec.toolkit),
+      connected: state === "ACTIVE",
       available: true,
       canAct: this.actions.length > 0,
+      // A sign-in that lapsed (EXPIRED, FAILED, INACTIVE…) is reported, so Ask and Connections can say "reconnect".
+      detail: state && state !== "ACTIVE" && state !== "INITIATED" ? "its sign-in expired; reconnect it on the Connections page" : undefined,
     };
   }
 
@@ -135,6 +142,8 @@ export class ComposioMcpConnector implements Connector {
   async search(input: SearchInput, _ctx: ConnectorContext) {
     const args = Object.fromEntries(Object.entries(this.spec.search.toArgs(input)).filter(([, v]) => v !== undefined && v !== ""));
     const data = await this.session.execute(this.spec.search.slug, args);
+    // No spec.detail stage here: the hosted MCP cuts every string to ~200 characters, so a full-message
+    // fetch returns the same snippet. The SDK connector (project keys) fetches full bodies.
     return extractEvidence(this.id, data, input.limit ?? 8);
   }
 

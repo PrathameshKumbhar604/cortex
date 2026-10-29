@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ConnectorRegistry, Connector } from "@cortex/connectors";
 import { LlmUnavailableError, type LlmRouter } from "@cortex/llm";
 import type {
+  ActionProposal,
   AgentEvent,
   ChatTurn,
   Claim,
@@ -277,7 +278,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     // 3. Plan.
     yield { type: "step", step: "plan", status: "active" };
     let plan: Plan;
-    if (fast || scoped.length === 0) {
+    if (fast || scoped.length === 0 || route.route === "action") {
       plan = heuristicPlan(input.question, scoped);
     } else {
       try {
@@ -300,7 +301,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         budget.models.add(`${res.provider}/${res.model}`);
         plan = sanitizePlan(res.data, input.question, scoped);
         // The router already decided this needs sources; the planner may not overrule it into small talk.
-        if (plan.intent === "chat") plan = { ...plan, intent: route.route === "action" ? "action" : "research" };
+        if (plan.intent === "chat") plan = { ...plan, intent: "research" };
         if (plan.intent !== "chat" && plan.subQuestions.length === 0) plan = heuristicPlan(input.question, scoped);
       } catch (err) {
         if (err instanceof LlmUnavailableError) throw err;
@@ -394,7 +395,27 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     yield { type: "evidence", items: ranked };
     yield { type: "step", step: "search", status: "done", detail: `${ranked.length} pieces of evidence from ${budget.toolCalls} searches` };
 
-    // 5. Nothing found → say so honestly, without spending an LLM call.
+    // 5a. Actions: draft for approval, or ask for what's missing. No answer to verify, so no claims or citations.
+    if (route.route === "action") {
+      yield { type: "step", step: "synthesize", status: "active", detail: "drafting" };
+      const drafted = await draftAction(input, deps, { evidence: ranked, briefs: actionBriefs(scoped.length ? scoped : connected), history, budget, signal });
+      if (drafted) {
+        const md = drafted.proposals.length ? "Here's the draft. Check it, edit if needed, and approve. Nothing happens until you do." : drafted.ask!;
+        yield* skip(["verify", "remember"]);
+        yield { type: "evidence", items: [] };
+        yield { type: "token", text: md };
+        yield { type: "answer", markdown: md, needsDetails: !drafted.proposals.length };
+        yield { type: "step", step: "synthesize", status: "done", detail: drafted.proposals.length ? "ready for approval" : "needs details" };
+        yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [], followups: [] };
+        for (const p of drafted.proposals) yield { type: "action_proposal", proposal: p };
+        yield usage(budget, started);
+        yield { type: "done" };
+        return;
+      }
+      // Not an action after all (a question, or the user moved on): answer it like any other question.
+    }
+
+    // 5b. Nothing found → say so honestly, without spending an LLM call.
     if (ranked.length === 0) {
       const searched = [...new Set([...calls.values()].map((c) => deps.registry.get(c.source)?.name ?? c.source))];
       const md =
@@ -487,28 +508,8 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     };
     yield { type: "step", step: "verify", status: "done", detail: `${Math.round(score * 100)}% grounded` };
 
-    // 8. Actions are proposed, never executed here. When the router said "action" but the answer
-    // left the ACTIONS section empty, draft it with a dedicated call instead of silently skipping.
-    let proposedActions = sections.actions;
-    if (route.route === "action" && proposedActions.length === 0 && budget.canCallLlm()) {
-      try {
-        budget.llmCalls++;
-        const res = await deps.llm.json(
-          {
-            tier: "strong",
-            messages: actionPrompt(input.question, ranked, actionBriefs(scoped.length ? scoped : connected)),
-            maxTokens: 1200,
-            cacheTtlMs: 0,
-            signal,
-          },
-          (v) => (Array.isArray(v) ? v : (v as { actions?: unknown[] })?.actions ?? [v]),
-        );
-        budget.models.add(`${res.provider}/${res.model}`);
-        proposedActions = res.data;
-      } catch {
-        // no draft possible; the answer still explains what was found
-      }
-    }
+    // 8. Actions the answer suggested are proposed, never executed here.
+    const proposedActions = sections.actions;
     for (const a of proposedActions.slice(0, 3)) {
       const p = deps.actions.propose(input.userId, deps.registry, a);
       if ("id" in p) yield { type: "action_proposal", proposal: p };
@@ -528,7 +529,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       for (const c of candidates.slice(0, 2)) {
         try {
           const item = await deps.memory.add({ userId: input.userId, ...c, source: "conversation", runId });
-          if (item) written.push(item);
+          if (item && !written.some((w) => w.id === item.id)) written.push(item); // a reinforced memory comes back with its existing id
         } catch {
           break;
         }
@@ -560,6 +561,39 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     yield usage(budget, started);
     yield { type: "done" };
   }
+}
+
+/**
+ * Drafts the requested action for the approval card, or the plain-words question to ask when a detail
+ * is missing. Returns null when the message turns out not to be an action.
+ */
+async function draftAction(
+  input: RunInput,
+  deps: AgentDeps,
+  o: { evidence: Evidence[]; briefs: ActionBrief[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
+): Promise<{ proposals: ActionProposal[]; ask?: string } | null> {
+  const drafts: unknown[] = [];
+  let ask: string | undefined;
+  if (o.budget.canCallLlm()) {
+    o.budget.llmCalls++;
+    const res = await deps.llm.json(
+      { tier: "strong", messages: actionPrompt(input.question, o.evidence, o.briefs, o.history), maxTokens: 1200, cacheTtlMs: 0, signal: o.signal },
+      (v) => (Array.isArray(v) ? v : (v as { actions?: unknown[] })?.actions ?? [v]),
+    );
+    o.budget.models.add(`${res.provider}/${res.model}`);
+    for (const d of res.data) {
+      const r = d as { ask?: unknown; notAction?: unknown };
+      if (r?.notAction === true) return null;
+      if (typeof r?.ask === "string" && r.ask.trim()) ask ??= r.ask.trim();
+      else drafts.push(d);
+    }
+  }
+  const proposals: ActionProposal[] = [];
+  for (const d of drafts.slice(0, 3)) {
+    const p = deps.actions.propose(input.userId, deps.registry, d);
+    if ("id" in p) proposals.push(p);
+  }
+  return proposals.length ? { proposals } : { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?" };
 }
 
 function* skip(steps: StepId[]): Generator<AgentEvent> {

@@ -48,6 +48,14 @@ export function TurnView({
               <span>
                 <strong className="font-[600]">{f.name} is unavailable</strong>: {f.reason}. {f.impact}
                 {f.source !== "llm" && f.source !== "memory" && " Continuing with the other sources."}
+                {/reconnect/.test(f.reason) && (
+                  <>
+                    {" "}
+                    <Link href="/connections" className="font-[600] underline underline-offset-2">
+                      Reconnect
+                    </Link>
+                  </>
+                )}
               </span>
             </li>
           ))}
@@ -116,8 +124,8 @@ export function TurnView({
         <p className="readout mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
           <Brain className="size-3 text-accent" aria-hidden />
           {turn.memoryUsed.length > 0 && <span>Used {turn.memoryUsed.length} memor{turn.memoryUsed.length > 1 ? "ies" : "y"}</span>}
-          {turn.memoryWritten.map((m) => (
-            <Link key={m.id} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
+          {turn.memoryWritten.map((m, i) => (
+            <Link key={`${m.id}:${i}`} href="/memory" className="normal-case tracking-normal text-accent-ink hover:underline">
               Learned: “{m.content}”
             </Link>
           ))}

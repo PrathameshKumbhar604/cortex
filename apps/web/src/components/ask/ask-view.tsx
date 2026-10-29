@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
-import { pushRecent } from "@/lib/recent";
+import { readThread, saveThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 import { Composer } from "./composer";
 import { TurnView } from "./turn-view";
@@ -33,7 +33,10 @@ function readMode(): RunMode {
 }
 
 export function AskView({ workspace }: { workspace: "demo" | "live" }) {
-  const { turns, busy, ask, stop, decide, reset } = useAgent();
+  const { turns, busy, ask, stop, decide, load, threadId } = useAgent();
+  const [localId, setLocalId] = useState(() => crypto.randomUUID());
+  const asked = useRef(false);
+  const [saveTick, setSaveTick] = useState(0);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<RunMode>("deep");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -54,23 +57,54 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     if (!question || busy) return;
     setDraft("");
     setExpanded(null);
-    pushRecent(question);
+    if (turns.length === 0) router.replace(`/?t=${localId}`);
+    asked.current = true;
     void ask(question, mode);
   };
 
-  // /?q=… from Brief cards and recent questions
+  const newThread = () => {
+    asked.current = false;
+    load();
+    setLocalId(crypto.randomUUID());
+    setExpanded(null);
+    router.push("/");
+  };
+
+  // /?t=… opens a saved thread without re-running it; /?q=… (Brief cards) asks in a new thread.
   useEffect(() => {
+    const t = params.get("t");
     const q = params.get("q");
-    if (q) {
-      router.replace("/");
-      submit(q);
+    if (t && t !== localId) {
+      const saved = readThread(t);
+      asked.current = false;
+      // A turn saved mid-run never finishes; show it as stopped.
+      load(saved?.turns.map((x) => (x.done ? x : { ...x, done: true, error: x.error ?? "Stopped before it finished." })), saved?.serverThreadId);
+      setLocalId(t);
+      setExpanded(null);
+    } else if (!t && !q && turns.length) {
+      newThread();
     }
+    if (q) submit(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
+
+  // Save the thread when a question starts and when its answer finishes; just opening one doesn't reorder it.
+  useEffect(() => {
+    if (!asked.current || !turns.length) return;
+    saveThread({ id: localId, title: turns[0]!.question, updatedAt: Date.now(), serverThreadId: threadId.current, turns });
+    if (!busy) asked.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns.length, busy, saveTick]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns.length]);
+
+  const onDecide = (turnId: string) => async (id: string, d: "approve" | "reject", e?: Record<string, unknown>) => {
+    await decide(turnId, id, d, e);
+    asked.current = true;
+    setSaveTick((n) => n + 1);
+  };
 
   const latest = turns.at(-1);
   const earlier = turns.slice(0, -1);
@@ -111,7 +145,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
               {earlier.map((t) =>
                 expanded === t.id ? (
                   <li key={t.id} className="border-t border-line py-6">
-                    <TurnView turn={t} latest={false} onDecide={(id, d, e) => decide(t.id, id, d, e)} onFollowup={submit} />
+                    <TurnView turn={t} latest={false} onDecide={onDecide(t.id)} onFollowup={submit} />
                     <button type="button" onClick={() => setExpanded(null)} className="readout mt-4 text-muted hover:text-ink">
                       Collapse
                     </button>
@@ -135,7 +169,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             </ol>
           )}
 
-          {latest && <TurnView turn={latest} latest onDecide={(id, d, e) => decide(latest.id, id, d, e)} onFollowup={submit} />}
+          {latest && <TurnView turn={latest} latest onDecide={onDecide(latest.id)} onFollowup={submit} />}
           <div ref={bottom} />
         </div>
       </div>
@@ -170,7 +204,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
           <div className="text-[12.5px] text-muted mt-2 flex items-center justify-between">
             <span className="hidden sm:inline">{mode === "fast" ? "Fast: one pass, quickest answer" : "Deep: plans, searches in parallel, verifies every claim"}</span>
             {turns.length > 0 && (
-              <button type="button" onClick={reset} disabled={busy} className={cn("ml-auto flex items-center gap-1 whitespace-nowrap hover:text-ink", busy && "opacity-40")}>
+              <button type="button" onClick={newThread} disabled={busy} className={cn("ml-auto flex items-center gap-1 whitespace-nowrap hover:text-ink", busy && "opacity-40")}>
                 <Plus className="size-3" aria-hidden /> New thread
               </button>
             )}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ConnectorRegistry, DemoConnector, TOOLKITS, buildRegistry, extractEvidence } from "./index";
 import type { Connector } from "./types";
+import { driveQuery, gmailBody, gmailQuery } from "./composio/toolkits";
+import { htmlToText, rankByQuery } from "./extract";
 
 const ctx = { userId: "u1" };
 
@@ -71,5 +73,71 @@ describe("evidence extraction", () => {
     const [e] = extractEvidence("gmail", data);
     expect(e).toMatchObject({ title: "Hello", quote: "Body text", author: "a@b.c" });
     expect(e?.timestamp).toBe("2026-10-20T10:00:00.000Z");
+  });
+});
+
+describe("large mailbox retrieval", () => {
+  it("keeps one item per email thread", () => {
+    const data = {
+      messages: [
+        { messageId: "m2", threadId: "t1", subject: "Re: Demo", messageText: "latest reply" },
+        { messageId: "m1", threadId: "t1", subject: "Demo", messageText: "first mail" },
+        { messageId: "m3", threadId: "t2", subject: "Other", messageText: "x" },
+      ],
+    };
+    const items = extractEvidence("gmail", data);
+    expect(items.map((e) => e.ref)).toEqual(["m2", "m3"]);
+  });
+
+  it("pushes filters to Gmail: operators kept, generic words dropped, keywords ORed, 30-day default", () => {
+    const q = gmailQuery({ query: "emails from:alice@x.com demo budget" });
+    expect(q).toMatch(/^from:alice@x\.com \{demo budget\} after:\d{4}\/\d{2}\/\d{2} -category:promotions/);
+    expect(q).not.toMatch(/emails/);
+    expect(gmailQuery({ query: "inbox", since: "2026-10-01T00:00:00Z", until: "2026-10-08T00:00:00Z" })).toBe(
+      "after:2026/10/01 before:2026/10/08 -category:promotions -category:social -in:spam -in:trash",
+    );
+  });
+
+  it("pushes filters to Drive, Slack and GitHub", () => {
+    const window = { since: "2026-10-01T00:00:00Z", until: "2026-10-08T00:00:00Z" };
+    expect(driveQuery({ query: "budget docs o'brien", ...window })).toBe(
+      "(fullText contains 'budget' or fullText contains 'obrien') and modifiedTime > '2026-10-01T00:00:00Z' and modifiedTime < '2026-10-08T00:00:00Z' and trashed = false",
+    );
+    expect(driveQuery({ query: "" })).toBe("trashed = false");
+    expect(driveQuery({ query: "fetch me the latest pdf from drive" })).toBe("(mimeType = 'application/pdf') and trashed = false");
+    const args = (id: string, query: string) => TOOLKITS.find((t) => t.id === id)!.search.toArgs({ query, ...window, limit: 50 });
+    expect(args("slack", "slack messages about launch in:#dev")).toMatchObject({ query: "launch in:#dev after:2026-10-01 before:2026-10-08", count: 10 });
+    expect(args("github", "open pull requests login")).toMatchObject({ q: "open login involves:@me updated:>=2026-10-01 updated:<=2026-10-08", per_page: 10 });
+  });
+
+  it("drops generic words from the Calendar text filter", () => {
+    const cal = TOOLKITS.find((t) => t.id === "calendar")!;
+    expect(cal.search.toArgs({ query: "meetings" }).query).toBeUndefined();
+    expect(cal.search.toArgs({ query: "standup meetings" }).query).toBe("standup");
+  });
+
+  it("decodes the text part of a multipart Gmail message, falling back to HTML", () => {
+    const b64 = (s: string) => Buffer.from(s).toString("base64url");
+    const multipart = { payload: { mimeType: "multipart/alternative", parts: [
+      { mimeType: "text/html", body: { data: b64("<p>html</p>") } },
+      { mimeType: "text/plain", body: { data: b64("plain body ünï") } },
+    ] } };
+    expect(gmailBody(multipart)).toBe("plain body ünï");
+    expect(gmailBody({ payload: { mimeType: "text/html", body: { data: b64("<style>x{}</style><p>Hi&nbsp;there</p>") } } }).trim()).toBe("Hi there");
+    expect(gmailBody({})).toBe("");
+  });
+
+  it("strips HTML documents down to readable text", () => {
+    expect(htmlToText("plain < text")).toBe("plain < text");
+    expect(htmlToText('<!DOCTYPE html><head><title>t</title></head><b>A &amp; B</b>').replace(/\s+/g, " ").trim()).toBe("A & B");
+  });
+
+  it("ranks hits by query words, newest first on ties", () => {
+    const items = [
+      { title: "old match", quote: "budget", timestamp: "2026-01-01" },
+      { title: "unrelated", quote: "", timestamp: "2026-02-01" },
+      { title: "new match", quote: "budget", timestamp: "2026-03-01" },
+    ];
+    expect(rankByQuery(items, "budget review").map((e) => e.title)).toEqual(["new match", "old match", "unrelated"]);
   });
 });

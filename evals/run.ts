@@ -56,9 +56,10 @@ for (const [i, c] of cases.entries()) {
   const verdict = events.find((e) => e.type === "verdict") as Extract<AgentEvent, { type: "verdict" }> | undefined;
   const evidence = (events.find((e) => e.type === "evidence") as Extract<AgentEvent, { type: "evidence" }> | undefined)?.items ?? [];
   const cited = new Set([...answer.matchAll(/\[(\d+)\]/g)].map((m) => evidence[Number(m[1]) - 1]).filter(Boolean));
-  const citedText = [...cited].map((e) => `${e!.title} ${e!.quote}`).join(" ").toLowerCase();
-  const recall = c.expect.length ? c.expect.filter((k) => citedText.includes(k.toLowerCase())).length / c.expect.length : 1;
   const proposals = events.filter((e) => e.type === "action_proposal") as Extract<AgentEvent, { type: "action_proposal" }>[];
+  // Actions carry no citations: their expected facts must appear in the draft instead.
+  const citedText = (c.expectAction ? proposals.map((p) => p.proposal.summary) : [...cited].map((e) => `${e!.title} ${e!.quote}`)).join(" ").toLowerCase();
+  const recall = c.expect.length ? c.expect.filter((k) => citedText.includes(k.toLowerCase())).length / c.expect.length : 1;
   const error = (events.find((e) => e.type === "error") as { message: string } | undefined)?.message;
   const usage = events.find((e) => e.type === "usage") as Extract<AgentEvent, { type: "usage" }> | undefined;
   rows.push({

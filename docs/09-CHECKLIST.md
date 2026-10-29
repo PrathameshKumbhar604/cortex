@@ -20,9 +20,9 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 
 ## 2. Chat management in the sidebar (#2)
 
-- [ ] Persist chats server-side (thread id, title, turns, created/updated) per user, not just a localStorage list.
+- [~] Persist chats server-side (thread id, title, turns, created/updated) per user, not just a localStorage list. Interim (2026-10-29): whole threads (title, turns, server thread id) saved in localStorage, 20 newest; server-side waits for auth (#7).
 - [ ] Sidebar: rename (inline), delete (with undo toast), pin; auto-title from the first question.
-- [ ] Open a past chat restores the full conversation, not a re-run.
+- [x] Open a past chat restores the full conversation, not a re-run (`/?t=<id>`; sidebar shows one entry per thread).
 - Tests: [ ] rename/delete/pin persist across reload and devices; [ ] deleting a chat removes its stored turns; [ ] undo restores it; [ ] user A cannot see or delete user B's chats.
 
 ## 3. Intent routing: when to search, which model (#3)
@@ -36,15 +36,18 @@ Root cause today: only Deep mode can classify "chat" intent, and only after spen
 
 ## 4. Live connectors that actually work at scale (#4)
 
-- [ ] Reproduce the Gmail and Calendar read and write failures with the live account; log the exact Composio request/response.
-- [ ] Fix argument mapping per tool (verified against `COMPOSIO_GET_TOOL_SCHEMAS`); unit tests with recorded responses.
-- [ ] Retrieval strategy for large mailboxes and other high-volume sources:
-  - [ ] Push filtering to the source: Gmail query syntax (`from:`, `after:`, `label:`, `is:unread`, `has:attachment`), Calendar time windows, GitHub `involves:`/`updated:`, Slack `in:`/`after:`.
-  - [ ] Fetch metadata first (subject, sender, date, snippet), rank, then fetch full bodies only for the top N (default 5).
-  - [ ] Hard caps per source per question; time window defaults to the last 30 days unless the question says otherwise.
-  - [ ] Thread de-duplication (one item per email thread).
-- [ ] Write actions (send email, create event, post message) end to end with the consent card.
-- Tests: [ ] read: "emails from X this week", "my meetings tomorrow" return correct items; [ ] write: draft email, create event, each only after Approve, and visible in Gmail/Calendar; [ ] a 1,000+ email mailbox answers in < 10 s with ≤ 2 body fetches per hit; [ ] expired connection shows a friendly reconnect prompt.
+- [x] Reproduce the Gmail and Calendar read and write failures with the live account. Found (2026-10-29): action requests with no matching evidence stopped at "couldn't find anything"; events were created in UTC; vague requests ("create an event") produced nothing. The hosted MCP (`ck_` key) cuts every string to ~200 chars, so full bodies need the project key (D4).
+- [x] Fix argument mapping per tool, verified against `COMPOSIO_GET_TOOL_SCHEMAS` for all 15 tools (Calendar `q` → `query`, Drive `page_size` → `pageSize`). Unit tests use synthetic responses shaped like the live ones.
+- [x] Actions have their own path: no research answer, claims or citations; the model drafts the action for the approval card, or asks one plain-words question for missing details (no field names or IDs). The reply goes back to drafting (flagged `needsDetails`, not by text), and drafting hands anything that is not an action ("latest files from drive?") back to normal answering.
+- [x] Drive understands "latest" (newest first) and file types ("pdf", "sheet", "slides"); evidence dates include the year so "latest" is judged correctly.
+- [x] Retrieval strategy for large mailboxes and other high-volume sources:
+  - [x] Push filtering to the source: Gmail operators kept and keywords ORed, minus promotions/social/spam; Calendar time windows; Drive any-keyword full text + modified time; GitHub `involves:@me` + `updated:`; Slack `after:`/`before:`. Words naming the app ("emails", "meetings", "issues") are dropped.
+  - [x] Fetch metadata first, rank, then fetch full bodies only for the top 2 (SDK/project-key mode; the hosted MCP truncates bodies anyway).
+  - [x] Hard caps: at most 10 results per source call; Gmail and Slack default to the last 30 days.
+  - [x] Thread de-duplication (one item per email thread).
+- [~] Write actions end to end with the consent card: create event and Gmail draft executed live; email send and Slack post drafted live but not approved (they would reach real people).
+- [x] Expired sign-ins are reported ("reconnect it on the Connections page", with a Reconnect link and button); failed actions explain why in plain words.
+- Tests: [x] read: Gmail "internships this month" answered in 4.6 s with citations; all six apps searched live without errors (GitHub account ChatGPT2324 has no issues/PRs; Calendar has few events). [x] write: create event + draft email, each only after approve, visible in Calendar/Gmail. [~] large mailbox: filtering is server-side, so mailbox size does not change cost (≤ 10 results, ≤ 2 body fetches); not measured on a 1,000+ mailbox. [ ] expired connection: built, but not unit-tested and not seen live (no expired account to test). Eval after #4: actions 2/2, citation recall 0.96, groundedness 0.88, 0 unconsented, median 4.0 s.
 
 ## 5. Automatic, optimised memory (#5)
 

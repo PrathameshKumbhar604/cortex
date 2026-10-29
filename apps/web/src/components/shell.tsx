@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Brain, Cable, Menu, MessageSquareText, Newspaper, X } from "lucide-react";
-import { onRecent, readRecent } from "@/lib/recent";
+import { onRecent, readThreads, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 
 const NAV = [
@@ -62,7 +62,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Wordmark />
         </Link>
         <NavLinks />
-        <RecentQuestions />
+        <Suspense fallback={<div className="flex-1" />}>
+          <RecentThreads />
+        </Suspense>
         <WorkspaceFooter />
       </nav>
 
@@ -113,11 +115,13 @@ function WorkspaceFooter() {
   );
 }
 
-function RecentQuestions() {
-  const [items, setItems] = useState<string[]>([]);
+function RecentThreads() {
+  const [items, setItems] = useState<SavedThread[]>([]);
+  const path = usePathname();
+  const current = useSearchParams().get("t");
   useEffect(() => {
-    setItems(readRecent());
-    return onRecent(() => setItems(readRecent()));
+    setItems(readThreads());
+    return onRecent(() => setItems(readThreads()));
   }, []);
   return (
     <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
@@ -125,17 +129,24 @@ function RecentQuestions() {
         <>
           <p className="readout mb-1.5 px-2.5 text-hair">Recent</p>
           <ul className="flex flex-col">
-            {items.map((q) => (
-              <li key={q}>
-                <Link
-                  href={`/?q=${encodeURIComponent(q)}`}
-                  title={q}
-                  className="block truncate rounded-md px-2.5 py-1.5 text-[13px] text-muted hover:bg-[#f0f1f5] hover:text-ink"
-                >
-                  {q}
-                </Link>
-              </li>
-            ))}
+            {items.map((t) => {
+              const active = path === "/" && current === t.id;
+              return (
+                <li key={t.id}>
+                  <Link
+                    href={`/?t=${t.id}`}
+                    title={t.title}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "block truncate rounded-md px-2.5 py-1.5 text-[13px]",
+                      active ? "bg-[#eceef3] text-ink" : "text-muted hover:bg-[#f0f1f5] hover:text-ink",
+                    )}
+                  >
+                    {t.title}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

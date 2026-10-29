@@ -24,6 +24,7 @@ export interface Evidence {
   url?: string;
   author?: string;
   timestamp?: string; // ISO
+  ref?: string; // source-side id (e.g. Gmail message id), used to fetch details
   subQuestionId?: string;
 }
 
@@ -126,7 +127,7 @@ export type AgentEvent =
   | { type: "evidence"; items: Evidence[] }
   | { type: "source_error"; failure: SourceFailure }
   | { type: "token"; text: string }
-  | { type: "answer"; markdown: string }
+  | { type: "answer"; markdown: string; needsDetails?: boolean } // needsDetails: a question back about an action
   | { type: "verdict"; claims: Claim[]; groundedness: number; conflicts: Conflict[]; missing: string[]; followups: string[] }
   | { type: "action_proposal"; proposal: ActionProposal }
   | { type: "memory_written"; items: MemoryItem[] }
@@ -137,6 +138,7 @@ export type AgentEvent =
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;
+  needsDetails?: boolean; // the assistant asked for details to finish an action
 }
 
 export const SOURCE_NAMES: Record<string, string> = {

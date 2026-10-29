@@ -126,6 +126,19 @@ describe("runAgent", () => {
     await collect(runAgent({ question: "Remember that Orbit is my top priority. What changed with demo day?", mode: "deep", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }));
     expect(mem.added[0]).toMatch(/Orbit is my top priority/);
   });
+
+  it("lists a memory once when two candidates reinforce the same stored memory", async () => {
+    const withMemory = ANSWER.replace(
+      /<<<MEMORY>>>\n\[\]/,
+      '<<<MEMORY>>>\n[{"content":"Orbit is the top priority","kind":"priority","salience":0.9,"reason":"stated"}]',
+    );
+    const { llm } = stubLlm(withMemory, { intent: "research", rewritten: "x", window: null, subQuestions: [{ id: "q1", question: "demo day", sources: ["slack"], query: "demo day" }] });
+    const mem = memStub(); // returns the same id for every add, like a reinforced memory
+    const events = await collect(runAgent({ question: "Remember that Orbit is my top priority. What changed with demo day?", mode: "deep", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }));
+    expect(mem.added).toHaveLength(2);
+    const written = events.find((e) => e.type === "memory_written");
+    expect(written && written.type === "memory_written" && written.items).toHaveLength(1);
+  });
 });
 
 describe("verification", () => {
@@ -217,5 +230,66 @@ describe("date verification", () => {
     const [bad] = verifyClaims("Demo Day has moved to Sun, Nov 15 in Engineering Hall [1].", ev);
     expect(ok?.status).toBe("supported");
     expect(bad?.status).not.toBe("supported");
+  });
+});
+
+describe("action requests", () => {
+  const deps = (llm: LlmRouter) => ({ llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() });
+  const answerOf = (events: AgentEvent[]) => (events.find((e) => e.type === "answer") as { markdown: string }).markdown;
+
+  it("asks for missing details instead of answering, verifying or proposing", async () => {
+    const { llm, calls } = stubLlm("unused", { ask: "What should the event be called, and when?" });
+    const events = await collect(runAgent({ question: "create an event in calendar", mode: "deep", userId: "u1" }, deps(llm)));
+    expect(answerOf(events)).toBe("What should the event be called, and when?");
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.needsDetails).toBe(true);
+    expect(events.some((e) => e.type === "action_proposal")).toBe(false);
+    const verdict = events.find((e) => e.type === "verdict");
+    expect(verdict && verdict.type === "verdict" && verdict.claims).toEqual([]);
+    expect(calls.stream).toBe(0); // no research answer was written
+    expect(calls.complete).toBe(1); // one drafting call, no planner
+  });
+
+  it("asks in plain words when the model drafts without a required detail", async () => {
+    const { llm } = stubLlm("unused", { connector: "calendar", action: "create_event", args: { title: "Standup" } });
+    const events = await collect(runAgent({ question: "create an event called Standup", mode: "fast", userId: "u1" }, deps(llm)));
+    expect(answerOf(events)).toMatch(/what exactly should I do/i);
+    expect(events.some((e) => e.type === "action_proposal")).toBe(false);
+  });
+
+  it("answers like a question when the message is not an action after all", async () => {
+    const reply = "Your newest file is the Q3 report [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]\n<<<MEMORY>>>\n[]";
+    const { llm, calls } = stubLlm(reply, { notAction: true });
+    const history = [
+      { role: "user" as const, content: "create a note" },
+      { role: "assistant" as const, content: "What should the note be called?", needsDetails: true },
+    ];
+    const events = await collect(runAgent({ question: "what changed with demo day?", mode: "fast", userId: "u1", history }, deps(llm)));
+    expect(answerOf(events)).toMatch(/newest file/);
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.needsDetails).toBeFalsy();
+    expect(calls.stream).toBe(1);
+  });
+
+  it("goes straight to the approval card when the details are there, with no claims or sources", async () => {
+    const draft = { connector: "calendar", action: "create_event", title: "Standup", args: { title: "Standup", start: "2026-10-30T16:00:00" } };
+    const { llm } = stubLlm("unused", draft);
+    const events = await collect(runAgent({ question: "create an event called Standup tomorrow at 4pm", mode: "fast", userId: "u1" }, deps(llm)));
+    const p = events.find((e) => e.type === "action_proposal");
+    expect(p && p.type === "action_proposal" && p.proposal.status).toBe("pending");
+    const lastEvidence = events.filter((e) => e.type === "evidence").at(-1);
+    expect(lastEvidence && lastEvidence.type === "evidence" && lastEvidence.items).toEqual([]);
+  });
+
+  it("routes the reply to a clarifying question back to drafting", async () => {
+    const { llm, calls } = stubLlm("unused", { ask: "x" }, { route: "general", sources: [], complex: false });
+    const history = [
+      { role: "user" as const, content: "create an event in calendar" },
+      { role: "assistant" as const, content: "What should it be called, and when?", needsDetails: true },
+    ];
+    const events = await collect(runAgent({ question: "Standup, tomorrow 4pm", mode: "fast", userId: "u1", history }, deps(llm)));
+    const route = events.find((e) => e.type === "route");
+    expect(route && route.type === "route" && route.decision).toMatchObject({ route: "action", sources: ["calendar"] });
+    expect(calls.route).toBe(0);
   });
 });

@@ -81,6 +81,12 @@ export async function decideRoute(
   signal?: AbortSignal,
 ): Promise<{ decision: RouteDecision; llm?: { provider: string; model: string; cached: boolean } }> {
   const ids = sources.map((s) => s.id);
+  const asked = history.at(-1);
+  // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on).
+  if (asked?.role === "assistant" && asked.needsDetails) {
+    const request = history.findLast((t) => t.role === "user")?.content ?? "";
+    return { decision: { route: "action", sources: hintedSources(`${request} ${question}`, ids), tier: "strong", reason: "answers a question about an action", by: "rules" } };
+  }
   const ruled = routeByRules(question, ids);
   if (ruled) return { decision: ruled };
   try {

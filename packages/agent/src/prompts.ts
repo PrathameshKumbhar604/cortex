@@ -14,6 +14,8 @@ export interface ActionBrief {
 
 const today = () =>
   new Date().toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+const now = () =>
+  `${new Date().toLocaleString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`;
 
 function memoryBlock(memories: MemoryItem[]): string {
   return memories.length ? memories.map((m) => `- (${m.kind}) ${m.content}`).join("\n") : "- none";
@@ -52,7 +54,7 @@ Rules:
 export function evidenceBlock(evidence: Evidence[]): string {
   return evidence
     .map((e, i) => {
-      const when = e.timestamp ? new Date(e.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+      const when = e.timestamp ? new Date(e.timestamp).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "";
       const meta = [e.source, e.author, when].filter(Boolean).join(" · ");
       return `[${i + 1}] (${meta}) ${e.title}: ${e.quote}`;
     })
@@ -121,21 +123,32 @@ export function verifyPrompt(items: { i: number; claim: string; evidence: string
   ];
 }
 
-/** Drafts the action the user asked for, from evidence only. Never executed without approval. */
-export function actionPrompt(question: string, evidence: Evidence[], actions: ActionBrief[]) {
+/** Drafts the action the user asked for, or asks for missing details. Never executed without approval. */
+export function actionPrompt(question: string, evidence: Evidence[], actions: ActionBrief[], history: ChatTurn[] = []) {
   return [
     {
       role: "system" as const,
       content: `Draft the single action the user asked for. It will be shown to them for approval before anything is sent.
+Now: ${now()}. Write datetimes as local ISO without an offset (2026-10-30T16:00:00); resolve "tomorrow", "next Monday" etc. from now.
 Available actions:
 ${actions.map((a) => `- ${a.connector}.${a.action}(${a.params}): ${a.title}`).join("\n") || "- none"}
-Use only facts from the evidence; never invent email addresses, dates or names. Write the text the user would send, in a natural, concise voice.
-Return only JSON: {"connector":"...","action":"...","title":"short description","args":{...}}`,
+Use only facts from the request, the conversation and the evidence; never invent email addresses, dates, times or names.
+If the latest message does not ask you to send, create, post or change something (it is a question, a search like "latest files", or the user moved on), return {"notAction":true}.
+If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question.
+Never mention field names, IDs, formats or other technical terms. Find IDs (a page, file or channel the user names) in the evidence; if you can't, ask for it by name ("Which Notion page should it go under?").
+Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
+Return only JSON, one of: {"connector":"...","action":"...","title":"short description","args":{...}}, {"ask":"your question"}, {"notAction":true}.`,
     },
-    { role: "user" as const, content: `Evidence:
+    {
+      role: "user" as const,
+      content: `Conversation so far:
+${historyBlock(history)}
+
+Evidence:
 ${evidenceBlock(evidence)}
 
-Request: ${question}` },
+Request: ${question}`,
+    },
   ];
 }
 

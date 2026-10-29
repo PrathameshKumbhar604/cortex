@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import type { ConnectorStatus } from "@cortex/shared";
 import { cn } from "@/lib/ui";
@@ -29,11 +29,16 @@ export function ConnectionsView() {
   const [info, setInfo] = useState<Info | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState<string | null>(null);
+  const [justConnected, setJustConnected] = useState<string | null>(null);
+  const popup = useRef<Window | null>(null);
   const params = useSearchParams();
 
   const load = useCallback(async () => {
     const res = await fetch("/api/connections");
-    setInfo((await res.json()) as Info);
+    const next = (await res.json()) as Info;
+    setInfo(next);
+    return next;
   }, []);
 
   useEffect(() => {
@@ -43,7 +48,29 @@ export function ConnectionsView() {
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
 
-  const connected = params.get("connected");
+  const connected = params.get("connected") ?? justConnected;
+
+  // Project-key OAuth returns to /connections?connected=… inside the popup: close it.
+  useEffect(() => {
+    if (params.get("connected") && window.opener) window.close();
+  }, [params]);
+
+  // Hosted sign-in ends on the provider's page, which can't close itself; close the popup once the source is connected.
+  useEffect(() => {
+    if (!waiting) return;
+    const started = Date.now();
+    const timer = setInterval(async () => {
+      const next = await load().catch(() => null);
+      if (next?.connectors.some((c) => c.id === waiting && c.connected)) {
+        popup.current?.close();
+        setJustConnected(waiting);
+        setWaiting(null);
+      } else if (popup.current?.closed || Date.now() - started > 5 * 60_000) {
+        setWaiting(null);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [waiting, load]);
 
   const switchTo = async (workspace: "demo" | "live") => {
     setError(null);
@@ -59,7 +86,9 @@ export function ConnectionsView() {
       const res = await fetch(`/api/connections/${id}`, { method: "POST" });
       const body = (await res.json()) as { redirectUrl?: string; error?: string };
       if (!res.ok || !body.redirectUrl) throw new Error(body.error ?? "Couldn't start sign-in.");
-      window.open(body.redirectUrl, "cortex-connect", "popup,width=520,height=720");
+      popup.current = window.open(body.redirectUrl, "cortex-connect", "popup,width=520,height=720");
+      setJustConnected(null);
+      setWaiting(id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't start sign-in.");
     } finally {
@@ -134,11 +163,11 @@ export function ConnectionsView() {
                 <button
                   type="button"
                   onClick={() => connect(c.id)}
-                  disabled={pending === c.id || info?.workspace !== "live"}
+                  disabled={pending === c.id || waiting === c.id || info?.workspace !== "live"}
                   className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-ink-2 disabled:opacity-50"
                 >
-                  {pending === c.id && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-                  Connect
+                  {(pending === c.id || waiting === c.id) && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+                  {c.detail ? "Reconnect" : "Connect"}
                 </button>
               )}
             </li>
