@@ -23,7 +23,12 @@
     "memory:setup": "cd services/memory && python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt",
     "oracle:local": "node scripts/oracle-local.mjs",
     "eval:routing": "tsx evals/routing.ts",
-    "eval:memory": "tsx evals/memory.ts"
+    "eval:memory": "tsx evals/memory.ts",
+    "check:auth": "node scripts/check-auth.mjs .cache",
+    "check:files": "node scripts/check-files.mjs .cache",
+    "check:onboarding": "node scripts/check-onboarding.mjs .cache",
+    "check:errors": "node scripts/check-errors.mjs .cache",
+    "check:admin": "node scripts/check-admin.mjs .cache"
   },
   "devDependencies": {
     "@next/env": "^16.4.3",

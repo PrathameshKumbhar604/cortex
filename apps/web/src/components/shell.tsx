@@ -4,16 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { motion, MotionConfig } from "motion/react";
-import { Brain, Cable, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { Brain, Cable, FileText, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
 import { play } from "@/lib/sound";
-import { deleteThread, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { openTour, Tour } from "./tour";
+import { Toaster } from "./toaster";
+import { claimThreads, deleteThread, syncThreads, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 
 const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
   { href: "/brief", label: "Brief", icon: Newspaper },
   { href: "/memory", label: "Memory", icon: Brain },
+  { href: "/files", label: "Files", icon: FileText },
   { href: "/connections", label: "Connections", icon: Cable },
 ];
 
@@ -28,9 +32,11 @@ export function Wordmark() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
+  // A hint only (the admin API checks the role itself); the owner is made admin on their first request.
+  const isAdmin = useUser().user?.publicMetadata.role === "admin";
   return (
     <ul className="flex flex-col gap-0.5">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {[...NAV, ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
         const active = href === "/" ? path === "/" : path.startsWith(href);
         return (
           <li key={href}>
@@ -57,6 +63,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
   useEffect(() => setOpen(false), [path]);
+  if (path === "/sign-in" || path === "/sso-callback")
+    return (
+      <MotionConfig reducedMotion="user">
+        {children}
+        <Toaster />
+      </MotionConfig>
+    ); // no app chrome (sidebar, tour) before sign-in
 
   return (
     <div className="flex h-full min-h-dvh">
@@ -94,6 +107,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <ThemeSwitch />
               <SoundSwitch />
             </div>
+            <div className="mt-2">
+              <Account />
+            </div>
           </div>
         )}
         <main className="min-h-0 flex-1 bg-surface">
@@ -102,6 +118,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div key={path} className="page-enter h-full">
               {children}
             </div>
+            <Tour />
+            <Toaster />
           </MotionConfig>
         </main>
       </div>
@@ -126,6 +144,10 @@ function WorkspaceFooter() {
   }, [path]);
   return (
     <div className="mt-4 flex flex-col items-start gap-1.5">
+      <button type="button" onClick={openTour} className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] text-muted hover:text-ink">
+        <Sparkles className="size-3.5" strokeWidth={1.75} aria-hidden /> Take the tour
+      </button>
+      <Account />
       {info && (
         <Link href="/connections" className="readout max-w-full truncate rounded-md px-2.5 py-1.5 text-muted hover:text-ink">
           {info.workspace === "demo" ? "Sample" : "Live"} · {info.count} sources
@@ -135,6 +157,54 @@ function WorkspaceFooter() {
         <ThemeSwitch />
         <SoundSwitch />
       </div>
+    </div>
+  );
+}
+
+function Account() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const owner = user?.id;
+  useEffect(() => {
+    if (!owner) return;
+    claimThreads(owner);
+    void syncThreads();
+  }, [owner]);
+  // Once per browser session, a few seconds in: ask the server to (re)build the brief if it is stale, so opening
+  // Brief is instant. The server answers at once and builds in the background; a fresh brief costs nothing.
+  useEffect(() => {
+    if (!owner) return;
+    const t = setTimeout(() => {
+      try {
+        if (sessionStorage.getItem("cortex.briefWarm")) return;
+        sessionStorage.setItem("cortex.briefWarm", "1");
+        const pick = JSON.parse(localStorage.getItem("cortex.briefSources") ?? "null") as string[] | null;
+        void fetch(`/api/brief${pick?.length ? `?sources=${pick.join(",")}` : ""}`).catch(() => {});
+      } catch {}
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [owner]);
+  if (!user) return null;
+  const email = user.primaryEmailAddress?.emailAddress ?? "";
+  const name = user.fullName ?? "";
+  return (
+    <div className="flex w-full min-w-0 items-center gap-2 px-1.5">
+      <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[11px] font-[600] text-accent-ink uppercase">
+        {(name || email).charAt(0)}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-2" title={email}>
+        {email}
+      </span>
+      <button
+        type="button"
+        // A full page load on sign-out, so nothing of this account stays in memory.
+        onClick={() => void signOut({ redirectUrl: "/sign-in" })}
+        aria-label="Sign out"
+        title="Sign out"
+        className="grid size-7 shrink-0 place-items-center rounded-[8px] text-hair hover:bg-hover hover:text-ink"
+      >
+        <LogOut className="size-3.5" strokeWidth={1.75} aria-hidden />
+      </button>
     </div>
   );
 }

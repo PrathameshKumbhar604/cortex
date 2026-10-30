@@ -5,7 +5,7 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 
 ## Decisions needed before building
 
-- [x] **D1 Auth provider (#7): approved, Better Auth.** Options: email magic link + Google sign-in with Better Auth (free, self-hosted, data in Oracle), or Clerk free tier (hosted). Recommendation: Better Auth.
+- [x] **D1 Auth provider (#7): Clerk (changed 2026-10-30).** Better Auth was built first, but Google/GitHub needed the user to create OAuth apps. Clerk development instances lend shared Google/GitHub apps (consent screen names Clerk); production still needs own OAuth apps. Our own sign-in page calls Clerk directly, so no Clerk branding.
 - [x] **D2 Admin panel scope (#11): approved minimum scope.** Minimum: user list, roles (admin/member), disable user, usage per user (LLM calls, searches, actions), connector status, memory counts. Is there one admin (you), or an org with several?
 - [x] **D3 "Playful" vs the brand (#8): approved, playful motion on a calm visual world.** PRODUCT.md currently says "must not feel playful". Proposal: playful *motion and micro-interactions* (springs, tactile presses, sounds) while keeping the calm visual world. Update PRODUCT.md once agreed.
 - [x] **D4 Composio mode (#4): approved, project key for multi-user.** The consumer `ck_` key ties every connected account to *your* Composio account. With real multi-user auth (D1) we need a Composio *project* key so each Cortex user connects their own accounts.
@@ -20,10 +20,10 @@ Every task is closed only when its tests pass. Design tasks use the Emil Kowalsk
 
 ## 2. Chat management in the sidebar (#2)
 
-- [~] Persist chats server-side (thread id, title, turns, created/updated) per user, not just a localStorage list. Interim (2026-10-29): whole threads (title, turns, server thread id) saved in localStorage, 20 newest; server-side waits for auth (#7).
+- [x] Persist chats server-side per account (2026-10-30): `chats` table (account, chat id, JSON, updated time; newest 200 kept, 1 MB per chat) behind `/api/chats` (GET list, PUT one, DELETE one; 401 without a session). The browser keeps localStorage as its cache, pushes each changed chat 1.5 s after the last change, deletes the server copy at once (undo puts it back), and on sign-in merges the server list in (newer copy wins, server on a tie) and uploads chats only this browser had. shortcut: last write wins per chat across devices.
 - [x] Sidebar: rename (inline), delete (with undo), pin (own "Pinned" group); auto-title: the fast model names a new chat from its first message (2–5 words, once, alongside the answer; the message stays the title if that fails); a rename survives later questions. Also in the phone menu.
 - [x] Open a past chat restores the full conversation, not a re-run (`/?t=<id>`; sidebar shows one entry per thread).
-- Tests: [~] rename/delete/pin persist across reload (browser check 2026-10-29); across devices waits for server storage; [x] deleting a chat removes its stored turns; [x] undo restores it; [x] opening a saved chat makes 0 `/api/ask` calls and no console errors; [ ] user A cannot see or delete user B's chats (needs #7).
+- Tests: [x] unit: merge keeps one copy per chat, the newer one, the server on a tie, pinned first; [~] rename/delete/pin persist across reload (browser check 2026-10-29); [ ] across devices: built, **not run (needs Clerk keys)**; [x] deleting a chat removes its stored turns; [x] undo restores it; [x] opening a saved chat makes 0 `/api/ask` calls and no console errors; [ ] user A cannot see or delete user B's chats: every query is scoped to the signed-in account; browser check not run (needs Clerk keys).
 
 ## 3. Intent routing: when to search, which model (#3)
 
@@ -67,10 +67,11 @@ Root cause today: only Deep mode can classify "chat" intent, and only after spen
 
 ## 7. Authentication (#7)
 
-- [ ] Sign-in before the app (D1): email magic link + Google; sessions; sign out.
-- [ ] Every API route requires a session; the anonymous cookie becomes the real user id; memory, chats, connectors and actions scoped to it.
-- [ ] Rate limiting per user on `/api/ask` and actions.
-- Tests: [ ] every API route returns 401 without a session; [ ] user A cannot read B's memories, chats, actions or connections (automated IDOR tests); [ ] Strix API security scan has no high findings.
+- [~] Sign-in before the app (D1, Clerk `@clerk/nextjs` 7.9.15, 2026-10-30): our own unbranded page on Clerk's signals API (`useSignIn`/`useSignUp`): email + password with a 6-digit emailed code to confirm new accounts and new devices, "Forgot password?" by code, "Continue with Google/GitHub" via `signIn.sso` → `/sso-callback` (`HandleSSOCallback`). Clerk sends the emails. Without keys the proxy shows a plain "Cortex needs its sign-in keys" page (503) instead of crashing. Sign out in the sidebar.
+- [x] Every API route requires a session (401 otherwise, via `clerkMiddleware` in `proxy.ts`); pages redirect to `/sign-in?next=…`. Cortex keeps a local copy of each account (`users` table: email, name, proven email, role, on/off, last active; refreshed from Clerk every 10 min). Data stays keyed by a data id: the first account to sign in on a browser inherits that browser's anonymous id. Uploads pass the proxy with `proxyClientMaxBodySize: 11mb`.
+- [x] Owner guard while Composio runs on a personal `ck_` key (D4 not done yet): only `CORTEX_OWNER_EMAILS` (or the first account with a proven email) may use the live workspace; others get the sample workspace and 403 on switching. The owner is made admin automatically; the role is mirrored to Clerk public metadata so the sidebar can show "Admin".
+- [x] Rate limiting per user: 20 questions, 15 actions and 20 uploads a minute (in-process; shortcut until several servers), plus the admin's daily question limit (#11).
+- Tests: [x] typecheck + 52 unit tests pass after the switch. [ ] `npm run check:auth` / `check:admin` / `check:files` / `check:onboarding` / `check:errors` rewritten for Clerk test addresses (`+clerk_test`, code 424242) but **not run (needs Clerk keys)**. [ ] Google/GitHub sign-in not tried. [ ] Strix API scan. The Better Auth version passed all its browser checks on 2026-10-29; that evidence no longer applies to the Clerk flows.
 
 ## 8. Motion, sound and delight (#8)
 
@@ -84,23 +85,23 @@ Use `emil-design-eng`, `animate`, `find-animation-opportunities`, `review-animat
 
 ## 9. Onboarding and a clearer Brief (#9)
 
-- [ ] Optional first-run walkthrough (skippable, replayable from settings): Ask → citations and verification → actions with approval → memory → connect an app.
-- [ ] Brief: explain itself on first visit, show an empty state that points to connecting apps, and let users pick which sources and projects it covers.
-- Tests: [ ] first visit shows the tour offer once; skip is remembered; [ ] a new user with no connections sees a helpful Brief, not an empty page; [ ] a 5-person hallway test: each completes "connect an app and ask a question" unaided.
+- [x] Optional first-run walkthrough (2026-10-29): offered once on Ask ("New to Cortex?", never forced), five steps each with a small live example (ask → sources and verification → approvals → memory → apps and files), Back/Next/arrow keys, Escape or Skip at any step; remembered; replay from "Take the tour" in the sidebar.
+- [x] Brief: explains itself on first visit (dismissible); with nothing connected it shows "Connect an app to get your first brief"; "Covers" row lets the user pick sources (saved per browser).
+- [x] Brief works in the background and stays light: the API answers at once with the saved brief (SQLite) and rebuilds only when older than 3 hours or on Refresh, one build per user at a time; the page checks back every 4 s while it builds; the app warms it once per session 5 s after sign-in. A build is one model call plus the source searches.
+- Tests: [x] `npm run check:onboarding`: tour offered, 5 steps, Escape remembered, not re-offered, replay works; Brief API answered in 75 ms while building, finished in ~6 s, intro and Covers shown; 0 errors. [ ] 5-person hallway test.
 
 ## 10. Friendlier errors (#10)
 
-- [ ] Rewrite every user-facing error in plain, calm language with a next step ("Gmail needs you to sign in again → Reconnect"); no stack traces, codes or provider names.
-- [ ] Inline retry buttons; toasts for transient failures; technical detail behind "Details".
-- Tests: [ ] simulated failures (LLM busy, connector expired, network down, memory offline) each show the calm message plus an action; [ ] `slopmonster` review of all error copy.
+- [x] One place explains every problem (`packages/shared/src/errors.ts`): a calm title, one plain sentence, one thing to do (Reconnect / Try again / Sign in), and the technical reason kept for "Details". A source that failed is a quiet note (the answer used the others); a whole answer that failed is a card with Try again. Expired app → "Gmail needs you to sign in again" + Reconnect Gmail; models busy → "The free AI models are busy · usually clears within a minute"; memory down → "Your memories are safe"; signed out → Sign in; our own plain messages are kept as they are.
+- [x] Inline Try again on failed answers (asks the same question again), on the Brief and the Memory page; small notices that leave on their own for passing problems (offline / back online, an attachment that failed, admin changes), shown once even when fired twice.
+- Tests: [x] unit: 7 simulated failures (expired, network, memory, models busy, connection lost, a raw TypeError…) show no codes or stack traces up front, each has the right action and keeps the raw reason. [x] `npm run check:errors` (browser, simulated): expired Gmail note with "Reconnect Gmail", models-busy card with Try again (asks again), codes hidden until Details, offline and back-online notices once each, memory-offline card with Try again. [ ] `slopmonster` review of all error copy.
 
 ## 11. Admin panel (#11)
 
-Depends on D1 and D2.
-- [ ] `/admin`, visible only to admins: users (search, role, disable/enable), usage per user, connector health, memory size, recent errors.
-- [ ] Global settings: allowed connectors, per-user daily limits, model order.
-- [ ] Audit log of admin actions and every executed user action.
-- Tests: [ ] non-admins get 403 on all admin routes; [ ] disabling a user ends their sessions; [ ] audit log records each change.
+- [x] `/admin` (2026-10-29), linked in the sidebar for admins only; the API answers admins only (roles and on/off kept in Cortex's `users` table; turning off also bans the account in Clerk, which ends its sessions and blocks sign-in). The owner is made admin automatically. Summary (accounts, active today, questions today, actions done); accounts table with search: role (Admin/Member), status (turn off/on; off ends every session and blocks sign-in), questions today, questions, model calls, searches, actions, memories, files, last active. You can't change or turn off your own account.
+- [x] Global settings: allowed apps (switches with each app's health; uploads always allowed; applied to asking, the Brief, actions and Connections) and a daily question limit per person (checked before any model call). Not done: model order (the free-model router picks its own order).
+- [x] Activity log (newest 5,000): role changes, accounts turned off/on, settings changes, every action that ran or failed, and errors people saw; filter by admin changes / actions / errors.
+- Tests: [x] `npm run check:admin`: a member gets 403 on all admin routes and a calm "This page is for admins"; an admin can't change themself (400); roles change both ways; turning an account off ends its session at once (401) and sign-in says "This account has been turned off…"; turning it on lets it sign in; the daily limit returns 429 with a plain message before any model call; only allowed apps are listed; the log has all four admin kinds.
 
 ## 12. Answer rendering and thread scrolling (#12)
 
@@ -108,6 +109,15 @@ Depends on D1 and D2.
 - [x] Code renders in a terminal panel: dark, language label ("terminal" for shell), Copy with "Copied" feedback, scrolls sideways instead of wrapping. Its colours stay fixed whatever the answer's verification weight. Not done: syntax colouring (needs a new dependency).
 - [x] The whole thread is shown and scrolls, instead of earlier turns collapsing into one-line rows. While an answer streams the view follows it, but scrolling up stops the follow (160 px to stop, 40 px to resume) and shows "Jump to latest". Previous/next question buttons (desktop) and Alt+↑/Alt+↓ (skipped while typing in a non-empty field); smooth scrolling unless reduced motion is on.
 - Tests: [x] browser check (2026-10-29, Playwright on a saved 3-question thread): opens at the end; previous moves up twice; Alt+↓ moves down; "Jump to latest" shows when reading history; 2 terminal panels labelled terminal/python; nested list, 3 table rows, 2 citation marks and no literal "[1]"; long code line scrolls; Copy puts the code on the clipboard; 0 console errors. [ ] check during a live streaming answer; [ ] phone widths.
+
+## 13. File uploads (#13)
+
+- [x] Upload on a Files page (drag and drop or picker) and with the paperclip in the composer (also drag onto it): up to 10 MB each, checked in the browser and on the server (413). Stored under `.data/uploads/<user>/`, metadata in SQLite; open/download and delete (with confirm). Only the owner can read or delete a file.
+- [x] Text is read from PDFs (`unpdf` 1.9.0) and text-like files (txt, md, csv, json, code); others are stored but not searchable, and the list says so.
+- [x] Works like a connector: "Your files" is a source in the registry (listed on Connections with Upload/Manage), searched and cited like Gmail or Drive, and part of the Brief. A file attached to a question always goes into the evidence (its most relevant passages), and the question searches only the files unless it names another app.
+- [x] Safety: files are served with `nosniff` and a sandbox CSP; only PDF, images and plain text open in the browser, everything else (HTML, SVG) downloads.
+- Not done: attaching an uploaded file to an email or saving it to Drive (needs Composio file upload); OCR for images; Word documents; vector search (keyword match for now).
+- Tests: [x] `npm run check:files`: a Chrome-printed PDF and a Markdown file are searchable, sizes correct; 11 MB refused; HTML served as a download; account isolation; a live question with the PDF attached answered "Room 204" citing only the PDF; composer chip shown. [x] unit test: attached passages are always evidence, cited first, and only files are searched.
 
 ## Cross-cutting checks (every release)
 

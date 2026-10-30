@@ -5,6 +5,8 @@ import { ChevronDown, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import type { MemoryItem, MemoryKind } from "@cortex/shared";
 import { onSettings, readUseOtherChats, writeUseOtherChats } from "@/lib/settings";
 import { cn, relativeDays } from "@/lib/ui";
+import { explainError } from "@cortex/shared";
+import { Problem } from "./problem";
 
 const KIND_LABEL: Record<MemoryKind, string> = {
   priority: "Priorities",
@@ -139,9 +141,9 @@ export function MemoryView() {
         )}
 
         {error && (
-          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-warn-ink">
-            {error}
-          </p>
+          <div className="mt-6">
+            <Problem problem={explainError(error)} onRetry={() => void load()} variant="card" />
+          </div>
         )}
 
         {items && items.length === 0 && !error && (

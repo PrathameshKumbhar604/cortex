@@ -463,3 +463,18 @@ describe("knowing when other chats matter", () => {
     expect(events.some((e) => e.type === "source_error")).toBe(false);
   });
 });
+
+describe("attached files", () => {
+  it("always uses the attached passages, searches only files, and cites them first", async () => {
+    const { llm } = stubLlm("The demo is in Room 204 [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]", undefined, { route: "general", sources: [], complex: false });
+    const attachments = [{ source: "files", title: "orbit-plan.pdf", quote: "The beta demo happens in Room 204.", ref: "f1" }];
+    const events = await collect(
+      runAgent({ question: "which room?", mode: "fast", userId: "u1", attachments }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }),
+    );
+    const route = events.find((e) => e.type === "route");
+    expect(route?.type === "route" && route.decision).toMatchObject({ route: "personal", sources: ["files"] });
+    expect(events.filter((e) => e.type === "tool_call").every((e) => e.type === "tool_call" && e.source === "files")).toBe(true);
+    const ev = events.find((e) => e.type === "evidence");
+    expect(ev?.type === "evidence" && ev.items[0]).toMatchObject({ id: "e1", title: "orbit-plan.pdf" });
+  });
+});

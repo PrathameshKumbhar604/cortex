@@ -1,11 +1,12 @@
-import { deps, jsonError, session } from "@/server/cortex";
+import { jsonError, session, unauthorized, depsFor } from "@/server/cortex";
 
 /** Starts one-click OAuth for a connector; the browser opens the returned URL. */
 export async function POST(req: Request, ctx: RouteContext<"/api/connections/[id]">) {
   const { id } = await ctx.params;
   const sess = await session();
+  if (!sess) return unauthorized();
   if (sess.workspace !== "live") return jsonError("Switch to your own workspace to connect real accounts.", 409);
-  const connector = deps(sess.workspace).registry.get(id);
+  const connector = (await depsFor(sess)).registry.get(id);
   if (!connector?.connect) return jsonError("This source doesn't need connecting.", 404);
   try {
     const origin = new URL(req.url).origin;

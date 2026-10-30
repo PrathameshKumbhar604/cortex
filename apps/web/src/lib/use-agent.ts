@@ -29,9 +29,17 @@ export interface ToolCall {
   startedAt: number;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+}
+
 export interface Turn {
   id: string;
   question: string;
+  /** Files attached to this question. */
+  attachments?: Attachment[];
   mode: RunMode;
   startedAt: number;
   steps: Record<StepId, StepState>;
@@ -136,9 +144,9 @@ export function useAgent() {
   }, []);
 
   const ask = useCallback(
-    async (question: string, mode: RunMode) => {
+    async (question: string, mode: RunMode, attachments: Attachment[] = []) => {
       if (!question.trim() || abort.current) return;
-      const turn = newTurn(question.trim(), mode);
+      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined };
       const history: ChatTurn[] = turns
         .filter((t) => t.done && t.answer)
         .slice(-40) // the whole chat; the agent fits it into its context budget
@@ -154,7 +162,7 @@ export function useAgent() {
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats() }),
+          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats(), attachments: attachments.map((a) => a.id) }),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {

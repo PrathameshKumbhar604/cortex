@@ -16,3 +16,6 @@ services/memory/data/
 .cache/
 apps/web/.impeccable/review/
 evals/results/
+
+# Local accounts database, auth secret and uploaded files
+.data/

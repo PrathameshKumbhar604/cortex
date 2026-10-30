@@ -85,7 +85,7 @@ export interface MemoryItem {
   runId?: string | null;
 }
 
-export type ConnectorKind = "composio" | "mcp" | "firecrawl" | "demo";
+export type ConnectorKind = "composio" | "mcp" | "firecrawl" | "demo" | "upload";
 
 export interface ConnectorStatus {
   id: SourceId;
@@ -151,6 +151,7 @@ export const SOURCE_NAMES: Record<string, string> = {
   web: "Web",
   memory: "Memory",
   chat: "Your chats",
+  files: "Your files",
   llm: "Language model",
 };
 
@@ -182,3 +183,5 @@ export function lineUnits(line: string): string[] {
     .map((s) => s.trim())
     .filter((s) => s.length > 12);
 }
+
+export { explainError, explainFailure, type Explained } from "./errors";

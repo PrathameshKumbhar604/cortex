@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import type { ConnectorStatus } from "@cortex/shared";
 import { cn } from "@/lib/ui";
+import { explainError } from "@cortex/shared";
+import { Problem } from "./problem";
 import { SourceMark } from "./ask/sources";
 
 interface Info {
@@ -23,6 +26,7 @@ const WHAT: Record<string, string> = {
   slack: "Team discussions and blockers",
   github: "Issues, pull requests, milestones",
   web: "Public web pages and search",
+  files: "Documents you uploaded to Cortex",
 };
 
 export function ConnectionsView() {
@@ -135,9 +139,9 @@ export function ConnectionsView() {
 
         {connected && <p className="mt-6 rounded-md bg-accent-soft px-3 py-2 text-[14px] text-accent-ink">Connected. Cortex can search it now.</p>}
         {error && (
-          <p role="alert" className="mt-6 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-warn-ink">
-            {error}
-          </p>
+          <div className="mt-6">
+            <Problem problem={explainError(error)} variant="card" />
+          </div>
         )}
 
         <ul className="mt-10 border-t border-ink">
@@ -152,9 +156,14 @@ export function ConnectionsView() {
                   {WHAT[c.id] ?? "Connected through MCP"}
                   {c.canAct ? " · can act with your approval" : " · read-only"}
                 </p>
-                {!c.connected && c.detail && <p className="mt-1 text-[12.5px] text-warn">{c.detail}</p>}
+                {!c.connected && c.detail && c.kind !== "upload" && <p className="mt-1 text-[12.5px] text-warn">{c.detail}</p>}
               </div>
-              {c.connected ? (
+              {c.kind === "upload" ? (
+                // Uploads need no sign-in: the source fills up as files are added.
+                <Link href="/files" className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-hover">
+                  {c.connected ? "Manage files" : "Upload files"}
+                </Link>
+              ) : c.connected ? (
                 <span className="flex items-center gap-1.5 text-[12.5px] text-ok">
                   <span aria-hidden className="size-1.5 rounded-full bg-ok" />
                   {c.kind === "demo" ? "Sample data" : "Connected"}

@@ -41,9 +41,10 @@ const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_00
  * three, across every connected source, ranked by remembered priorities.
  * One LLM call; results are cached by the router for 20 minutes.
  */
-export async function runBrief(deps: AgentDeps, userId: string): Promise<Brief> {
+/** `only` limits the brief to the sources the user picked (all connected ones when omitted). */
+export async function runBrief(deps: AgentDeps, userId: string, only?: string[]): Promise<Brief> {
   const ctx = { userId, signal: AbortSignal.timeout(60_000) };
-  const connected = (await deps.registry.connected(ctx)).filter((c) => c.id !== "web");
+  const connected = (await deps.registry.connected(ctx)).filter((c) => c.id !== "web" && (!only || only.includes(c.id)));
   const failures: SourceFailure[] = [];
 
   const results = await Promise.all(

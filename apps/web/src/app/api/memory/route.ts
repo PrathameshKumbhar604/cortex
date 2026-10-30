@@ -1,10 +1,11 @@
 import type { MemoryKind } from "@cortex/shared";
-import { deps, jsonError, memoryUser, session } from "@/server/cortex";
+import { deps, jsonError, memoryUser, session, unauthorized } from "@/server/cortex";
 
 const OFFLINE = "The memory service isn't running, so memories can't be shown. Start it with `npm run memory`.";
 
 export async function GET() {
   const sess = await session();
+  if (!sess) return unauthorized();
   const { memory } = deps(sess.workspace);
   try {
     const [health, items] = await Promise.all([memory.health(), memory.list(memoryUser(sess))]);
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
   const content = body.content?.trim();
   if (!content || content.length < 3) return jsonError("Write what Cortex should remember.");
   const sess = await session();
+  if (!sess) return unauthorized();
   try {
     const item = await deps(sess.workspace).memory.add({
       userId: memoryUser(sess),

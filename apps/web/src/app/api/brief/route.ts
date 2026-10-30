@@ -1,18 +1,11 @@
-import { runBrief } from "@cortex/agent";
-import { LlmUnavailableError } from "@cortex/llm";
-import { deps, jsonError, memoryUser, session } from "@/server/cortex";
+import { briefFor } from "@/server/brief";
+import { session, unauthorized } from "@/server/cortex";
 
-export async function GET() {
+/** Answers at once with the saved brief; builds a fresh one in the background when it is stale (?refresh=1 forces it). */
+export async function GET(req: Request) {
   const sess = await session();
-  const d = deps(sess.workspace);
-  try {
-    const brief = await runBrief(
-      { ...d, memory: { ...d.memory, recall: (_u, q, l) => d.memory.recall(memoryUser(sess), q, l) } as typeof d.memory },
-      sess.userId,
-    );
-    return Response.json(brief);
-  } catch (err) {
-    if (err instanceof LlmUnavailableError) return jsonError("Every free model is busy right now. Try again in a minute.", 503);
-    return jsonError(err instanceof Error ? err.message : "Couldn't build the brief.", 500);
-  }
+  if (!sess) return unauthorized();
+  const url = new URL(req.url);
+  const sources = url.searchParams.get("sources")?.split(",").filter(Boolean);
+  return Response.json(await briefFor(sess, sources?.length ? sources : undefined, url.searchParams.get("refresh") === "1"));
 }

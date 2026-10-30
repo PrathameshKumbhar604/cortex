@@ -21,7 +21,7 @@ const ACTION =
 /** Requests that start with a command verb ("Email Dr. Ruiz…", "Remind the team…"). */
 const IMPERATIVE = /^\s*(please\s+)?(email|e-mail|mail|message|text|ping|dm|tell|remind|ask|invite|notify|schedule|send|draft|reply|respond|post|create|book|add|open|file|comment|update|reschedule|cancel|share)\b/i;
 const SOURCE_WORDS =
-  /\b(e-?mails?|inbox|gmail|mail|calendar|meetings?|events?|schedule|drive|docs?|files?|notion|pages?|slack|channels?|dms?|github|issues?|prs?|pull requests?|repos?|commits?|milestones?|sprints?|deadlines?|due|standup|advisor|team(mates?)?|projects?|tasks?|todos?|brief)\b/i;
+  /\b(e-?mails?|inbox|gmail|mail|calendar|meetings?|events?|schedule|drive|docs?|files?|notion|pages?|slack|channels?|dms?|github|issues?|prs?|pull requests?|repos?|commits?|milestones?|sprints?|deadlines?|due|standup|advisor|team(mates?)?|projects?|tasks?|todos?|brief|uploads?|uploaded|pdfs?|attach(?:ed|ments?))\b/i;
 const PERSONAL = /\b(my|mine|our|ours|i|i'm|i've|me|we|us)\b/i;
 
 const SOURCE_HINTS: [RegExp, string][] = [
@@ -31,6 +31,7 @@ const SOURCE_HINTS: [RegExp, string][] = [
   [/\b(notion|pages?|spec|notes|wiki)\b/i, "notion"],
   [/\b(slack|channels?|dms?|chat|thread)\b/i, "slack"],
   [/\b(github|issues?|prs?|pull requests?|repos?|commits?|milestones?|bugs?)\b/i, "github"],
+  [/\b(upload(ed|s)?|attach(ed|ment)?|my (files?|pdfs?|documents?|notes)|the (pdf|document|file) i (sent|gave|shared|added))\b/i, "files"],
 ];
 
 function hintedSources(q: string, available: string[]): string[] {

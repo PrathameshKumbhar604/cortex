@@ -1,10 +1,20 @@
 "use client";
 
-import { ArrowUp, Square } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { ArrowUp, FileText, Loader2, Paperclip, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { RunMode } from "@cortex/shared";
 import { motion } from "motion/react";
+import { formatSize } from "@/lib/files";
 import { cn } from "@/lib/ui";
+
+export interface PendingFile {
+  key: string;
+  name: string;
+  size: number;
+  status: "uploading" | "ready" | "error";
+  id?: string;
+  error?: string;
+}
 
 export function Composer({
   value,
@@ -16,6 +26,9 @@ export function Composer({
   onMode,
   placeholder,
   autoFocus,
+  attachments = [],
+  onAttach,
+  onRemove,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -26,8 +39,14 @@ export function Composer({
   onMode: (m: RunMode) => void;
   placeholder: string;
   autoFocus?: boolean;
+  attachments?: PendingFile[];
+  onAttach?: (files: File[]) => void;
+  onRemove?: (key: string) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const uploading = attachments.some((a) => a.status === "uploading");
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -39,10 +58,45 @@ export function Composer({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!busy) onSubmit();
+        if (!busy && !uploading) onSubmit();
       }}
-      className="rounded-[14px] border border-line-strong bg-surface shadow-[0_8px_24px_-12px_rgba(14,17,22,0.14)] transition-colors focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgba(67,83,255,0.10),0_8px_24px_-12px_rgba(14,17,22,0.14)]"
+      onDragOver={(e) => {
+        if (!onAttach || !e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (!onAttach || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDragging(false);
+        onAttach([...e.dataTransfer.files]);
+      }}
+      className={cn("rounded-[14px] border bg-surface shadow-[0_8px_24px_-12px_rgba(14,17,22,0.14)] transition-colors focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgba(67,83,255,0.10),0_8px_24px_-12px_rgba(14,17,22,0.14)]", dragging ? "border-accent bg-accent-wash" : "border-line-strong")}
     >
+      {attachments.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5 px-3 pt-3" aria-label="Attached files">
+          {attachments.map((a) => (
+            <li
+              key={a.key}
+              title={a.error}
+              className={cn(
+                "enter flex max-w-[240px] items-center gap-1.5 rounded-[8px] border py-1 pr-1 pl-2 text-[12.5px]",
+                a.status === "error" ? "border-risk/40 bg-risk-soft text-risk" : "border-line bg-shell text-ink-2",
+              )}
+            >
+              {a.status === "uploading" ? <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden /> : <FileText className="size-3.5 shrink-0" aria-hidden />}
+              <span className="truncate">{a.name}</span>
+              <span className="shrink-0 text-hair">{a.status === "error" ? "failed" : formatSize(a.size)}</span>
+              <button type="button" onClick={() => onRemove?.(a.key)} aria-label={`Remove ${a.name}`} className="grid size-5 shrink-0 place-items-center rounded-[5px] hover:bg-hover">
+                <X className="size-3" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <label htmlFor="ask" className="sr-only">
         Ask Cortex
       </label>
@@ -64,6 +118,30 @@ export function Composer({
         className="no-ring block w-full resize-none bg-transparent px-[18px] pt-4 pb-2 text-[15.5px] leading-relaxed text-ink outline-none placeholder:text-hair focus-visible:outline-none"
       />
       <div className="flex items-center justify-between gap-3 px-3 pb-3">
+        <div className="flex items-center gap-1.5">
+        {onAttach && (
+          <>
+            <input
+              ref={picker}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => {
+                if (e.target.files?.length) onAttach([...e.target.files]);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => picker.current?.click()}
+              aria-label="Attach files (up to 10 MB each)"
+              title="Attach files (up to 10 MB each)"
+              className="grid size-8 place-items-center rounded-lg text-muted hover:bg-hover hover:text-ink"
+            >
+              <Paperclip className="size-4" aria-hidden />
+            </button>
+          </>
+        )}
         <div role="radiogroup" aria-label="Depth" className="flex gap-0.5 rounded-lg bg-shell p-0.5">
           {(["fast", "deep"] as const).map((m) => (
             <button
@@ -86,6 +164,7 @@ export function Composer({
             </button>
           ))}
         </div>
+        </div>
         {busy ? (
           <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-ink text-on-ink hover:bg-ink-2">
             <Square className="size-3 fill-current" aria-hidden />
@@ -94,7 +173,7 @@ export function Composer({
           <button
             type="submit"
             aria-label="Ask"
-            disabled={!value.trim()}
+            disabled={!value.trim() || uploading}
             className="grid size-8 place-items-center rounded-full bg-accent text-on-ink transition-opacity hover:bg-accent-ink disabled:bg-line-strong disabled:text-muted"
           >
             <ArrowUp className="size-4" aria-hidden />

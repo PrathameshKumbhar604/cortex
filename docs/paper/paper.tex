@@ -19,35 +19,41 @@
 \title{From Static Retrieval to Granularity-Aware Search Policies: A Review of Agentic Retrieval-Augmented Generation with a Case Study on Live Workspace Data}
 
 \author{
-\IEEEauthorblockN{Ajit Paraskar}
-\IEEEauthorblockA{\textit{Dept. of Computer Engineering}\\
+\IEEEauthorblockN{Prof. Swapnali Gaikwad}
+\IEEEauthorblockA{\textit{Department of Computer Engineering}\\
 \textit{Dr. D. Y. Patil Institute of Technology}\\
 Pimpri, Pune, India\\
-\placeholder{EMAIL: Ajit Paraskar}}
+swapnali.gaikwad@dypvp.edu.in}
 \and
-\IEEEauthorblockN{Harshvardhan Patil}
-\IEEEauthorblockA{\textit{Dept. of Computer Engineering}\\
+\IEEEauthorblockN{Ajit Paraskar}
+\IEEEauthorblockA{\textit{Department of Computer Engineering}\\
 \textit{Dr. D. Y. Patil Institute of Technology}\\
 Pimpri, Pune, India\\
-\placeholder{EMAIL: Harshvardhan Patil}}
+ajitparaskar87@gmail.com}
 \and
 \IEEEauthorblockN{Prathamesh Kumbhar}
-\IEEEauthorblockA{\textit{Dept. of Computer Engineering}\\
+\IEEEauthorblockA{\textit{Department of Computer Engineering}\\
 \textit{Dr. D. Y. Patil Institute of Technology}\\
 Pimpri, Pune, India\\
-\placeholder{EMAIL: Prathamesh Kumbhar}}
+prathameshkumbhar.dev@gmail.com}
+\and
+\IEEEauthorblockN{Harshvardhan Patil}
+\IEEEauthorblockA{\textit{Department of Computer Engineering}\\
+\textit{Dr. D. Y. Patil Institute of Technology}\\
+Pimpri, Pune, India\\
+harsh.patil.tech@gmail.com}
 \and
 \IEEEauthorblockN{Bikram Ghosh}
-\IEEEauthorblockA{\textit{Dept. of Computer Engineering}\\
+\IEEEauthorblockA{\textit{Department of Computer Engineering}\\
 \textit{Dr. D. Y. Patil Institute of Technology}\\
 Pimpri, Pune, India\\
-\placeholder{EMAIL: Bikram Ghosh}}
+ghoshbikram2725@gmail.com}
 }
 
 \maketitle
 
 \begin{abstract}
-Retrieval-augmented generation (RAG) grounds large language models (LLMs) in external text, but the classic retrieve-once pipeline struggles with multi-hop questions, noisy context and data that changes over time. Agentic RAG addresses these problems by letting the model plan, search repeatedly, choose tools, critique its own evidence and keep memory across sessions. This paper reviews agentic RAG around one recent anchor work, GRASP, which trains a small policy model with reinforcement learning to coordinate semantic search, keyword search and on-demand paragraph reading over a sentence-level index. We organise the literature into a taxonomy of eight design dimensions: query planning, iterative and adaptive retrieval, search granularity and search policies, self-reflection and corrective retrieval, tool use and connector protocols, long-term memory, attribution and citation verification, and evaluation. We then compare representative methods along these dimensions. As a case study we describe Cortex, an open-source agentic RAG system over live workspace sources such as mail, calendars, documents, chat and code hosting. Cortex combines an explicit planner, parallel per-source search, claim-level citation verification, governed long-term memory and actions that run only after the user approves them. We map each Cortex design choice to the surveyed literature, identify where GRASP's granularity-aware policy could extend it, and report preliminary measurements from a small 12-question evaluation. We close with open challenges in supervision without gold evidence, freshness, safety and evaluation.
+Retrieval-augmented generation (RAG) grounds large language models (LLMs) in external text, but the classic retrieve-once pipeline struggles with multi-hop questions, noisy context and data that changes over time. Agentic RAG addresses these problems by letting the model plan, search repeatedly, choose tools, critique its own evidence and keep memory across sessions. This paper reviews agentic RAG around one recent anchor work, GRASP, which uses reinforcement learning to teach a small policy model when to search by meaning, when to search by keyword and when to read a whole paragraph, over an index of single sentences. We organise the literature into a taxonomy of eight design dimensions: query planning, iterative and adaptive retrieval, search granularity and search policies, self-reflection and corrective retrieval, tool use and connector protocols, long-term memory, attribution and citation verification, and evaluation. We then compare representative methods along these dimensions. As a case study we describe Cortex, an open-source agentic RAG system over live workspace sources such as mail, calendars, documents, chat and code hosting. Cortex combines an explicit planner, parallel per-source search, claim-level citation verification, governed long-term memory and actions that run only after the user approves them. We map each Cortex design choice to the surveyed literature, identify where GRASP's granularity-aware policy could extend it, and report preliminary measurements from a small 12-question evaluation. We close with open challenges in supervision without gold evidence, freshness, safety and evaluation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -132,7 +138,7 @@ IRCoT alternates retrieval with chain-of-thought steps: each new reasoning sente
 A newer line of work treats the retrieval interface itself as an action space. Search-R1 trains an LLM with RL to issue search calls during reasoning, using an outcome reward and masking retrieved tokens out of the loss~\cite{jin2025searchr1}. Search-o1 inserts agentic search into the reasoning of large reasoning models~\cite{li2025searcho1}. MARAG-R1 gives the agent four retrieval tools (semantic search, keyword search, filtering and aggregation) and trains it with supervised fine-tuning followed by RL~\cite{luo2025maragr1}. A-RAG exposes hierarchical retrieval interfaces (keyword search, semantic search and chunk reading) that the model combines on its own~\cite{du2026arag}. GRASP is the anchor of this review, and we describe it in detail.
 
 \subsubsection{Problem}
-Gandhi \textit{et al.} identify three difficulties in agentic RAG~\cite{gandhi2026grasp}: using lexical and semantic signals together, choosing a context granularity that does not fill the window with irrelevant tokens, and training a policy that decides when, where and how to retrieve across steps. They argue that prior RL-trained agents use a single retriever or a fixed, coarse chunk size, which limits how retrieval can adapt during multi-step reasoning.
+Gandhi \textit{et al.} identify three difficulties in agentic RAG~\cite{gandhi2026grasp}: using lexical and semantic signals together, choosing a context granularity that does not fill the window with irrelevant tokens, and training a policy that decides when, where and how to retrieve across steps. In their view, earlier agents trained with RL are tied to one retriever or to large chunks of fixed size, so their retrieval cannot change as the reasoning moves from step to step.
 
 \subsubsection{Formulation and actions}
 GRASP models agentic RAG as a finite-horizon Markov decision process. The state holds the question, the interaction history, the evidence and tools used so far, and the remaining turn budget. Each paragraph in the corpus is split into sentences, and every sentence keeps a pointer to its parent paragraph. At each step the policy writes a reasoning segment and then picks one of four actions: \emph{semantic search} (dense retrieval with a Qwen3-0.6B model), \emph{keyword search} (BM25), \emph{read paragraph}, which returns the full parent paragraph of a retrieved sentence, and \emph{answer}, which ends the episode. Both search actions return the top-$K$ sentences with their parent identifiers and scores ($K=5$ in the experiments). The agent therefore sees short, sentence-level evidence first and pays for a whole paragraph only when it chooses to read one.
@@ -242,7 +248,7 @@ Three patterns stand out. First, learned search policies (Search-R1, MARAG-R1, G
 Cortex answers questions such as ``what changed in this project this week, and what is at risk?'' over a user's connected sources. It returns an answer in which factual sentences cite numbered evidence, flags claims it could not verify, and lists contradictions between sources. When the user asks it to do something, it drafts an action and waits for approval. The description below follows the source code (TypeScript agent, connector and LLM packages, and a Python memory service), not the project's roadmap.
 
 \subsection{Architecture}
-Fig.~\ref{fig:cortex} shows one run. The orchestrator is a hand-written, bounded loop rather than a graph framework, so that every branch is explicit and the number of LLM calls is predictable. Hard limits apply to every run: at most 5 sub-questions, 18 tool calls, 4 LLM calls in Deep mode (2 in Fast mode), 16 evidence items (8 in Fast mode) and 90\,s in total.
+Fig.~\ref{fig:cortex} shows one run. The orchestrator is a hand-written, bounded loop rather than a graph framework, so that every branch is explicit and the number of LLM calls is predictable. Hard limits apply to every run: at most 5 sub-questions, 18 tool calls, 5 LLM calls in Deep mode (3 in Fast mode, counting the router call), 16 evidence items (8 in Fast mode) and 90\,s in total.
 
 \begin{figure}[t]
 \centering
@@ -255,14 +261,14 @@ Fig.~\ref{fig:cortex} shows one run. The orchestrator is a hand-written, bounded
   arr/.style={-{Stealth[length=1.5mm]}},
   darr/.style={{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}}
 ]
-\node[step] (u) at (0, 0)   {\textbf{Understand}: check which sources are live; report outages};
+\node[step] (u) at (0, 0)   {\textbf{Route}: live sources; route, sources and model tier};
 \node[step] (r) at (0,-1)   {\textbf{Recall}: top memories (pinned always included)};
 \node[step] (p) at (0,-2)   {\textbf{Plan} (LLM, JSON): intent, time window, 2--5 sub-questions with sources and keywords};
 \node[step] (s) at (0,-3.1) {\textbf{Search}: all (sub-question $\times$ source) pairs in parallel; dedupe; rank by keyword hits and recency};
 \node[step] (y) at (0,-4.25) {\textbf{Synthesize} (LLM, streamed): cite every fact; list conflicts, gaps, actions};
 \node[step] (v) at (0,-5.3) {\textbf{Verify}: lexical claim check; LLM re-check of doubtful claims};
 \node[step] (a) at (0,-6.3) {\textbf{Propose actions}: validate against connector schema; never execute};
-\node[step] (m) at (0,-7.3) {\textbf{Remember}: explicit requests, or salient candidates ($\geq 0.6$)};
+\node[step] (m) at (0,-7.3) {\textbf{Remember}: rules gate, then one small-model extraction (at most 2 items)};
 \foreach \x/\y in {u/r, r/p, p/s, s/y, y/v, v/a, a/m} { \draw[arr] (\x) -- (\y); }
 % left: memory service spanning recall..remember
 \node[side, minimum height=7.0cm, text width=1.55cm] (mem) at (-3.0,-4.15) {\textbf{Memory service}\\[2pt] vector search or SQLite FTS5\\[2pt] provenance, TTL, decay, pin, forget};
@@ -285,6 +291,8 @@ Fig.~\ref{fig:cortex} shows one run. The orchestrator is a hand-written, bounded
 
 \textbf{Understand and recall.} The registry asks each connector for its status. A source that is down produces an event that names the source, the reason (for example, an expired connection) and its \emph{impact} on the answer, and the run continues without it. Memories are retrieved next. Pinned memories are always included; the rest are ranked by relevance weighted by salience.
 
+\textbf{Route.} Before any planning, an intent router decides whether the question needs the user's sources at all. Regular-expression rules settle clear cases at no cost: greetings and statements to remember go to a direct answer, imperative requests (``email\ldots'', ``schedule\ldots'') go to the action path, and words that name an app (``my emails'', ``issues'') restrict the search to that app. Ambiguous questions take one call to a small, fast model. The router returns one of four routes (general knowledge, personal sources, web or action), the sources to touch and the model tier. A general question is answered directly, labelled as not coming from the user's sources, and makes no connector calls. This is a lightweight version of Adaptive-RAG's idea of matching retrieval effort to the question~\cite{jeong2024adaptiverag}, using rules and a prompted model instead of a trained classifier. On a 20-question routing set written by the developers it chose the expected route for all 20.
+
 \textbf{Plan.} In Deep mode one LLM call returns JSON with an intent (research, action or chat), a rewritten question that resolves references from the conversation, an optional time window, and 2--5 sub-questions. Each sub-question names 1--3 sources and a short keyword query. The plan is validated against the connected sources. If the output is unusable, Cortex falls back to a single sub-question over all sources with a locally parsed time window, which is also the plan used in Fast mode.
 
 \textbf{Search and rank.} Every unique (source, query) pair runs in parallel. Each connector call has a 12\,s timeout, one retry for transient errors and a 90\,s result cache. In Deep mode, sub-questions that found nothing get one broadened retry (fewer keywords, no time window) without an extra LLM call. Evidence is deduplicated and ranked by keyword overlap with a small recency bonus. If nothing is found, Cortex says which sources it searched and does not guess. This path costs no LLM call.
@@ -295,9 +303,11 @@ Fig.~\ref{fig:cortex} shows one run. The orchestrator is a hand-written, bounded
 
 \textbf{Actions.} Proposed actions are checked against the connector's action schema (the action must exist and required parameters must be present). Each valid proposal is stored on the server with an exact, human-readable preview and shown as a confirmation card. Only the approval endpoint calls the connector's execute method. Each approval is tied to one user, can be used once and expires after 30 minutes.
 
-\textbf{Memory.} Cortex, not the memory backend, decides what to keep. Automatic extraction in the memory library is turned off. Explicit requests (``remember that\ldots'') are stored with salience 0.95; model-proposed facts are stored only at salience $\geq 0.6$, at most two per run. Each kind of memory has a time-to-live (for example, 45 days for priorities and 90 for facts; preferences do not expire). Salience decays with a 30-day half-life unless the memory is pinned, and a near-duplicate reinforces an existing memory instead of creating a new one. Users can pin, edit or delete memories. Search uses Oracle Agent Memory's vector index when it is configured and SQLite FTS5 (BM25) otherwise.
+\textbf{Memory.} Cortex, not the memory backend, decides what to keep. Automatic extraction in the memory library is turned off; Cortex runs its own after each answer. A rules gate first discards questions, commands, small talk and anything that looks like a secret, so most turns cost no extra call. Otherwise one fast-model call, which sees the related memories already stored, returns at most two items, each with a kind (priority, preference, fact, person or decision), a salience and a reason that is shown to the user. Explicit requests (``remember that\ldots'') are stored with salience 0.95, other candidates only at salience $\geq 0.5$, and a candidate that contradicts an unpinned memory replaces it. On a 30-message scripted conversation this policy stored all 12 expected memories and none from small talk or secrets. Each kind of memory has a time-to-live (for example, 45 days for priorities and 90 for facts; preferences do not expire). Salience decays with a 30-day half-life unless the memory is pinned, and a near-duplicate reinforces an existing memory instead of creating a new one. Users can pin, edit or delete memories. Storage is split in two. Oracle Agent Memory on Oracle AI Database holds the memory text and serves vector search, and recall drops results beyond a fixed distance so that unrelated questions do not pull in every memory. A SQLite ledger keeps the governance fields (provenance, reason, pin, time-to-live, decay) for every memory, caps unpinned memories at 200 per user, and serves keyword search through FTS5 (BM25) when Oracle is not configured.
 
 \textbf{Connectors and models.} Six workspace apps (Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub) are reached through Composio with managed OAuth. Any MCP server, over HTTP or stdio, can be added through a configuration file. Firecrawl provides web search, and a fictional sample workspace with deliberate cross-source conflicts supports demos and evaluation. Tool outputs of any shape are mapped to a common evidence record (title, quote, URL, author, timestamp). An LLM router sends requests to OpenAI-compatible free-tier providers in order (Groq, Gemini, Cerebras, OpenRouter, with Puter as a last resort). It applies per-provider cooldowns after rate-limit or key errors, caches responses, and fails over a streamed answer only before the first token arrives.
+
+\textbf{Implementation.} Cortex is a TypeScript monorepo. The agent, connector, LLM-router and shared-type packages are plain libraries, so the same pipeline runs in the web app, the unit tests and the evaluation scripts. The web application uses Next.js with React; its API routes stream each run's events (plan, evidence, claims, actions) to the browser, which renders the answer with citation marks and the verification result. Sign-in uses Clerk, and every API route rejects requests without a session. The web server keeps its own records (accounts, saved chats, uploaded files, briefs, an admin activity log) in a local SQLite file. Uploaded PDFs and text files form one more source, searched and cited like the connected apps. The memory service is a separate Python (FastAPI) process. Per-user rate limits and an administrator's daily question limit are checked before any model call, so a free-tier quota cannot be exhausted by one account.
 
 \subsection{Mapping Cortex to the Literature}
 Table~\ref{tab:map} links each design choice to the work it draws on and states how GRASP relates to it.
@@ -333,30 +343,30 @@ MCP connectors, consent gate & ReAct~\cite{yao2023react}, MCP~\cite{anthropic202
 \textbf{Where Cortex goes beyond GRASP's setting.} GRASP studies a static, single-domain Wikipedia corpus. Cortex has to handle problems that this setting does not raise. Its sources fail independently, so it reports outages and their impact. Facts carry timestamps and change, so it filters by time window and gives a recency bonus. Sources can contradict each other, so it surfaces conflicts instead of choosing one. Finally, it can change external state, so execution is separated from the model's output and gated by explicit user consent, a safeguard that matters given indirect prompt injection through retrieved content~\cite{greshake2023injection,hou2025mcp}.
 
 \subsection{Preliminary Measurements}
-Cortex includes a 12-question evaluation over its fictional sample workspace. The run reported here used Deep mode with free-tier models. Groq's \texttt{openai/gpt-oss-120b} was the primary strong model and Gemini 3.5 Flash-Lite the fallback; the smaller fast-tier model handled planning and claim re-checks, and other free-tier providers were available for failover. Table~\ref{tab:prelim} lists the results. Groundedness is the verifier's mean claim score described above. Citation recall is the fraction of expected key facts for each question that appear in the cited evidence, averaged over questions.
+Cortex includes a 12-question evaluation over its fictional sample workspace. Table~\ref{tab:prelim} reports two runs: the first version of the pipeline, and the version after the intent router was added and the claim checker made stricter. Both used Deep mode with free-tier models. Groq's \texttt{openai/gpt-oss-120b} was the primary strong model and Gemini 3.5 Flash-Lite the fallback; the smaller fast-tier model handled planning and claim re-checks, and other free-tier providers were available for failover. Table~\ref{tab:prelim} lists the results. Groundedness is the verifier's mean claim score described above. Citation recall is the fraction of expected key facts for each question that appear in the cited evidence, averaged over questions.
 
 \begin{table}[t]
 \centering
-\caption{Preliminary Cortex measurements (12 questions, fictional sample workspace, free-tier models, single run). These are not a benchmark comparison.}
+\caption{Preliminary Cortex measurements (12 questions, fictional sample workspace, free-tier models, one run per version). These are not a benchmark comparison.}
 \label{tab:prelim}
 \footnotesize
-\begin{tabular}{@{}lr@{}}
+\begin{tabular}{@{}lrr@{}}
 \toprule
-Metric & Value \\
+Metric & First & + Router \\
 \midrule
-Mean groundedness (lexical check + LLM re-check) & 0.88 \\
-Mean citation recall & 0.92 \\
-Honest ``not found'' answers & 1/1 \\
-Cross-source conflicts detected & 1/2 \\
-Expected actions proposed & 1/2 \\
-Actions executed without explicit consent & 0 \\
-Median latency & 3.7\,s \\
-90th-percentile latency & 7.1\,s \\
+Mean groundedness (lexical + LLM re-check) & 0.88 & 0.75 \\
+Mean citation recall & 0.92 & 0.92 \\
+Honest ``not found'' answers & 1/1 & 1/1 \\
+Cross-source conflicts detected & 1/2 & 1/2 \\
+Expected actions proposed & 1/2 & 2/2 \\
+Actions executed without consent & 0 & 0 \\
+Median latency & 3.7\,s & 4.6\,s \\
+90th-percentile latency & 7.1\,s & 6.3\,s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These numbers should be read with care. The question set is small and was written by the developers. The workspace is synthetic. Groundedness is measured by Cortex's own verifier, which is partly lexical and may both over-credit paraphrases and under-credit correct inferences. No other system was run on the same data, so the results cannot be compared with GRASP or any other method. Within these limits, the run supports three observations: the citation and verification path works end to end, the system did not invent an answer when the evidence was absent, and the consent gate held. It also points to weaknesses. Conflict detection and action proposals each succeeded on only one of two cases, and both depend on the synthesizer noticing the issue, not on a dedicated component.
+These numbers should be read with care. The question set is small and was written by the developers. The workspace is synthetic. Groundedness is measured by Cortex's own verifier, which is partly lexical and may both over-credit paraphrases and under-credit correct inferences. No other system was run on the same data, so the results cannot be compared with GRASP or any other method. Within these limits, the run supports three observations: the citation and verification path works end to end, the system did not invent an answer when the evidence was absent, and the consent gate held. It also points to weaknesses. Conflict detection succeeded on only one of two cases in both runs, because it depends on the synthesizer noticing the disagreement rather than on a dedicated component. Giving actions their own route raised action proposals from one of two to two of two. The second run's groundedness was measured with a stricter claim checker, so the two groundedness values are not directly comparable.
 
 %=====================================================================
 \section{Open Challenges and Future Directions}

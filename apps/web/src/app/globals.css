@@ -34,6 +34,7 @@
   --src-github: light-dark(#0e1116, #e9ebf0);
   --src-web: light-dark(#3e63dd, #6e8df5);
   --src-memory: light-dark(#4353ff, #7c88ff);
+  --src-files: light-dark(#c2410c, #fb8b4c);
 }
 /* An explicit choice overrides the system setting (set before paint by the script in layout.tsx). */
 :root[data-theme="light"] {
@@ -169,6 +170,82 @@ button:not(:disabled):active {
     opacity: 0;
     translate: 0 -4px;
   }
+}
+
+/* Sign-in sample answer: each claim settles from hairline to full weight as if checked, its citation arrives, then
+   the tick draws. Plays once on a page seen rarely; reduced motion shows the end state. */
+@keyframes settle {
+  from {
+    font-weight: 200;
+    color: var(--hair);
+  }
+}
+@keyframes cite-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+.promo-claim {
+  animation: settle 900ms var(--ease-out) var(--d, 0ms) both;
+}
+.promo-cite {
+  animation: cite-in 260ms var(--ease-out) calc(var(--d, 0ms) + 300ms) both;
+}
+.promo-tick path {
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: draw 420ms var(--ease-out) 2300ms forwards;
+}
+.promo-fade {
+  animation: rise 280ms var(--ease-out) 2200ms both;
+}
+
+/* Sign-in panel: two slow accent glows that drift, a dot grid that fades out from the middle, chips that bob, the
+   scene progress and the typing caret. Constant ambient motion is linear or a long ease-in-out, all transform/opacity;
+   reduced motion (rule at the end of this file) stills all of it. */
+.promo-panel {
+  --promo-shadow: light-dark(rgb(14 17 22 / 0.22), rgb(0 0 0 / 0.75));
+  --promo-glow: light-dark(rgb(67 83 255 / 0.14), rgb(124 136 255 / 0.26));
+}
+.promo-glow {
+  background: radial-gradient(closest-side, var(--promo-glow), transparent);
+  animation: glow-drift 18s var(--ease-in-out) infinite alternate;
+}
+.promo-glow-2 {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--src-calendar) 14%, transparent), transparent);
+  animation-duration: 23s;
+  animation-direction: alternate-reverse;
+}
+@keyframes glow-drift {
+  to {
+    transform: translate(80px, 60px) scale(1.12);
+  }
+}
+.promo-dots {
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 55%, black, transparent);
+}
+.promo-float {
+  animation: bob 4.2s var(--ease-in-out) infinite alternate;
+}
+@keyframes bob {
+  to {
+    transform: translateY(-7px);
+  }
+}
+.promo-progress {
+  transform-origin: left;
+  animation: fill linear both;
+}
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+.promo-caret {
+  animation: caret 1s steps(1) infinite;
 }
 
 /* "Verified": the check draws itself once checking finishes. */

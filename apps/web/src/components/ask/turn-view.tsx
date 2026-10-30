@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { Brain, CircleAlert, CloudOff } from "lucide-react";
+import { Brain, FileText } from "lucide-react";
+import { explainError, explainFailure } from "@cortex/shared";
+import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
 import { ActionCard } from "./action-card";
@@ -15,11 +17,14 @@ export function TurnView({
   turn,
   onDecide,
   onFollowup,
+  onRetry,
   latest,
 }: {
   turn: Turn;
   onDecide: (proposalId: string, d: "approve" | "reject", edits?: Record<string, unknown>) => Promise<void>;
   onFollowup: (q: string) => void;
+  /** Asks the same question again (offered when part or all of the answer failed). */
+  onRetry?: () => void;
   latest: boolean;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
@@ -32,30 +37,32 @@ export function TurnView({
     }
     return ids;
   }, [turn.answer, turn.evidence]);
+  const failures = turn.error ? turn.failures.filter((f) => f.source !== "llm") : turn.failures;
   const jump = (id: string) => document.getElementById(`ev-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
   return (
     <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
       <h2 className="mb-3 text-balance text-[30px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[38px]">{turn.question}</h2>
+      {turn.attachments && turn.attachments.length > 0 && (
+        <ul className="-mt-1 mb-3 flex flex-wrap gap-1.5" aria-label="Attached files">
+          {turn.attachments.map((f) => (
+            <li key={f.id}>
+              <a href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-[8px] border border-line px-2 py-1 text-[12.5px] text-ink-2 hover:border-line-strong hover:text-ink">
+                <FileText className="size-3.5" aria-hidden />
+                {f.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
       <Readout turn={turn} />
 
-      {turn.failures.length > 0 && (
+      {/* A source that failed is a calm note: the answer still used the others. (The model failing shows below instead.) */}
+      {failures.length > 0 && (
         <ul className="mb-5 flex flex-col gap-1.5">
-          {turn.failures.map((f) => (
-            <li key={f.source} className="flex items-start gap-2 rounded-md bg-warn-soft px-3 py-2 text-[13px] leading-snug text-warn-ink">
-              <CloudOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              <span>
-                <strong className="font-[600]">{f.name} is unavailable</strong>: {f.reason}. {f.impact}
-                {f.source !== "llm" && f.source !== "memory" && " Continuing with the other sources."}
-                {/reconnect/.test(f.reason) && (
-                  <>
-                    {" "}
-                    <Link href="/connections" className="font-[600] underline underline-offset-2">
-                      Reconnect
-                    </Link>
-                  </>
-                )}
-              </span>
+          {failures.map((f) => (
+            <li key={f.source}>
+              <Problem problem={explainFailure(f)} onRetry={onRetry} />
             </li>
           ))}
         </ul>
@@ -76,10 +83,9 @@ export function TurnView({
       )}
 
       {turn.error && (
-        <p role="alert" className="mb-4 flex items-start gap-2 text-[15px] text-risk">
-          <CircleAlert className="mt-1 size-4 shrink-0" aria-hidden />
-          {turn.error}
-        </p>
+        <div className="mb-5">
+          <Problem problem={explainError(turn.error)} onRetry={onRetry} variant="card" />
+        </div>
       )}
 
       {turn.conflicts.length > 0 && (

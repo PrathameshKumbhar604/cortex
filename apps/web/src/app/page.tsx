@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AskView } from "@/components/ask/ask-view";
+import { redirect } from "next/navigation";
 import { session } from "@/server/cortex";
 
 export default function AskPage() {
@@ -11,6 +12,7 @@ export default function AskPage() {
 }
 
 async function AskWithSession() {
-  const { workspace } = await session();
-  return <AskView workspace={workspace} />;
+  const sess = await session();
+  if (!sess) redirect("/sign-in");
+  return <AskView workspace={sess.workspace} />;
 }

@@ -10,6 +10,7 @@ import type {
   Evidence,
   MemoryItem,
   Plan,
+  RouteDecision,
   RunMode,
   SourceFailure,
   StepId,
@@ -45,6 +46,8 @@ export interface RunInput {
   userId: string;
   threadId?: string;
   history?: ChatTurn[];
+  /** Passages of files the user attached to this question: always part of the evidence. */
+  attachments?: Omit<Evidence, "id" | "subQuestionId">[];
   /** Opt-in: may read the user's other chats. When false, they are never searched. */
   useOtherChats?: boolean;
   signal?: AbortSignal;
@@ -231,7 +234,16 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       deps.llm,
       signal,
     );
-    const route = routed.decision;
+    const attached = input.attachments ?? [];
+    // A question with a file attached is about that file (plus any app it names), whatever its wording.
+    const route: RouteDecision = attached.length
+      ? {
+          ...routed.decision,
+          route: routed.decision.route === "action" ? "action" : "personal",
+          sources: [...new Set([...routed.decision.sources.filter((s) => s !== "web"), "files"])],
+          reason: "asks about an attached file",
+        }
+      : routed.decision;
     if (routed.llm) {
       budget.llmCalls++;
       if (routed.llm.cached) budget.cachedCalls++;
@@ -400,7 +412,10 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         subQuestionId: plan.subQuestions[0]?.id,
       })),
     );
-    const ranked = rankEvidence(evidence, `${input.question} ${plan.rewritten}`, LIMITS.maxEvidence[input.mode]).map((e, i) => ({
+    // Attached passages always make the cut; searched evidence fills the remaining places.
+    const searched = evidence.filter((e) => !attached.some((a) => a.ref === e.ref && a.quote === e.quote)); // already attached
+    const kept = rankEvidence(searched, `${input.question} ${plan.rewritten}`, Math.max(2, LIMITS.maxEvidence[input.mode] - attached.length));
+    const ranked = [...attached.map((a) => ({ ...a, id: "" })), ...kept].map((e, i) => ({
       ...e,
       id: `e${i + 1}`,
     }));

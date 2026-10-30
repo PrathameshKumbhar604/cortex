@@ -9,7 +9,9 @@ import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
 import { useThreadScroll } from "@/lib/use-thread-scroll";
 import { play } from "@/lib/sound";
 import { cn } from "@/lib/ui";
-import { Composer } from "./composer";
+import { Composer, type PendingFile } from "./composer";
+import { uploadFile } from "@/lib/files";
+import { toast } from "@/lib/toast";
 import { TurnView } from "./turn-view";
 
 const DEMO_SUGGESTIONS = [
@@ -48,6 +50,22 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
   const asked = useRef(false);
   const [saveTick, setSaveTick] = useState(0);
   const [draft, setDraft] = useState("");
+  const [files, setFiles] = useState<PendingFile[]>([]);
+
+  // Each file uploads as soon as it is added, so it is ready by the time the question is sent.
+  const attach = (picked: File[]) => {
+    for (const f of picked) {
+      const key = crypto.randomUUID();
+      setFiles((all) => [...all, { key, name: f.name, size: f.size, status: "uploading" }]);
+      uploadFile(f).then(
+        (saved) => setFiles((all) => all.map((a) => (a.key === key ? { ...a, status: "ready", id: saved.id } : a))),
+        (err: Error) => {
+          setFiles((all) => all.map((a) => (a.key === key ? { ...a, status: "error", error: err.message } : a)));
+          toast(`Couldn't attach ${f.name}`, { body: err.message, tone: "warn" });
+        },
+      );
+    }
+  };
   const [mode, setMode] = useState<RunMode>("deep");
   const params = useSearchParams();
   const router = useRouter();
@@ -72,7 +90,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     }
     asked.current = true;
     play("send");
-    void ask(question, mode);
+    const ready = files.filter((f) => f.status === "ready" && f.id).map((f) => ({ id: f.id!, name: f.name, size: f.size }));
+    setFiles([]);
+    void ask(question, mode, ready);
   };
 
   const newThread = () => {
@@ -160,7 +180,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
           {turns.map((t, i) => (
             <section key={t.id} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
-              <TurnView turn={t} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} />
+              <TurnView turn={t} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} onRetry={busy ? undefined : () => submit(t.question)} />
             </section>
           ))}
         </div>
@@ -227,6 +247,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             mode={mode}
             onMode={changeMode}
             autoFocus
+            attachments={files}
+            onAttach={attach}
+            onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
             placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
           />
           <div className="text-[12.5px] text-muted mt-2 flex items-center justify-between">
