@@ -47,7 +47,7 @@ export function FilesView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">Your files</h1>
+        <h1 className="text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">Your files</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
           Upload documents for Cortex to read. They become a source like your connected apps: Cortex searches them when they are relevant and cites
           them in answers. You can also attach a file to one question with the paperclip. Up to 10 MB each, visible only to you.

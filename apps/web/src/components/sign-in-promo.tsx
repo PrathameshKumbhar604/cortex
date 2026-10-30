@@ -80,7 +80,7 @@ export function SignInPromo() {
       </div>
 
       <div className="relative my-auto w-full max-w-[540px] pt-8">
-        <h2 className="text-[42px] font-[250] leading-[1.06] tracking-[-0.04em] text-ink xl:text-[48px]">
+        <h2 className="font-serif text-[44px] font-[400] leading-[1.06] tracking-[-0.015em] text-ink xl:text-[52px]">
           Answers from your
           <br />
           <span className="relative inline-grid align-baseline">

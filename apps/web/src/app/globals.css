@@ -3,21 +3,21 @@
 :root {
   /* Each colour holds its light and its dark value; the theme picks one (light-dark() follows color-scheme). */
   color-scheme: light dark;
-  --shell: light-dark(#f7f8fa, #0d0f12);
-  --surface: light-dark(#ffffff, #14161a);
-  --ink: light-dark(#0e1116, #e9ebf0);
-  --ink-2: light-dark(#2b303a, #c9cdd6);
-  --muted: light-dark(#5e6573, #9aa0ab);
-  --hair: light-dark(#646b79, #8b919d);
-  --line: light-dark(#e6e8ee, #24272e);
-  --line-strong: light-dark(#d9dce3, #30343d);
-  --hover: light-dark(#f0f1f5, #1c1f25);
-  --pressed: light-dark(#eceef3, #22262d);
-  --on-ink: light-dark(#ffffff, #0e1116);
-  --accent: light-dark(#4353ff, #7c88ff);
-  --accent-soft: light-dark(#eef0ff, #1d2142);
-  --accent-wash: light-dark(#f4f5ff, #181b31);
-  --accent-ink: light-dark(#2f3ce0, #a9b0ff);
+  --shell: light-dark(#eeebe4, #1a1917);
+  --surface: light-dark(#ffffff, #211f1c);
+  --ink: light-dark(#1b1a17, #ece9e2);
+  --ink-2: light-dark(#36342f, #cfcbc2);
+  --muted: light-dark(#625e56, #a29e95);
+  --hair: light-dark(#6b675f, #938f86);
+  --line: light-dark(#dbd6cb, #2e2c28);
+  --line-strong: light-dark(#b8b1a3, #3a3732);
+  --hover: light-dark(#e4e0d6, #282622);
+  --pressed: light-dark(#dcd7cc, #2f2d29);
+  --on-ink: light-dark(#ffffff, #1a1917);
+  --accent: light-dark(#5b47e0, #9d8cff);
+  --accent-soft: light-dark(#efecfd, #2a2450);
+  --accent-wash: light-dark(#f6f4fe, #221e3a);
+  --accent-ink: light-dark(#4a37c9, #c2b8ff);
   --risk: light-dark(#d93a3f, #ff6b70);
   --risk-soft: light-dark(#fdf2f2, #2b1517);
   --warn: light-dark(#b35a00, #f5a04f);
@@ -31,10 +31,12 @@
   --src-drive: light-dark(#e5a000, #f5b52e);
   --src-notion: light-dark(#646b78, #9aa0ab);
   --src-slack: light-dark(#8e4ec6, #b07ee6);
-  --src-github: light-dark(#0e1116, #e9ebf0);
+  --src-github: light-dark(#1b1a17, #ece9e2);
   --src-web: light-dark(#3e63dd, #6e8df5);
-  --src-memory: light-dark(#4353ff, #7c88ff);
+  --src-memory: light-dark(#5b47e0, #9d8cff);
   --src-files: light-dark(#c2410c, #fb8b4c);
+  /* Light mode lifts white panels off the tinted shell with a soft shadow; dark mode separates by tone alone. */
+  --raise: 0 1px 2px light-dark(rgb(27 26 23 / 0.06), transparent), 0 4px 16px -8px light-dark(rgb(27 26 23 / 0.1), transparent);
 }
 /* An explicit choice overrides the system setting (set before paint by the script in layout.tsx). */
 :root[data-theme="light"] {
@@ -68,6 +70,7 @@
   --color-warn-ink: var(--warn-ink);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 html {
@@ -80,6 +83,16 @@ html {
 body {
   font-family: var(--font-sans);
   font-feature-settings: "ss01", "cv11";
+}
+
+/* Headings speak in the brand serif: Fraunces with its soft, rounded terminals, Cortex's own voice. */
+h1 {
+  font-family: var(--font-serif);
+}
+h1,
+.font-serif {
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 100;
 }
 
 ::selection {
@@ -206,7 +219,7 @@ button:not(:disabled):active {
    reduced motion (rule at the end of this file) stills all of it. */
 .promo-panel {
   --promo-shadow: light-dark(rgb(14 17 22 / 0.22), rgb(0 0 0 / 0.75));
-  --promo-glow: light-dark(rgb(67 83 255 / 0.14), rgb(124 136 255 / 0.26));
+  --promo-glow: light-dark(rgb(91 71 224 / 0.14), rgb(157 140 255 / 0.24));
 }
 .promo-glow {
   background: radial-gradient(closest-side, var(--promo-glow), transparent);
@@ -258,6 +271,31 @@ button:not(:disabled):active {
   stroke-dasharray: 18;
   stroke-dashoffset: 18;
   animation: draw 420ms var(--ease-out) 120ms forwards;
+}
+
+/* Signing in / out: the screen fades in, the wordmark breathes, an indeterminate bar sweeps across. */
+.interstitial {
+  animation: rise 240ms var(--ease-out) both;
+}
+.breathe {
+  animation: breathe 2.4s var(--ease-in-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.55;
+    scale: 0.97;
+  }
+}
+.sweep {
+  animation: sweep 1.1s var(--ease-in-out) infinite;
+}
+@keyframes sweep {
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 300%;
+  }
 }
 
 /* Code panels keep their own colours whatever the answer's verification weight is. */

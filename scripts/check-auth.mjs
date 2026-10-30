@@ -35,6 +35,7 @@ try {
   console.log("created account (code by email), landed on:", new URL(page.url()).pathname, "| in sidebar:", await page.getByText(email).first().isVisible().catch(() => false));
   const id = db.prepare("SELECT id FROM users WHERE email = ?").get(email)?.id;
   console.log("data id = earlier anonymous id:", db.prepare("SELECT data_id FROM cortex_links WHERE user_id = ?").get(id)?.data_id === anon);
+  await page.getByRole("button", { name: "Account menu" }).first().click();
   await page.getByRole("button", { name: "Sign out" }).first().click();
   await page.waitForURL("**/sign-in**");
   console.log("after sign out /api/memory:", await page.evaluate(async () => (await fetch("/api/memory")).status));

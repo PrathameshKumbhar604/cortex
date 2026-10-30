@@ -11,7 +11,29 @@ import { SourceMark } from "./ask/sources";
 const SEEN = "cortex.tour"; // "done" or "skipped"
 const OPEN_EVENT = "cortex:tour";
 
-/** Opens the walkthrough from anywhere (the sidebar's "Take the tour"). */
+const OFFER = "cortex.tourOffer"; // set for the browser session in which the sidebar shows "Take the tour"
+
+/** True during the first signed-in session; after a sign-out the tour lives in the account menu only. */
+export function tourInSidebar() {
+  try {
+    if (sessionStorage.getItem(OFFER)) return true;
+    if (localStorage.getItem(SEEN)) return false;
+    sessionStorage.setItem(OFFER, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** On sign-out: the sidebar offer is over, and the tour is not offered again on the next sign-in. */
+export function endTourOffer() {
+  try {
+    sessionStorage.removeItem(OFFER);
+    if (!localStorage.getItem(SEEN)) localStorage.setItem(SEEN, "skipped");
+  } catch {}
+}
+
+/** Opens the walkthrough from anywhere (the sidebar or the account menu). */
 export function openTour() {
   window.dispatchEvent(new Event(OPEN_EVENT));
 }

@@ -21,7 +21,7 @@ Packages used (all in TeX Live): `cite`, `amsmath`, `amssymb`, `graphicx`, `arra
 
 LaTeX is not installed on the machine where this was written, so the source has **not been compiled**. I checked it with a script instead: braces balance, every `\begin` has a matching `\end`, all 41 `\cite` keys exist in `refs.bib` and every entry is cited, every `\ref` has a `\label`, table rows have the right number of columns, and both files are plain ASCII. On the first Overleaf compile, check:
 
-- **Page count.** The target is 6 to 8 pages. The text is about 5,000 words plus two figures, four tables and 41 references, which should come to roughly 8 pages. If it runs over, the easiest cuts are the "Open Challenges" paragraphs (Section VI) and the "Where Cortex goes beyond GRASP's setting" paragraph (Section V-B).
+- **Page count.** The target is 6 to 8 pages. The body text is about 3,500 words (about 5,900 for the whole PDF; the cap is 6,300) plus two figures, four tables and 41 references, which should come to roughly 8 pages. If it runs over, the easiest cuts are the "Open Challenges" paragraphs (Section VI) and the "Where Cortex goes beyond GRASP's setting" paragraph (Section V-B).
 - **Fig. 1 (taxonomy, full page width).** The boxes are 3.75 cm wide on a 4.3 cm grid. If a box overflows, lower `text width` in the `cat` style.
 - **Fig. 2 (Cortex pipeline).** It is wrapped in `\resizebox{\columnwidth}{!}{...}`, so it always fits the column. If the text looks too small, raise `font=\scriptsize` to `\footnotesize` and widen the node spacing.
 - **Table II (full-width comparison).** The column widths add up to about 17.5 cm. If the table is too wide, shrink the `p{...}` widths.

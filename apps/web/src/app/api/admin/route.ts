@@ -1,5 +1,6 @@
 import { getSettings, listUsers, recentActivity } from "@/server/admin";
 import { deps, requireAdmin } from "@/server/cortex";
+import { composioKeyKind } from "@/server/db";
 
 /** Everything the admin page shows, in one call: accounts with usage, app health, settings and recent activity. */
 export async function GET() {
@@ -24,5 +25,6 @@ export async function GET() {
     activity,
     connectors: connectors.filter((c) => c.id !== "files").map((c) => ({ id: c.id, name: c.name, connected: c.connected, available: c.available, detail: c.detail })),
     memory,
+    composio: composioKeyKind(), // operator setup notes are shown in the admin panel only, never to members
   });
 }

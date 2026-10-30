@@ -166,7 +166,7 @@ export function SignIn({ next }: { next: string }) {
               }}
             >
               <MailCheck className="size-6 text-accent" aria-hidden />
-              <h1 className="text-[24px] font-[400] tracking-[-0.02em] text-ink">
+              <h1 className="text-[24px] font-[400] tracking-[-0.015em] text-ink">
                 {step === "verify-signup" ? "Confirm your email" : step === "verify-device" ? "Confirm it's you" : "Choose a new password"}
               </h1>
               <p className="text-[14.5px] leading-relaxed text-muted">
@@ -208,7 +208,7 @@ export function SignIn({ next }: { next: string }) {
             </form>
           ) : (
             <>
-              <h1 className="mt-8 text-[26px] font-[400] tracking-[-0.025em] text-ink lg:mt-0">{mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
+              <h1 className="mt-8 text-[26px] font-[400] tracking-[-0.015em] text-ink lg:mt-0">{mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
               <p className="mt-1.5 text-[14.5px] text-muted">{mode === "sign-in" ? "Sign in to pick up where you left off." : "Free. Takes ten seconds."}</p>
 
               <div className="mt-7 flex flex-col gap-2.5">

@@ -62,7 +62,7 @@ export function MemoryView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">What Cortex remembers</h1>
+        <h1 className="text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">What Cortex remembers</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
           As you chat, Cortex saves what will still matter next week: your priorities, preferences, people and decisions. Small talk, one-off questions
           and anything that looks like a password or code are never saved. Each memory shows why it was kept. Pinned memories never fade; everything

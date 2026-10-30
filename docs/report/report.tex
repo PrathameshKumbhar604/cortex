@@ -63,6 +63,7 @@
   \node[font=\small, align=center, below] at ({#1},{#2-0.4}) {#3};
 }
 
+\setlength{\emergencystretch}{3em}
 \begin{document}
 
 \setlength{\parindent}{0mm}
@@ -86,7 +87,7 @@
 \vspace*{2\baselineskip}
 {\bfseries \fontsize{14}{12} \selectfont Under The Guidance of \\
 \vspace*{1\baselineskip}
-Prof. [Guide Name]\par} % FIX: group closed here (was left open in the template)
+Prof. Swapnali Gaikwad\par} % FIX: group closed here (was left open in the template)
 \vspace*{2\baselineskip}
 \includegraphics[width=200pt]{DPU_DYP_Logo.png} \\
 \vspace*{1\baselineskip}
@@ -134,7 +135,7 @@ A.Y 2026-2027\par} % FIX: group closed here (was left open in the template)
 \centerline{\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35}
 \centerline{\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47}
 
-is a bonafide work carried out by Students under the supervision of Prof. [Guide Name] and it
+is a bonafide work carried out by Students under the supervision of Prof. Swapnali Gaikwad and it
 is submitted towards the partial fulfillment of the requirement of Bachelor of Engineering (Computer Engineering).\\
 
 
@@ -142,9 +143,9 @@ is submitted towards the partial fulfillment of the requirement of Bachelor of E
 \bgroup
 \def\arraystretch{0.9}\vspace*{0.5\baselineskip}\vspace*{0.5\baselineskip}
 \begin{tabular}{c c }
-Prof. [Guide Name] &  \hspace{50 mm} Prof. [HOD Name] \\
-Internal Guide   &  \hspace{50 mm} H.O.D \\
-Dept. of Computer Engg.  &	\hspace{50 mm}Dept. of Computer Engg.  \\
+Prof. Swapnali Gaikwad &  \hspace{25 mm} Dr. Omkaresh Kulkarni \\
+Internal Guide   &  \hspace{25 mm} H.O.D \\
+Dept. of Computer Engg.  &	\hspace{25 mm}Dept. of Computer Engg.  \\
 \end{tabular}
 \egroup % FIX: closes the \bgroup opened above
 %}
@@ -196,16 +197,16 @@ Is successfully completed by
 
  \vspace*{1\baselineskip} % FIX: removed the stray "}" that followed this line
  \begin{tabular}{c c }
-Prof. [Guide Name] &  \hspace{50 mm} Prof. [HOD Name] \\
-Internal Guide   &  \hspace{50 mm} H.O.D \\
-Dept. of Computer Engg.  &	\hspace{50 mm}Dept. of Computer Engg.  \\
+Prof. Swapnali Gaikwad &  \hspace{25 mm} Dr. Omkaresh Kulkarni \\
+Internal Guide   &  \hspace{25 mm} H.O.D \\
+Dept. of Computer Engg.  &	\hspace{25 mm}Dept. of Computer Engg.  \\
 \end{tabular}
 \newpage
 
 %\pictcertificate{TITLE OF BE PROJECT}{Student Name}{Exam Seat No}{Guide Name}
 \setcounter{page}{0}
 \frontmatter
-\cfoot{Dr.D.Y.Patil Institute of Technology, Department of Computer Engineering 2026-2027}
+\cfoot{\footnotesize Dr.D.Y.Patil Institute of Technology, Department of Computer Engineering\\ 2026-2027}
 \rfoot{\thepage}
 \pagenumbering{Roman}
 %\pictack{BE PROJECT TITLE}{Guide Name}
@@ -231,10 +232,10 @@ on {\bfseries \fontsize{12}{12} \selectfont `\ProjectTitle'}.}
 \vspace*{1.5\baselineskip}
 
  \textit{We would like to take this opportunity to thank our internal guide
- \textbf{Prof. [Guide Name]} for giving us all the help and guidance we needed. We are
+ \textbf{Prof. Swapnali Gaikwad} for giving us all the help and guidance we needed. We are
  really grateful to them for their kind support. Their valuable suggestions were very helpful.} \vspace*{1.5\baselineskip}
 
- \textit{We are also grateful to \textbf{Prof. [HOD Name]}, Head of Computer
+ \textit{We are also grateful to \textbf{Dr. Omkaresh Kulkarni}, Head of Computer
  Engineering Department, Dr. D. Y. Patil Institute of Technology, Pimpri, for their indispensable
  support and suggestions.}
 \vspace*{1.5\baselineskip}
@@ -288,7 +289,7 @@ continuous Internet connection, for Our Project.}
 Internal project.
 
 \section{Internal Guide}
-Prof. [Guide Name]
+Prof. Swapnali Gaikwad
 
 \section{ Sponsorship and External Guide}
 The project is not sponsored, and there is no external guide.
@@ -374,8 +375,8 @@ System Description: the system is modelled as $S = \{X, Y, C, M, P, F, Sc, Fc\}$
 \begin{itemize}
 \item Input: $X = \{q, m, H, u\}$, where $q$ is the question (a string of at most 2000 characters), $m \in \{\mathit{fast}, \mathit{deep}\}$ the run mode, $H$ the last six turns of the conversation (each truncated to 1500 characters) and $u$ the anonymous user identifier.
 \item Output: $Y = \{A, L, G, K, R, W\}$, where $A$ is the answer in Markdown, $L$ the list of claims with their status in $\{\mathit{supported}, \mathit{partial}, \mathit{unsupported}\}$, $G \in [0,1]$ the groundedness score, $K$ the list of conflicts, $R$ the list of action proposals (all in state \emph{pending}) and $W$ the set of memories written (at most two). The output is delivered as an ordered stream of typed events.
-\item Identify data structures, classes, divide and conquer strategies to exploit distributed/parallel/concurrent processing, constraints: the main data structures are the plan $\Pi = \{(q_i, S_i, k_i)\}_{i \le 5}$ of sub-questions $q_i$ with source sets $S_i \subseteq C$ and keyword queries $k_i$; the evidence list $E$; least-recently-used caches with expiry; and the server-side map of pending actions. The question is divided into sub-questions, and the set of search calls $T = \bigcup_i \{(s, k_i) : s \in S_i\}$ (deduplicated, $|T| \le 18$) is executed concurrently, so the search latency is $\max_{t \in T} \tau_t$ rather than $\sum_{t \in T} \tau_t$, with each $\tau_t$ bounded by a 12~s timeout and one retry. Constraints: at most 5 sub-questions, 18 tool calls, 4 model calls in Deep mode (2 in Fast mode), 16 evidence items in Deep mode (8 in Fast mode), and a 90~s run timeout.
-\item Functions : Identify Objects, Morphisms, Overloading in functions, Functional relations: $F = \{f_{plan}, f_{search}, f_{rank}, f_{synth}, f_{verify}, f_{propose}, f_{remember}, f_{execute}\}$ with $f_{plan}: (q, C, M, H) \rightarrow \Pi$; $f_{search}: (s, k) \rightarrow E_{s,k}$; $f_{rank}: E \rightarrow E^{*}$; $f_{synth}: (q, \Pi, E^{*}, M) \rightarrow (A, K, R', W')$; $f_{verify}: (A, E^{*}) \rightarrow (L, G)$; $f_{propose}: R' \rightarrow R$; $f_{remember}: W' \rightarrow W$; and $f_{execute}: (r, \mathit{approve}) \rightarrow \mathit{result}$. The search function is overloaded (polymorphic) across five connector implementations behind one interface. The composition $f_{verify} \circ f_{synth} \circ f_{rank} \circ f_{search} \circ f_{plan}$ is the agent run; $f_{execute}$ is deliberately \emph{not} part of that composition and can only be invoked by the user.
+\item Identify data structures, classes, divide and conquer strategies to exploit distributed/\allowbreak{}parallel/\allowbreak{}concurrent processing, constraints: the main data structures are the plan $\Pi = \{(q_i, S_i, k_i)\}_{i \le 5}$ of sub-questions $q_i$ with source sets $S_i \subseteq C$ and keyword queries $k_i$; the evidence list $E$; least-recently-used caches with expiry; and the server-side map of pending actions. The question is divided into sub-questions, and the set of search calls $T = \bigcup_i \{(s, k_i) : s \in S_i\}$ (deduplicated, $|T| \le 18$) is executed concurrently, so the search latency is $\max_{t \in T} \tau_t$ rather than $\sum_{t \in T} \tau_t$, with each $\tau_t$ bounded by a 12~s timeout and one retry. Constraints: at most 5 sub-questions, 18 tool calls, 4 model calls in Deep mode (2 in Fast mode), 16 evidence items in Deep mode (8 in Fast mode), and a 90~s run timeout.
+\item Functions : Identify Objects, Morphisms, Overloading in functions, Functional relations: $F = \{f_{plan}, \allowbreak f_{search}, \allowbreak f_{rank}, \allowbreak f_{synth}, \allowbreak f_{verify}, \allowbreak f_{propose}, \allowbreak f_{remember}, \allowbreak f_{execute}\}$ with $f_{plan}: (q, C, M, H) \rightarrow \Pi$; $f_{search}: (s, k) \rightarrow E_{s,k}$; $f_{rank}: E \rightarrow E^{*}$; $f_{synth}: (q, \Pi, E^{*}, M) \rightarrow (A, K, R', W')$; $f_{verify}: (A, E^{*}) \rightarrow (L, G)$; $f_{propose}: R' \rightarrow R$; $f_{remember}: W' \rightarrow W$; and $f_{execute}: (r, \mathit{approve}) \rightarrow \mathit{result}$. The search function is overloaded (polymorphic) across five connector implementations behind one interface. The composition $f_{verify} \circ f_{synth} \circ f_{rank} \circ f_{search} \circ f_{plan}$ is the agent run; $f_{execute}$ is deliberately \emph{not} part of that composition and can only be invoked by the user.
 \item Mathematical formulation if possible: evidence is ranked by $\mathit{score}(e) = 2\,h(e, q) + \max(0,\, 3 - a(e)/10)$, where $h$ counts question keywords present in the evidence and $a(e)$ is its age in days (30 when unknown). A claim $c$ citing evidence $E_c$ has content-word overlap $o(c) = |T(c) \cap T(E_c)| \,/\, |T(c)|$, and is \emph{supported} if $o(c) \ge 0.4$ and every number in $c$ appears in $E_c$, \emph{partial} if $o(c) \ge 0.2$, and \emph{unsupported} otherwise. Groundedness is $G = \frac{1}{|L|}\sum_{c \in L} w(c)$ with $w = 1, 0.5, 0$ for the three states ($G = 1$ when $L$ is empty). The effective salience of an unpinned memory of age $t$ days is $s_{\mathit{eff}} = s \cdot 0.5^{\,t/30}$.
 \item Success Conditions: an answer is streamed in which every factual sentence carries a citation to existing evidence, $G$ and the conflicts are reported, every proposal remains \emph{pending} until the user approves it, and every unavailable source is named together with its impact.
 \item Failure Conditions: every language model provider is unavailable or rate-limited (the user is told so and offered Fast Mode); the 90~s run timeout expires; no source is connected; or the memory service is unreachable (the run continues without memory and says so).
@@ -393,26 +394,26 @@ System Description: the system is modelled as $S = \{X, Y, C, M, P, F, Sc, Fc\}$
 
 \section{Review of Conference/Journal Papers supporting Project idea}
 \label{sec:survey}
-The following papers and white papers support the project idea. Chapter~\ref{ch:intro} discusses them in more detail.
+We read the papers below while shaping the idea. Each entry says in a line or two what the work did and what we took from it; Chapter~\ref{ch:intro} goes into more detail.
 \begin{enumerate}
-\item \textbf{GRASP: GRanularity-Aware Search Policy for Agentic RAG}~\cite{grasp2026} (base paper). The agent is trained with reinforcement learning to choose, at each step, between a semantic search, a keyword search and reading the paragraph around a retrieved sentence; it therefore starts from sentence-sized evidence and loads a whole paragraph only when it decides to. The training reward has four parts: answer accuracy, grounded reading, complementary search and turn efficiency. It motivates Cortex's mix of retrieval granularities, its preference for small cited quotes over whole documents, and its explicit budget on retrieval turns.
-\item \textbf{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}~\cite{lewis2020rag} introduced RAG: a generator conditioned on passages from a dense retriever over a non-parametric index. Cortex keeps the idea of conditioning on retrieved evidence but retrieves from live tools rather than a fixed index.
-\item \textbf{ReAct}~\cite{yao2023react} interleaves reasoning traces with tool actions. Cortex adopts the reason-then-act structure but fixes the number of steps in advance instead of looping.
-\item \textbf{IRCoT}~\cite{trivedi2023ircot} interleaves retrieval with chain-of-thought steps for multi-step questions, showing that one retrieval round is not enough for multi-hop questions.
-\item \textbf{Self-Ask}~\cite{press2023selfask} measures the compositionality gap and decomposes a question into explicit follow-up questions; Cortex's planner produces explicit sub-questions in the same spirit.
-\item \textbf{Self-RAG}~\cite{asai2024selfrag} trains a model to decide when to retrieve and to critique its own output with reflection tokens; Cortex applies an external critic to each claim instead.
-\item \textbf{Corrective RAG}~\cite{yan2024crag} scores the quality of retrieved documents and triggers corrective actions such as web search; Cortex's bounded broadened retry for empty sub-questions is a light-weight analogue.
-\item \textbf{Adaptive-RAG}~\cite{jeong2024adaptiverag} routes questions by complexity to no-retrieval, single-step or multi-step strategies; Cortex exposes the same trade-off to the user as Fast and Deep modes.
-\item \textbf{ALCE}~\cite{gao2023alce} benchmarks generation with citations and defines citation recall and precision; Cortex's claim-level citation check follows this line.
-\item \textbf{RARR}~\cite{gao2023rarr} researches and revises model output to attribute it to evidence; Cortex verifies after generation and marks unsupported claims instead of rewriting them.
-\item \textbf{FActScore}~\cite{min2023factscore} scores long-form text by the fraction of atomic facts supported by a knowledge source; Cortex's groundedness score is a sentence-level variant.
-\item \textbf{MemGPT}~\cite{packer2023memgpt} and \textbf{Generative Agents}~\cite{park2023generative} show how agents keep long-term memory with retrieval by relevance, recency and importance; Cortex adds user-visible provenance, decay and expiry.
-\item \textbf{Toolformer}~\cite{schick2023toolformer} and the \textbf{Model Context Protocol} survey~\cite{hou2025mcp} cover tool use and the protocol Cortex uses for pluggable connectors, including its security risks.
-\item White papers and web references: the agentic RAG survey~\cite{singh2025agenticrag}, the RAGAS evaluation framework~\cite{es2024ragas}, the \emph{Lost in the Middle} study~\cite{liu2024lost}, and McKinsey Global Institute reports on knowledge-worker time and generative AI~\cite{mckinseyweb,mckinsey}.
+\item \textbf{GRASP}~\cite{grasp2026} (base paper). Its agent picks one of three moves per turn: look something up by meaning, look it up by exact words, or open the paragraph around a sentence it already found. A reinforcement-learning reward teaches it when each move pays off. We did not train anything, but we copied the habit of starting from short quotes and capping how many retrieval turns a question gets.
+\item \textbf{RAG}~\cite{lewis2020rag}. The original RAG model pairs a text generator with a dense retriever over a fixed Wikipedia index. Cortex keeps the core idea of answering from retrieved text, though our ``index'' is the user's live Gmail, Slack, GitHub and other accounts, queried at question time.
+\item \textbf{ReAct}~\cite{yao2023react}. Here the model writes a thought, calls a tool, reads the result and repeats. Our planner also reasons before it searches, but the number of steps is decided up front so a run cannot loop.
+\item \textbf{IRCoT}~\cite{trivedi2023ircot}. The authors fire a new retrieval after every reasoning sentence. Their results convinced us that one search round misses evidence for questions with several hops.
+\item \textbf{Self-Ask}~\cite{press2023selfask}. A model can answer each part of a question and still get the whole wrong; the paper calls this the compositionality gap and closes some of it by making the follow-up questions explicit. Cortex's planner writes its two to five sub-questions out in the same way.
+\item \textbf{Self-RAG}~\cite{asai2024selfrag}. One fine-tuned model decides for itself when to retrieve and grades its own output. In Cortex the grading is done outside the writer, by a separate verifier that looks at one claim at a time.
+\item \textbf{Corrective RAG}~\cite{yan2024crag}. A small judge rates what was retrieved and falls back to web search when the rating is poor. Our cheaper version is a single broadened retry for any sub-question that came back empty.
+\item \textbf{Adaptive-RAG}~\cite{jeong2024adaptiverag}. A classifier guesses how hard a question is and picks no retrieval, one step or many steps. We hand that choice to the user as the Fast and Deep modes.
+\item \textbf{ALCE}~\cite{gao2023alce}. This benchmark scores how well generated answers cite their sources, and it is where our notion of citation recall comes from.
+\item \textbf{RARR}~\cite{gao2023rarr}. RARR searches for support after the text is written and edits the parts it cannot back up. Cortex also checks after writing, but it marks weak claims in the interface rather than silently rewriting them.
+\item \textbf{FActScore}~\cite{min2023factscore}. Long answers are broken into atomic facts and scored by the share that a knowledge source supports. Our groundedness score is a coarser cousin that works per sentence and only against the evidence that sentence cites.
+\item \textbf{MemGPT}~\cite{packer2023memgpt} and \textbf{Generative Agents}~\cite{park2023generative}. Both give an agent a long-term store and rank memories by how recent, important and relevant they are. Cortex ranks with similar signals, then shows the user why each memory exists and when it will lapse.
+\item \textbf{Toolformer}~\cite{schick2023toolformer} and the \textbf{MCP survey}~\cite{hou2025mcp}. The first teaches a model to call APIs; the second maps the Model Context Protocol ecosystem and its security holes. The second is the main reason our connectors may read freely but can only propose writes.
+\item Other references: a survey of agentic RAG~\cite{singh2025agenticrag}, the RAGAS metrics~\cite{es2024ragas}, the \emph{Lost in the Middle} study~\cite{liu2024lost}, and two McKinsey reports on how knowledge workers spend their time and what generative AI may change~\cite{mckinseyweb,mckinsey}.
 \end{enumerate}
 
 \section{Plan of Project Execution}
-The project follows the waterfall model with the phases listed in Section~\ref{sec:taskset}: requirement analysis and literature survey, feasibility study, design, implementation, testing and evaluation, and documentation. The schedule is tracked in a project planner; the task network is shown in Figure~\ref{fig:tasknet} and the timeline chart in Annexure~\ref{app:plan}.
+We planned the work as a waterfall, phase by phase, using the tasks in Section~\ref{sec:taskset}: survey and requirements first, then feasibility, design, coding, testing with evaluation, and finally the write-up. Figure~\ref{fig:tasknet} shows how the tasks depend on each other, and Annexure~\ref{app:plan} holds the planner and timeline.
 
 
 
@@ -487,34 +488,36 @@ Additional free keywords: agentic RAG, query decomposition, parallel tool callin
 \section{Motivation of the Project}
 \begin{itemize}
 \item \textbf{Fragmented information costs time.} In the words of the McKinsey Global Institute, ``the average interaction worker spends an estimated 28 percent of the workweek managing e-mail and nearly 20 percent looking for internal information or tracking down colleagues who can help with specific tasks''~\cite{mckinseyweb}. Generative AI is expected to have its largest effect on exactly this kind of knowledge work~\cite{mckinsey}.
-\item \textbf{Single-shot RAG is not analysis.} Multi-hop questions need several retrieval steps~\cite{trivedi2023ircot,press2023selfask}, and stuffing many retrieved chunks into a long context does not guarantee the model uses them: accuracy drops when relevant information sits in the middle of a long input~\cite{liu2024lost}. GRASP~\cite{grasp2026} shows that deciding \emph{how much} context to load is itself part of the problem.
-\item \textbf{Trust needs evidence.} Language models produce fluent but unsupported statements. Citation benchmarks~\cite{gao2023alce} and fact-level scoring~\cite{min2023factscore} show that attribution can be measured; a product can therefore show the user which claims are supported instead of presenting everything with equal confidence.
-\item \textbf{Agents that act must ask.} Once an agent can send e-mail or post messages, a wrong or injected instruction has real consequences. The Model Context Protocol makes tools easy to connect but also widens the attack surface~\cite{hou2025mcp}. A strict propose-then-approve design is a simple, verifiable safety property.
-\item \textbf{Memory should be explainable.} Agent memory systems~\cite{packer2023memgpt,park2023generative} decide what to store on the user's behalf. Users should be able to see why something was remembered, where it came from, how long it will be kept, and remove it.
-\item \textbf{Cost.} Students and individual developers cannot pay per-token API prices; a design that stays within free tiers makes the system usable by its intended users.
+\item \textbf{One search is rarely enough.} A question like ``who is blocking the release?'' may need a Slack thread, then the GitHub issue it links to. Work on multi-hop QA~\cite{trivedi2023ircot,press2023selfask} makes the same point. Dumping every retrieved chunk into the prompt does not fix it either, because models tend to overlook facts buried mid-way through a long prompt~\cite{liu2024lost}. GRASP~\cite{grasp2026} treats ``how much text to load'' as a decision in its own right.
+\item \textbf{Trust needs evidence.} A model can write a confident sentence that nothing supports. Since citation quality~\cite{gao2023alce} and fact-level support~\cite{min2023factscore} can be measured, we decided Cortex should show the user, claim by claim, which parts are backed and which are not.
+\item \textbf{Agents that act must ask.} If an assistant can send an e-mail, then a misread request or an instruction hidden in a retrieved message can do real damage. MCP makes it easy to plug in tools, and that convenience also gives attackers more ways in~\cite{hou2025mcp}. Requiring a proposal and a separate approval is simple to build and easy to test.
+\item \textbf{Memory should be explainable.} Systems such as MemGPT and Generative Agents~\cite{packer2023memgpt,park2023generative} choose what to remember without asking. We wanted each memory in Cortex to carry its reason, its source and an expiry date, and to be deletable in one click.
+\item \textbf{Cost.} Our target users are students and solo developers who will not pay per-token prices, so Cortex had to run entirely on free tiers.
 \end{itemize}
 
 \section{Literature Survey}
 \begin{itemize}
-\item \textbf{Retrieval-augmented generation.} Lewis et al.~\cite{lewis2020rag} combine a parametric seq2seq generator with a non-parametric dense index. In the RAG-Sequence model the output probability marginalises over the top-$k$ retrieved passages $z$:
+\item \textbf{Retrieval-augmented generation.} Lewis et al.~\cite{lewis2020rag} let a sequence-to-sequence model look things up in an external dense index instead of relying only on what its weights memorised. Their RAG-Sequence variant sums the answer probability over the $k$ best passages $z$:
 \[ p(y \mid x) \approx \sum_{z \in \mathrm{top}\mbox{-}k(p_\eta(\cdot \mid x))} p_\eta(z \mid x) \prod_{i} p_\theta(y_i \mid x, z, y_{1:i-1}). \]
-The retriever is queried once per input. Cortex keeps the conditioning on retrieved evidence but replaces the single dense index with several live tools that are searched through their own APIs, and it exposes the retrieved passages as numbered, citable evidence.
+Retrieval happens once, before generation starts. We kept the principle of answering from retrieved text but dropped the single prebuilt index: Cortex searches several live tools through their own APIs and hands the model numbered quotes it must cite.
 
-\item \textbf{Agentic and multi-step retrieval.} ReAct~\cite{yao2023react} lets the model alternate a \emph{thought} with an \emph{action} (for example a Wikipedia search) and the resulting \emph{observation}, producing a trajectory $(t_1, a_1, o_1, \ldots, t_n, a_n, o_n)$ that reduces hallucination on HotpotQA and FEVER. IRCoT~\cite{trivedi2023ircot} interleaves retrieval with each chain-of-thought sentence, using the sentence generated so far as the next query. Self-Ask~\cite{press2023selfask} defines the \emph{compositionality gap}, the rate at which a model answers all sub-questions correctly but the composed question wrongly, and narrows it by asking explicit follow-up questions. Singh et al.~\cite{singh2025agenticrag} survey these designs as \emph{agentic RAG}: retrieval controlled by agents that plan, reflect, use tools and collaborate. Cortex is a planning-based agentic RAG system: the plan is produced once, then executed in parallel.
+\item \textbf{Agentic and multi-step retrieval.} In ReAct~\cite{yao2023react} the model writes a short thought, takes an action such as a Wikipedia lookup, reads what came back, and goes round again; on HotpotQA and FEVER this produced fewer invented facts than reasoning alone. IRCoT~\cite{trivedi2023ircot} goes further and issues a fresh retrieval after every reasoning sentence, using that sentence as the query. Press et al.~\cite{press2023selfask} noticed that models often get every sub-question right yet still botch the combined question. They named this the \emph{compositionality gap} and reduced it by having the model pose its follow-up questions explicitly. The survey by Singh et al.~\cite{singh2025agenticrag} groups such systems under the label \emph{agentic RAG}. Cortex fits the planning branch of that family: it writes one plan, then runs all of its searches at the same time.
 
-\item \textbf{Base paper: GRASP.} Gandhi, Lee et al.~\cite{grasp2026} argue that an agentic RAG system faces three linked decisions: when to search, which kind of matching to use (exact terms or meaning), and how much text to bring into the context, since extra, irrelevant text can mislead the agent. GRASP gives the agent three actions (semantic search, keyword search, and reading a paragraph around a retrieved sentence) and trains the policy with reinforcement learning. The reward combines answer accuracy, grounded reading, complementary use of the search tools and turn efficiency. On HotpotQA, 2WikiMultiHopQA and MuSiQue (500 validation questions each) the authors report retrieval recall of 0.90, 0.90 and 0.70 and higher answer scores than all of their baselines, which include one-shot retrieval, prompted agents and other agents trained with reinforcement learning. In the authors' analysis, the trained agent first searches by meaning to find the right topic, then reads a paragraph to confirm the details, and finally searches by keyword for the specific entity it has found, a pattern they liken to skimming and scanning. Cortex does not train a policy; it transfers three of these lessons to a prompting-based system over live tools: (i) retrieve small, citable units (each evidence item is a quote of at most a few hundred characters with title, author, timestamp and link) and keep at most 16 of them; (ii) use keyword queries, because the tool APIs it calls (Gmail, Slack, GitHub search) are lexical, while long-term memory search can be semantic when Oracle Agent Memory is configured; and (iii) bound the number of retrieval turns explicitly, with a single broadened retry for sub-questions that found nothing.
+\item \textbf{Base paper: GRASP.} Gandhi, Lee et al.~\cite{grasp2026} point out that a retrieval agent keeps facing three choices at once: should it search now, should it match on exact words or on meaning, and how much surrounding text should it pull in, given that padding can distract it. Their agent has three moves (semantic search, keyword search, and expanding a hit to its paragraph), and its policy is learned with reinforcement learning. The reward mixes four things: a correct answer, reading that is grounded, using both search types where each helps, and finishing in few turns. On 500 validation questions each from HotpotQA, 2WikiMultiHopQA and MuSiQue they report retrieval recall of 0.90, 0.90 and 0.70, and better answers than every baseline they tried, from one-shot retrieval to prompted agents and other RL-trained agents. Looking at the learned behaviour, the authors see the agent search by meaning to land on the right topic, open a paragraph to check details, and then search by keyword for the exact name it found; they compare this to skimming and then scanning a text.
 
-\item \textbf{Adaptive and corrective retrieval.} Self-RAG~\cite{asai2024selfrag} trains one model that retrieves on demand and emits reflection tokens judging whether a passage is relevant and whether its own output is supported. Corrective RAG (CRAG)~\cite{yan2024crag} adds a light-weight evaluator that scores retrieved documents and, depending on the score, uses them, searches the web, or both, followed by a decompose-then-recompose filter. Adaptive-RAG~\cite{jeong2024adaptiverag} trains a small classifier to predict question complexity and selects no retrieval, single-step or multi-step retrieval accordingly. Search-R1~\cite{jin2025searchr1} trains a model with reinforcement learning to issue search queries during step-by-step reasoning. These approaches need model training or fine-tuning; Cortex obtains a coarse version of the same adaptivity without training, through the user-selected Fast and Deep modes, the planner's \emph{chat} intent (no retrieval for small talk), and the empty-result retry.
+We had no way to train such a policy on hosted free-tier models, so Cortex borrows three of GRASP's lessons as fixed rules instead. First, evidence is kept small: each item is a quote of a few hundred characters with title, author, time and link, and no more than 16 items reach the model. Second, searches use keywords, because the Gmail, Slack and GitHub search APIs are keyword-based anyway; only memory recall can be semantic, and only when Oracle Agent Memory is switched on. Third, the number of retrieval rounds is capped, with one wider retry for a sub-question that found nothing.
 
-\item \textbf{Attribution and verification.} ALCE~\cite{gao2023alce} evaluates generation with citations along fluency, correctness and citation quality; citation recall asks whether each statement is fully supported by the passages it cites, and citation precision whether each citation is needed. RARR~\cite{gao2023rarr} finds attribution for model output with search and post-edits unsupported content. FActScore~\cite{min2023factscore} splits text into atomic facts and computes
+\item \textbf{Adaptive and corrective retrieval.} Self-RAG~\cite{asai2024selfrag} fine-tunes a single model to fetch passages only when it thinks it needs them and to emit special tokens that rate both the passage and its own answer. CRAG~\cite{yan2024crag} puts a small grader in front of the generator; depending on the grade, the retrieved documents are used, replaced by a web search, or combined with one, and are then trimmed to their useful strips. Adaptive-RAG~\cite{jeong2024adaptiverag} trains a classifier to guess question difficulty and picks no retrieval, one round or several rounds to match. Search-R1~\cite{jin2025searchr1} uses reinforcement learning to teach a model when to issue search queries in the middle of its reasoning. All four need training. Cortex gets a rougher form of the same adaptivity with none: the user picks Fast or Deep, the planner can label a message as \emph{chat} and skip retrieval, and empty sub-questions get one retry.
+
+\item \textbf{Attribution and verification.} ALCE~\cite{gao2023alce} is a benchmark for answers that carry citations. It scores fluency, correctness and citation quality, where citation recall checks that the cited passages fully back each statement and citation precision checks that no citation is superfluous. RARR~\cite{gao2023rarr} takes finished model output, searches for support, and edits away what it cannot support. FActScore~\cite{min2023factscore} breaks text into atomic facts and reports
 \[ f(y) = \frac{1}{|A_y|} \sum_{a \in A_y} \mathbf{1}[a \mbox{ is supported by } \mathcal{C}], \]
-the fraction of atomic facts supported by a knowledge source $\mathcal{C}$. RAGAS~\cite{es2024ragas} proposes reference-free metrics for RAG pipelines, including faithfulness of the answer to the retrieved context. Cortex's groundedness score is a sentence-level, citation-scoped variant of these ideas, computed cheaply (lexically) for every claim, with a model-based re-check only for doubtful claims.
+that is, the share of atomic facts that a knowledge source $\mathcal{C}$ backs up. RAGAS~\cite{es2024ragas} offers metrics for RAG pipelines that need no gold answers; one of them, faithfulness, asks whether the answer sticks to the retrieved context. Our groundedness score borrows from all of these but is cheaper: it works per sentence, compares each sentence only with the evidence it cites, uses word overlap first, and calls a model only for the sentences that look doubtful.
 
-\item \textbf{Long-term memory for agents.} MemGPT~\cite{packer2023memgpt} manages a model's limited context like an operating system manages memory, moving information between the context window and external storage. Generative Agents~\cite{park2023generative} store a stream of observations and retrieve memories by a weighted sum of recency, importance and relevance. Cortex's memory service uses the same three signals (salience as importance, exponential decay as recency, search score as relevance) but makes them visible to the user, keeps a reason and a source for each memory, and lets the user pin, edit or forget it.
+\item \textbf{Long-term memory for agents.} MemGPT~\cite{packer2023memgpt} borrows the idea of paging from operating systems: the prompt is treated as fast memory, and the agent swaps information in and out of a larger external store. In Generative Agents~\cite{park2023generative}, simulated characters log everything they observe and later pull memories back by a weighted score of recency, importance and relevance. Cortex's memory service ranks with the same three ingredients (salience for importance, a 30-day half-life for recency, search score for relevance). The difference is that the user can see them: every memory lists why it was saved and where it came from, and it can be pinned, edited or forgotten from the Memory page.
 
-\item \textbf{Tool use and the Model Context Protocol.} Toolformer~\cite{schick2023toolformer} shows that a model can learn in a self-supervised way which external APIs to call and with which arguments. The Model Context Protocol (MCP)~\cite{anthropic2024mcp} standardises how assistants connect to tools and data; Hou et al.~\cite{hou2025mcp} survey its ecosystem and its security threats across the server life cycle. Cortex uses MCP both through Composio's hosted endpoint and for arbitrary servers declared in a configuration file, and it treats every write operation as a proposal that needs explicit approval.
+\item \textbf{Tool use and the Model Context Protocol.} Toolformer~\cite{schick2023toolformer} lets a model teach itself, from its own sampled API calls, which tool to call and with what arguments. MCP~\cite{anthropic2024mcp} is an open protocol that gives assistants one common way to reach tools and data. Hou et al.~\cite{hou2025mcp} map the MCP ecosystem and list the attacks possible at each stage of a server's life, from creation to updates. Cortex talks MCP in two places, Composio's hosted endpoint and any extra server listed in \texttt{mcp.config.json}, and in both cases a write is only ever a proposal waiting for the user.
 
-\item \textbf{Long contexts.} Liu et al.~\cite{liu2024lost} show that models use information at the beginning and end of a long input much better than information in the middle. This supports keeping the evidence set small and ranked, as GRASP's granularity argument also suggests.
+\item \textbf{Long contexts.} Liu et al.~\cite{liu2024lost} moved the relevant passage around inside long prompts and found a U-shaped curve: models do best when the fact is near the start or the end, and worst when it sits in the middle. That result, together with GRASP's point about granularity, is why Cortex sends a short, ranked list of evidence rather than everything it found.
 \end{itemize}
 
 Table~\ref{tab:litcompare} compares the closest approaches with Cortex on the properties this project targets.
@@ -523,7 +526,7 @@ Table~\ref{tab:litcompare} compares the closest approaches with Cortex on the pr
 \begin{center}
 \def\arraystretch{1.3}
 \small
-\begin{tabularx}{\textwidth}{| X | c | c | c | c | c |}
+\begin{tabularx}{\textwidth}{| X |*{5}{>{\centering\arraybackslash}p{1.75cm}|}}
 \hline
 Approach & Multi-step & Training-free & Claim check & Live tools & Consent gate \\ \hline
 RAG~\cite{lewis2020rag} & No & No & No & No & -- \\ \hline
@@ -609,17 +612,17 @@ Further efficiency measures in the chosen design: identical prompts are served f
 
 \section{Applications}
 \begin{itemize}
-\item Students and project teams: tracking deadlines, advisor requests and blockers across e-mail, chat, documents and repositories.
-\item Software developers: status of issues and pull requests, review requests and release dates across GitHub, Slack and documentation.
-\item Professionals: a morning brief of what changed and what is at risk, ranked by remembered priorities.
-\item Any organisation that wants answers over internal tools with an auditable link from each claim to its source, and with human approval before an assistant sends or changes anything.
+\item A student project team can ask what the guide asked for, which deadline moved and who is stuck, without opening mail, chat, Drive and GitHub one by one.
+\item A developer can check which pull requests wait on them and whether the release date in Slack matches the GitHub milestone.
+\item Anyone who starts the day with e-mail can read the Daily Brief instead, ordered by the priorities Cortex has been told to remember.
+\item A team that needs to audit an assistant can follow each claim back to its source, and nothing is sent or changed without a person approving it.
 \end{itemize}
 
 \section{Hardware Resources Required}
 \begin{table}[!htbp]
 \begin{center}
 \def\arraystretch{1.5}
-  \begin{tabular}{| c | c | c | p{6cm} |}
+  \begin{tabular}{| c | c | >{\centering\arraybackslash}p{2.6cm} | p{5cm} |}
 \hline
 Sr. No. &	Parameter &	Minimum Requirement & Justification \\
 \hline
@@ -655,7 +658,7 @@ Platform :
 \chapter{Project Plan}
 
 \section{Project Estimates}
-The project follows the waterfall model: requirement analysis, feasibility study, design, implementation, testing and maintenance, each completed and reviewed before the next. The estimates below use the basic COCOMO model together with the outputs of the laboratory assignments in Annexures~\ref{app:algo} and~\ref{app:quality}.
+As the department's format asks, we used a waterfall plan: each phase (requirements, feasibility, design, coding, testing, maintenance) was signed off before the next one started. The estimates below use the basic COCOMO model together with the outputs of the laboratory assignments in Annexures~\ref{app:algo} and~\ref{app:quality}.
 \subsection{Reconciled Estimates}
 \subsubsection{Cost Estimate}
 The size of the delivered source code, counted as non-blank lines of TypeScript, TSX, Python, CSS and scripts (excluding dependencies and generated files), is about 6.1~KLOC. The basic COCOMO model for an organic project gives
@@ -665,7 +668,7 @@ The monetary cost of operation is zero: every external service is used on its fr
 \begin{table}[!htbp]
 \begin{center}
 \def\arraystretch{1.3}
-\begin{tabular}{| l | l | c |}
+\begin{tabular}{| p{5.6cm} | p{4.2cm} | c |}
 \hline
 Resource & Plan used & Cost (INR) \\ \hline
 Language models (Groq, Gemini, Cerebras, OpenRouter) & Free tier & 0 \\ \hline
@@ -696,9 +699,9 @@ with an average staffing of $E/D \approx 2.2$ persons. With four team members wo
 \end{itemize}
 
 \section{Risk Management w.r.t. NP Hard analysis}
-This section discusses Project risks and the approach to managing them.
+Here we list what could derail Cortex and what we did about each item.
 \subsection{Risk Identification}
-For risks identification, review of scope document, requirements specifications and schedule is done. Answers to questionnaire revealed some risks. Each risk is categorized as per the categories mentioned in \cite{bookPressman}. Please refer table \ref{tab:risk} for all the risks. The questions below are quoted from the risk identification questionnaire in Pressman and Maxim~\cite{bookPressman}; the team's answers are given after each question.
+We went back over our scope, the requirements and the schedule, and answered the risk questionnaire from Pressman and Maxim~\cite{bookPressman}. The questions below are quoted from that book, with our answer in italics after each one. The risks it surfaced are sorted into Pressman's categories and collected in Table~\ref{tab:risk}.
 
 \begin{enumerate}
 \item Have top software and customer managers formally committed to support the project? \emph{Yes; it is an internal project approved by the department, with no external customer.}
@@ -713,7 +716,7 @@ For risks identification, review of scope document, requirements specifications 
 \end{enumerate}
 
 \subsection{Risk Analysis}
-The risks for the Project can be analyzed within the constraints of time and quality
+Table~\ref{tab:risk} rates each risk by how likely it is and how much it would hurt the schedule and the quality of answers. Tables~\ref{tab:riskdef} and~\ref{tab:riskImpactDef} give the scales.
 
 \begin{table}[!htbp]
 \begin{center}
@@ -771,7 +774,7 @@ Medium	& $ < 5 \% $ & Schedule impact or Barely noticeable degradation in qualit
 \subsection{Overview of Risk Mitigation, Monitoring, Management}
 
 
-Following are the details for each risk.
+Each risk from Table~\ref{tab:risk} is expanded below with its source, our response and its current status.
 \begin{table}[!htbp]
 \begin{center}
 %\def\arraystretch{1.5}
@@ -894,7 +897,7 @@ Risk Status	& Identified \\ \hline
 \label{sec:schedule}
 \subsection{Project task set}
 \label{sec:taskset}
-Major Tasks in the Project stages are:
+We split the year into ten tasks:
 \begin{itemize}
   \item Task 1: Problem identification, literature survey (base paper GRASP and related work) and requirement gathering.
   \item Task 2: Software requirement specification, feasibility study and risk analysis.
@@ -909,7 +912,7 @@ Major Tasks in the Project stages are:
 \end{itemize}
 
 \subsection{Task network}
-Project tasks and their dependencies are noted in this diagrammatic form (Figure~\ref{fig:tasknet}).
+Figure~\ref{fig:tasknet} shows which task waits on which. The feasibility spikes (T4) ran beside the design so that the riskiest services were tried before coding began.
 
 \begin{figure}[!htbp]
 \centering
@@ -943,7 +946,7 @@ Project tasks and their dependencies are noted in this diagrammatic form (Figure
 \end{figure}
 
 \subsection{Timeline Chart}
-A project timeline chart for the entire project is presented in the project planner. Please refer Annexure~\ref{app:plan} for the planner and the timeline chart (Figure~\ref{fig:gantt}).
+The month-by-month timeline is in the planner in Annexure~\ref{app:plan}, drawn as a Gantt chart in Figure~\ref{fig:gantt}.
 
 
 \section{Team Organization}
@@ -962,7 +965,7 @@ Agent and verification & Planner, parallel search, synthesis prompt, claim verif
 Connectors and model router & Composio, MCP, Firecrawl and sample connectors; free-tier router, cooldowns and cache & [to be filled] \\ \hline
 Memory service & FastAPI service, SQLite ledger, Oracle Agent Memory adapter, memory policy & [to be filled] \\ \hline
 Web application and testing & Ask, Brief, Memory and Connections screens; event stream client; tests and documentation & [to be filled] \\ \hline
-Internal guide & Review of design and progress, approval of milestones & Prof. [Guide Name] \\ \hline
+Internal guide & Review of design and progress, approval of milestones & Prof. Swapnali Gaikwad \\ \hline
 \end{tabularx}
 \end{center}
 \caption{Team roles}
@@ -970,14 +973,14 @@ Internal guide & Review of design and progress, approval of milestones & Prof. [
 \end{table}
 
 \subsection{Management reporting and communication}
-Progress is reported to the internal guide in the project slots of the laboratory time table and recorded in the assessment sheet. Within the team, work is tracked in the shared Git repository: each change is a commit with a descriptive message, design decisions are recorded in the project documentation, and the automated tests and the evaluation are run before a change is merged.
+We report to the guide in the project slots of the lab timetable, and progress is noted on the assessment sheet. Day to day, the Git repository is our record: every change lands as a commit with a message saying what and why, design decisions go into the docs folder, and nothing is merged until the tests and the evaluation have been run.
 
 
 \chapter{Software requirement specification  }
 
 \section{Introduction}
 \subsection{Purpose and Scope of Document}
-This Software Requirement Specification (SRS) describes what Cortex must do and the conditions under which it must do it. It covers the users and use cases, the data the system manages, the functional model (data flow, activity and state behaviour), the non-functional requirements, the design constraints and the software interfaces. It is intended for the project team, the internal guide and the examiners, and it is the reference for the design in Chapter~\ref{ch:design} and the tests in Chapter~\ref{ch:testing}.
+This chapter pins down what Cortex has to do and under which limits. It starts with who uses the system and why, moves on to the data it keeps and how a question flows through it, and ends with the non-functional requirements, design constraints and interfaces. We wrote it for ourselves, our guide and the examiners; the design in Chapter~\ref{ch:design} and the tests in Chapter~\ref{ch:testing} both trace back to it.
 
 \subsection{Overview of responsibilities of Developer}
 \begin{itemize}
@@ -989,7 +992,7 @@ This Software Requirement Specification (SRS) describes what Cortex must do and 
 \end{itemize}
 
 \section{Usage Scenario}
-This section provides various usage scenarios for the system to be developed.
+Below are the people and systems that interact with Cortex, followed by what each of them does with it.
  \subsection{User profiles}
 \begin{itemize}
 \item \textbf{End user} (primary actor): a developer, productivity-focused professional or undergraduate whose work is spread across Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub. The user may be non-technical and never handles API keys or configuration files. The user asks questions, reads the Brief, approves or declines actions and manages memory.
@@ -1000,7 +1003,7 @@ This section provides various usage scenarios for the system to be developed.
 \end{itemize}
 
 \subsection{Use-cases}
-All use-cases for the software are presented in Table~\ref{tab:usecase}.
+Table~\ref{tab:usecase} lists the eight use cases.
 
 \begin{table}[!htbp]
 \begin{center}
@@ -1035,7 +1038,7 @@ Sr No.	& Use Case	& Description	& Actors	& Assumptions \\
 
 
 \subsection{Use Case View}
-Use Case Diagram. The use case diagram of Cortex is given below (Figure~\ref{fig:usecase}).
+Figure~\ref{fig:usecase} draws the same use cases, with the user on the left and the supporting systems on the right.
 \begin{center}
 	\begin{figure}[!htbp]
 		\centering
@@ -1043,8 +1046,8 @@ Use Case Diagram. The use case diagram of Cortex is given below (Figure~\ref{fig
 \begin{tikzpicture}[>=stealth,
   uc/.style={ellipse, draw, minimum width=3.5cm, minimum height=0.95cm, font=\small, align=center, inner sep=1pt, fill=white},
   inc/.style={->, dashed}]
-\draw[rounded corners, fill=gray!4] (-3.4,0.9) rectangle (5.2,-10.7);
-\node[font=\bfseries] at (0.9,0.45) {Cortex};
+\draw[rounded corners, fill=gray!4] (-3.4,0.9) rectangle (5.9,-10.7);
+\node[font=\bfseries] at (1.25,0.45) {Cortex};
 \node[uc] (u1) at (-1,-0.7) {Ask a question};
 \node[uc] (u2) at (-1,-2.2) {Choose Fast or\\Deep mode};
 \node[uc] (u3) at (-1,-3.7) {Inspect trace\\and evidence};
@@ -1052,34 +1055,34 @@ Use Case Diagram. The use case diagram of Cortex is given below (Figure~\ref{fig
 \node[uc] (u5) at (-1,-6.7) {Read the\\Daily Brief};
 \node[uc] (u6) at (-1,-8.2) {Manage memory};
 \node[uc] (u7) at (-1,-9.7) {Connect an app /\\choose workspace};
-\node[uc] (u8) at (3.3,-1.4) {Search connected\\sources};
-\node[uc] (u9) at (3.3,-3.4) {Generate and\\verify answer};
-\node[uc] (u10) at (3.3,-5.4) {Recall and\\store memory};
-\node[uc] (u11) at (3.3,-7.4) {Execute approved\\action};
+\node[uc] (u8) at (3.9,-0.7) {Search connected\\sources};
+\node[uc] (u9) at (3.9,-2.3) {Generate and\\verify answer};
+\node[uc] (u10) at (3.9,-3.9) {Recall and\\store memory};
+\node[uc] (u11) at (3.9,-5.5) {Execute approved\\action};
 \stickactor{-5.6}{-5.2}{User}
 \stickactor{7.6}{-1.6}{Connected apps}
 \stickactor{7.6}{-4.6}{Model providers}
 \stickactor{7.6}{-7.6}{Memory service}
 \foreach \uc in {u1,u2,u3,u4,u5,u6,u7} \draw (-5.2,-4.7) -- (\uc.west);
-\draw[inc] (u1) -- node[above, sloped, font=\scriptsize] {$\ll$include$\gg$} (u8);
-\draw[inc] (u1) -- node[above, sloped, font=\scriptsize, pos=0.6] {$\ll$include$\gg$} (u9);
-\draw[inc] (u1) -- (u10);
-\draw[inc] (u4) -- node[below, sloped, font=\scriptsize] {$\ll$include$\gg$} (u11);
-\draw[inc] (u5) -- (u9);
+\draw[inc] (u1) -- (u8);
+\draw[inc] (u1.east) -- (u9.west);
+\draw[inc] (u1.east) -- (u10.west);
+\draw[inc] (u4) -- (u11);
+\draw[inc] (u5.east) -- (1.4,-6.7) |- (u9.south west);
 \draw (u8.east) -- (7.2,-1.1);
 \draw (u11.east) -- (7.2,-1.1);
 \draw (u9.east) -- (7.2,-4.1);
 \draw (u10.east) -- (7.2,-7.1);
 \draw (u6.east) -- (7.2,-7.1);
 \end{tikzpicture}}}
-	  \caption{Use case diagram}
+	  \caption{Use case diagram. Dashed arrows are $\ll$include$\gg$ relations.}
 	  \label{fig:usecase}
 	\end{figure}
 \end{center}
 
 \section{Data Model and Description}
 \subsection{Data Description}
-Data objects that will be managed/manipulated by the software are described in this section. Cortex does not copy users' source data into a database: evidence exists only during a run (and in a 90~s search cache). The persistent data are the memories and the conversation messages kept by the memory service, and the response cache of the model router. The main data objects are:
+Cortex does not copy users' source data into a database: evidence exists only during a run (and in a 90~s search cache). The persistent data are the memories and the conversation messages kept by the memory service, and the response cache of the model router. The main data objects are:
 \begin{itemize}
 \item \textbf{Evidence}: one retrieved item, with a run-scoped identifier (\texttt{e1}, \texttt{e2}, \ldots), source, title, quote (a compact excerpt), and optional link, author, timestamp and sub-question identifier. Evidence is numbered in the prompt and cited as \texttt{[n]}.
 \item \textbf{Plan} and \textbf{SubQuestion}: the run intent (\texttt{research}, \texttt{action} or \texttt{chat}), the rewritten question, an optional time window (since, until, label), and up to five sub-questions, each with its sources and a keyword query of at most 80 characters.
@@ -1091,7 +1094,7 @@ Data objects that will be managed/manipulated by the software are described in t
 \item \textbf{AgentEvent}: the unit of the output stream; one of sixteen typed events listed in Section~\ref{sec:io}.
 \end{itemize}
 \subsection{Data objects and Relationships}
-Figure~\ref{fig:erd} shows the data objects, their major attributes and their relationships in an ERD-like form. A run has one plan; a plan has up to five sub-questions; each sub-question yields evidence; a claim cites zero or more evidence items; a conflict refers to evidence from at least two sides; a run may produce action proposals and memories; and the messages of a run are appended to its conversation thread.
+Figure~\ref{fig:erd} draws these objects as an entity-relationship diagram. A run has one plan; a plan has up to five sub-questions; each sub-question yields evidence; a claim cites zero or more evidence items; a conflict refers to evidence from at least two sides; a run may produce action proposals and memories; and the messages of a run are appended to its conversation thread.
 
 \begin{figure}[!htbp]
 \centering
@@ -1125,7 +1128,7 @@ Figure~\ref{fig:erd} shows the data objects, their major attributes and their re
 
 
 \section{Functional Model and Description}
-A description of each major software function, along with data flow (structured analysis) is presented here; the class hierarchy is given in Chapter~\ref{ch:design}. The major functions are: (1) check which sources are available; (2) recall memories; (3) plan; (4) search in parallel and rank evidence; (5) synthesize a streamed, cited answer; (6) verify claims and compute groundedness; (7) validate and store action proposals; (8) remember salient facts; and (9) execute an approved action. The Daily Brief reuses functions (1), (2), (4) and a single synthesis call.
+This section walks through what Cortex does with a question, as data flows; the classes behind it are in Chapter~\ref{ch:design}. A run uses nine functions: (1) check which sources are available; (2) recall memories; (3) plan; (4) search in parallel and rank evidence; (5) synthesize a streamed, cited answer; (6) verify claims and compute groundedness; (7) validate and store action proposals; (8) remember salient facts; and (9) execute an approved action. The Daily Brief reuses functions (1), (2), (4) and a single synthesis call.
 \subsection{Data Flow Diagram}
 \subsubsection{Level 0 Data Flow Diagram}
 Figure~\ref{fig:dfd0} shows Cortex as a single process with its external entities.
@@ -1203,7 +1206,7 @@ Figure~\ref{fig:dfd1} decomposes the process into its nine sub-processes. Extern
 \draw[->] (p6) -- node[lab, right] {verified answer} (p7);
 \draw[->] (p7) -- node[lab, left] {answer, candidates} (p8);
 \draw[->] (p5) -- node[lab, above, sloped] {answer tokens} (user2);
-\draw[->] (p6) -- node[lab, below, sloped] {claims, score, conflicts} (user2);
+\draw[->] (p6) -- node[lab, below, sloped, pos=0.55, align=center] {claims, score,\\conflicts} (user2);
 \draw[->] (p7) -- node[lab, above] {action card} (user3);
 \draw[->] (p7) -- node[lab, above, sloped] {proposal} (d2);
 \draw[->] (d2) -- node[lab, above, sloped] {proposal} (p9);
@@ -1220,7 +1223,7 @@ Figure~\ref{fig:dfd1} decomposes the process into its nine sub-processes. Extern
 
 \subsection{Activity Diagram:}
 \begin{itemize}
-	\item	The Activity diagram represents the steps taken. Figure~\ref{fig:activity} shows the activities of one run, including the decision points for Fast mode, small talk, empty results and requested actions, and the parallel searches.
+	\item	Figure~\ref{fig:activity} follows one run from question to stored memory. The diamonds are the four branch points (Fast mode, small talk, no evidence, action requested), and the bars mark where the searches fork and join.
 \end{itemize}
 
 \begin{figure}[!htbp]
@@ -1315,8 +1318,7 @@ Figure~\ref{fig:dfd1} decomposes the process into its nine sub-processes. Extern
 
 \subsection{State Diagram:}
   State Transition Diagram\\
-Fig.\ref{fig:state-dig} shows the state transition diagram of an action proposal in Cortex. The states are
-represented in ovals and state of system gets changed when certain events occur. The transitions from one state to the other are represented by arrows. The Figure shows the important states and events from the moment the agent drafts an action until it is executed, rejected or expires. Final states are drawn with a double border.
+Fig.\ref{fig:state-dig} tracks a single action proposal. It is born when the model drafts an action and the store accepts it, and it ends in one of five places: discarded, rejected, expired, executed or failed (double borders). Each arrow is labelled with the event that moves it. There is no arrow from \emph{Pending} straight to \emph{Executed}; the only way through is an explicit approval.
 
 \begin{center}
 	\begin{figure}[!htbp]
@@ -1331,9 +1333,9 @@ represented in ovals and state of system gets changed when certain events occur.
 \node[st] (pend) at (4,0) {Pending};
 \node[fin] (rej) at (4,-3.4) {Rejected};
 \node[fin] (exp) at (4,3.2) {Expired};
-\node[st] (appr) at (9,0) {Approved};
-\node[fin] (exec) at (13.5,1.6) {Executed};
-\node[fin] (fail) at (13.5,-1.6) {Failed};
+\node[st] (appr) at (10.5,0) {Approved};
+\node[fin] (exec) at (16.5,2.2) {Executed};
+\node[fin] (fail) at (16.5,-2.2) {Failed};
 \draw (init) -- node[lab, above] {model drafts\\action} (pend);
 \draw (init) -- node[lab, left] {connector, action or\\required argument invalid} (disc);
 \draw (pend) -- node[lab, right] {decline} (rej);
@@ -1358,7 +1360,7 @@ represented in ovals and state of system gets changed when certain events occur.
 \item Node.js 24 or later and Python 3.11 are required.
 \end{itemize}
  \subsection{Software Interface Description}
-The software interfaces to the outside world are described in Table~\ref{tab:interfaces}. Human interaction is through the web interface described in Chapter~\ref{ch:results}.
+Table~\ref{tab:interfaces} lists every endpoint Cortex exposes or calls. People use the web screens shown in Chapter~\ref{ch:results}.
 
 \begin{table}[!htbp]
 \begin{center}
@@ -1399,11 +1401,11 @@ LangSmith API & Optional traces of runs, model calls and searches \\ \hline
 \chapter{Detailed Design Document using Appendix A and B}
 \label{ch:design}
  \section{Introduction}
-This document specifies the design that is used to solve the problem of answering questions over live, distributed work data with cited, verified answers and consent-gated actions. It describes the architecture, the data design and the components. The design follows four principles taken from the project's product definition: show the evidence and not only the answer; never act without consent; say ``I don't know'' before guessing; and keep every loop bounded.
+This chapter explains how Cortex is built to answer questions over scattered, live work data with cited and checked answers, and to act only with consent. It covers the architecture, then the data, then the components. The design follows four principles taken from the project's product definition: show the evidence and not only the answer; never act without consent; say ``I don't know'' before guessing; and keep every loop bounded.
 \section{Architectural Design}
 	Cortex is a layered system (Figure~\ref{fig:arch-dig}). The \textbf{browser client} (React) renders the Ask, Brief, Memory and Connections screens and consumes the event stream. The \textbf{web server} (Next.js route handlers) authenticates the browser by an anonymous cookie, builds the dependencies for the selected workspace and exposes the API. The \textbf{agent package} contains the orchestrator, the prompts, the verifier, the action store, the brief and the tracing wrapper. It depends on three subsystems: the \textbf{model router} package, the \textbf{connector} package and the \textbf{memory service}. A \textbf{shared} package holds the types used by both server and client. The orchestrator is written by hand rather than with a graph framework, so that every branch is explicit, every loop is bounded and the number of model calls is predictable.
 
-\textbf{Package view.} \texttt{apps/web} depends on \texttt{packages/agent}, \texttt{packages/connectors}, \texttt{packages/llm} and \texttt{packages/shared}; \texttt{packages/agent} depends on the other three packages; \texttt{packages/connectors} uses the cache of \texttt{packages/llm}; \texttt{services/memory} is independent and is reached over HTTP.
+\textbf{Package view.} \texttt{apps/\allowbreak{}web} depends on \texttt{packages/\allowbreak{}agent}, \texttt{packages/\allowbreak{}connectors}, \texttt{packages/\allowbreak{}llm} and \texttt{packages/\allowbreak{}shared}; \texttt{packages/\allowbreak{}agent} depends on the other three packages; \texttt{packages/\allowbreak{}connectors} uses the cache of \texttt{packages/\allowbreak{}llm}; \texttt{services/\allowbreak{}memory} is independent and is reached over HTTP.
 
 \textbf{Deployment view.} During development and evaluation, two processes run on one machine: the Next.js server on port 3000 and the memory service (Uvicorn) on port 8000. The optional Oracle AI Database Free runs in a Docker container on port 1521. All other services are remote APIs. Deployment to a hosted environment is planned for Term II.
 
@@ -1414,7 +1416,7 @@ This document specifies the design that is used to solve the problem of answerin
 \begin{tikzpicture}[>=stealth, thick,
   layer/.style={draw, rounded corners, fill=gray!6},
   box/.style={draw, rounded corners=3pt, align=center, font=\small, fill=white, minimum height=0.9cm},
-  step/.style={draw, rounded corners=3pt, align=center, font=\scriptsize, fill=blue!8, minimum height=0.8cm, minimum width=1.6cm},
+  stage/.style={draw, rounded corners=3pt, align=center, font=\scriptsize, fill=blue!8, minimum height=0.8cm, minimum width=1.6cm},
   ext/.style={draw, align=center, font=\small, fill=yellow!10, minimum height=1cm},
   ttl/.style={font=\small\bfseries, anchor=west}]
 % browser
@@ -1439,14 +1441,14 @@ This document specifies the design that is used to solve the problem of answerin
 % agent
 \draw[layer] (0,-5.0) rectangle (17,-8.6);
 \node[ttl] at (0.1,-5.3) {packages/agent};
-\node[step] (s1) at (1.2,-6.3) {understand};
-\node[step] (s2) at (3.3,-6.3) {recall};
-\node[step] (s3) at (5.4,-6.3) {plan};
-\node[step] (s4) at (7.5,-6.3) {search\\(parallel)};
-\node[step] (s5) at (9.6,-6.3) {synthesize\\(stream)};
-\node[step] (s6) at (11.7,-6.3) {verify};
-\node[step] (s7) at (13.8,-6.3) {propose\\actions};
-\node[step] (s8) at (15.9,-6.3) {remember};
+\node[stage] (s1) at (1.2,-6.3) {understand};
+\node[stage] (s2) at (3.3,-6.3) {recall};
+\node[stage] (s3) at (5.4,-6.3) {plan};
+\node[stage] (s4) at (7.5,-6.3) {search\\(parallel)};
+\node[stage] (s5) at (9.6,-6.3) {synthesize\\(stream)};
+\node[stage] (s6) at (11.7,-6.3) {verify};
+\node[stage] (s7) at (13.8,-6.3) {propose\\actions};
+\node[stage] (s8) at (15.9,-6.3) {remember};
 \foreach \sa/\sb in {s1/s2,s2/s3,s3/s4,s4/s5,s5/s6,s6/s7,s7/s8} \draw[->] (\sa) -- (\sb);
 \node[box, minimum width=3.6cm] at (2.3,-7.8) {Budget and LIMITS};
 \node[box, minimum width=3.6cm] at (6.4,-7.8) {ActionStore\\(pending actions)};
@@ -1485,7 +1487,7 @@ This document specifies the design that is used to solve the problem of answerin
 \section{Data design (using Appendices A and B)}
 The data structures are deliberately small and typed. All types shared by server and client are defined once in the shared package, and the structured outputs of the models are validated with schemas before use.
 \subsection{Internal software data structure}
-Data structures that are passed among components of the software are:
+These structures travel between the packages:
 \begin{itemize}
 \item \textbf{AgentEvent} stream: an asynchronous generator of typed events produced by the orchestrator, serialised by the ask route as \texttt{data: \{json\}} lines and folded by the client hook into a \emph{Turn} (steps, plan, tool calls, evidence, answer, claims, conflicts, actions, memories, usage).
 \item \textbf{SearchInput} (\texttt{query}, \texttt{since}, \texttt{until}, \texttt{limit}) and \textbf{RawEvidence} (evidence without run-scoped identifiers), exchanged between the agent and the connectors.
@@ -1494,7 +1496,7 @@ Data structures that are passed among components of the software are:
 \item \textbf{Sections}: the synthesis output split at fixed markers into the answer, conflicts, missing items, action drafts (JSON), memory candidates (JSON) and follow-up questions.
 \end{itemize}
 \subsection{Global data structure}
-Data structures available to major portions of the architecture are:
+These are shared across most of the server:
 \begin{itemize}
 \item Process-wide singletons on the server: one model router (with its provider health map and response cache), one action store, one memory client and one connector registry per workspace (sample or live). They survive development hot reloads.
 \item The \texttt{LIMITS} constant of the agent (sub-questions, tool calls, model calls and evidence per mode, run timeout).
@@ -1502,7 +1504,7 @@ Data structures available to major portions of the architecture are:
 \item The toolkit specifications: for each app, its search tool, the mapping of search input to tool arguments, and its actions with parameters, risk and preview function.
 \end{itemize}
 \subsection{Temporary data structure}
-Files created for interim use are:
+Cortex writes these short-lived files:
 \begin{itemize}
 \item \texttt{.cache/llm-cache.json}: the persisted response cache of the model router (entries expire; least recently used entries are evicted beyond 1000).
 \item \texttt{.cache/eval-llm-cache.json}: the response cache used by evaluation runs.
@@ -1510,7 +1512,7 @@ Files created for interim use are:
 \item In memory only: the search cache (90~s), the pending actions (30~min) and the per-run budget.
 \end{itemize}
 \subsection{Database description}
-The memory service uses an SQLite database file (\texttt{services/memory/data/ledger.db}) with the tables in Table~\ref{tab:db}, and an FTS5 full-text index \texttt{memories\_fts(id, content)} used for keyword search with BM25 ranking when Oracle is not configured. When Oracle AI Database is configured, the same memories are also written to an Oracle Agent Memory store (identifier \texttt{CORTEX}) for vector search, with automatic extraction switched off, and conversation threads are kept there for summaries. The ledger remains the source of the governance fields (reason, pin, salience, expiry) in both cases.
+The memory service uses an SQLite database file (\texttt{services/\allowbreak{}memory/\allowbreak{}data/\allowbreak{}ledger.db}) with the tables in Table~\ref{tab:db}, and an FTS5 full-text index \texttt{memories\_fts(id, content)} used for keyword search with BM25 ranking when Oracle is not configured. When Oracle AI Database is configured, the same memories are also written to an Oracle Agent Memory store (identifier \texttt{CORTEX}) for vector search, with automatic extraction switched off, and conversation threads are kept there for summaries. The ledger remains the source of the governance fields (reason, pin, salience, expiry) in both cases.
 
 \begin{table}[!htbp]
 \begin{center}
@@ -1875,6 +1877,7 @@ TA9 & Proposal missing a required field & Rejected naming the missing field & Pa
 \begin{center}
 \def\arraystretch{1.2}
 \small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{| l | c | c | c | c | c |}
 \hline
 Question ID & Groundedness & Citation recall & Specific check & Time (s) & Answered by \\ \hline
@@ -1891,7 +1894,8 @@ unknown & 1.00 & 1.00 & not found: yes & 2.4 & Gemini \\ \hline
 action-slack & 1.00 & 1.00 & action: yes & 2.4 & Gemini \\ \hline
 action-email & 1.00 & 1.00 & action: no & 3.2 & Gemini \\ \hline
 \textbf{Summary} & \textbf{0.88} & \textbf{0.92} & see text & p50 3.7, p90 7.1 & \\ \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 \caption{Preliminary evaluation results (Deep mode, 12 questions)}
 \label{tab:eval}
@@ -2101,7 +2105,7 @@ The references cited in this report are listed below in the ACM reference format
 \begin{itemize}
 \item To develop the problem under consideration and justify feasibilty using
 concepts of knowledge canvas and IDEA Matrix.\\
-Refer \cite{innovationbook} for IDEA Matrix and Knowledge canvas model. Case studies are given in this book. IDEA Matrix is represented in the following form. Knowledge canvas represents about identification  of opportunity for product. Feasibility is represented w.r.t. business perspective.\\
+Both tools come from Kulkarni~\cite{innovationbook}. The IDEA matrix (Table~\ref{tab:imatrix}) is a grid of verbs, from Increase, Drive, Educate and Accelerate down to Ignore, Decrease, Eliminate and Avoid, that sorts what a product should push and what it should drop. The knowledge canvas is a one-page view of the opportunity a product addresses. We use both to argue feasibility from the user's and the business side.\\
 
 \begin{table}[!htbp]
 \begin{center}
@@ -2184,7 +2188,7 @@ $f = f_{\mathit{remember}} \circ f_{\mathit{propose}} \circ f_{\mathit{verify}} 
 
 It should include assignments such as
 \begin{itemize}
-\item Use of divide and conquer strategies to exploit distributed/parallel/concurrent processing of the above to identify object, morphisms, overloading in functions (if any), and functional relations and any other dependencies (as per requirements).
+\item Use of divide and conquer strategies to exploit distributed/\allowbreak{}parallel/\allowbreak{}concurrent processing of the above to identify object, morphisms, overloading in functions (if any), and functional relations and any other dependencies (as per requirements).
              It can include Venn diagram, state diagram, function relations, i/o relations; use this to derive objects, morphism, overloading
 
 \textbf{Divide and conquer.} The question is divided into sub-questions; each sub-question is divided into one search per source; all searches are executed concurrently; the results are merged (deduplicated and ranked) and conquered by a single synthesis. Objects: Plan, SubQuestion, Evidence, Claim, Conflict, ActionProposal, MemoryItem. Morphisms: $f_{\mathit{search}}$ maps a (source, query) pair to evidence, $f_{\mathit{verify}}$ maps (answer, evidence) to claims. Overloading: \texttt{search}, \texttt{execute} and \texttt{status} are implemented differently by the five connector classes behind one interface. The state behaviour of a proposal is in Figure~\ref{fig:state-dig}. Figure~\ref{fig:venn} relates the sentences of an answer to the verification outcome.
@@ -2226,7 +2230,7 @@ The UML diagrams are given in the SRS and design chapters (use case, activity, s
 \node[fn] (ve) at (15,0.4) {verify};
 \node[fn] (pr) at (15,-0.9) {propose};
 \node[fn] (re) at (15,-2.2) {remember};
-\node[fn] (ex) at (18,-0.9) {execute\\(user only)};
+\node[fn] (ex) at (19,-0.9) {execute\\(user only)};
 \draw[->] (st) -- (pl);
 \draw[->] (rc) -- (pl);
 \draw[->] (rc.south) to[bend right=20] (sy.south);
@@ -2344,7 +2348,7 @@ T10 & Final report and demo & Mar 2027 & Apr 2027 & T9 \\ \hline
 (At-least one technical paper must be submitted in Term-I on the project design in the
 conferences/workshops in IITs, Central Universities or UoP Conferences or equivalent International Conferences Sponsored by IEEE/ACM)
 \begin{enumerate}
-\item Paper Title: From Static Retrieval to Granularity-Aware Search Policies: A Review of Agentic Retrieval-Augmented Generation with a Case Study on Live Workspace Data (draft prepared in IEEE conference format; submission details to be filled by the team)
+\item Paper Title: Agentic Retrieval-Augmented Generation over Live Workspace Data: A Survey and the Cortex Assistant (draft prepared in IEEE conference format; submission details to be filled by the team)
 \item Name of the Conference/Journal where paper submitted : [to be filled by the team]
 \item Paper accepted/rejected : [to be filled by the team]
 \item Review comments by reviewer : [to be filled by the team]

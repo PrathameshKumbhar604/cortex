@@ -29,6 +29,7 @@ interface Overview {
   activity: { at: string; actor: string; kind: string; target: string; detail: string }[];
   connectors: { id: string; name: string; connected: boolean; available: boolean; detail?: string }[];
   memory: { ok: boolean; backend: string };
+  composio: "project" | "personal" | "none";
 }
 
 const KIND: Record<string, { label: string; tone: string }> = {
@@ -106,7 +107,7 @@ export function AdminView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[1080px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">Admin</h1>
+        <h1 className="text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">Admin</h1>
         <p className="mt-3 max-w-[64ch] text-[15px] leading-relaxed text-muted">
           Everyone who uses this Cortex, what they use, and the settings that apply to all of them. Turning an account off signs it out everywhere.
         </p>
@@ -279,6 +280,14 @@ function Apps({ data, onSave }: { data: Overview; onSave: (s: Overview["settings
         Apps
       </h2>
       <p className="mt-2 text-[13px] text-muted">Which apps people may connect and search. Uploaded files are always allowed.</p>
+      {data.composio !== "project" && (
+        <p className="mt-2 rounded-md border border-line bg-accent-wash px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
+          {data.composio === "personal"
+            ? "Your Composio key is a personal one (ck_), so every connection belongs to your Composio account. Only admins can connect apps, and they all share those connections; members use the sample workspace."
+            : "No Composio key is set, so nobody can connect apps yet."}{" "}
+          To let every member connect their own apps, create a project API key at platform.composio.dev (it starts with ak_), put it in COMPOSIO_API_KEY in the root .env and restart Cortex.
+        </p>
+      )}
       <ul className="mt-2">
         {data.connectors.map((c) => {
           const on = !allowed || allowed.includes(c.id);

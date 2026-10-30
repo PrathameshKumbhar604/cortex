@@ -1,0 +1,463 @@
+%This is a very basic  BE PROJECT PRELIMINARY template.
+
+%#############################################
+%#########Author :  PROJECT###########
+%#########COMPUTER ENGINEERING############
+%
+% Filled for the project "Cortex" (A.Y. 2026-2027).
+% Compile with: pdflatex report -> bibtex report -> pdflatex report -> pdflatex report
+% Every change made to the college template only to make it compile is marked "% FIX"
+% and listed in NOTES.md.
+
+
+\documentclass[oneside,a4paper,12pt]{report}
+%\usepackage{showframe}
+%\hoffset = 8.9436619718309859154929577464789pt
+%\voffset = 13.028169014084507042253521126761pt
+
+\usepackage{fancyhdr}   % FIX: \pagestyle{fancy}, \cfoot, \rfoot need fancyhdr
+\usepackage{graphicx}   % FIX: \includegraphics needs graphicx
+\usepackage{titlesec}   % FIX: \titleformat needs titlesec
+\providecommand{\frontmatter}{}                              % FIX: not defined in the report class
+\providecommand{\mainmatter}{\clearpage\pagenumbering{arabic}} % FIX: not defined in the report class
+\setlength{\headheight}{15pt} % FIX: silences the fancyhdr headheight warning at 12pt
+
+\pagestyle{fancy}
+\fancyhead{}
+\renewcommand{\headrulewidth}{0pt}
+\footskip = 0.625in
+\cfoot{}
+\rfoot{}
+
+\usepackage[]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes,snakes,automata,backgrounds,petri}
+\usetikzlibrary{positioning,fit,calc} % FIX: used by the diagrams drawn in this report
+
+\usepackage{tabularx}
+
+\usepackage[nottoc,notlot,notlof,numbib]{tocbibind}
+\usepackage[titletoc]{appendix}
+\usepackage{titletoc}
+\renewcommand{\appendixname}{Annexure}
+\renewcommand{\bibname}{References}
+
+\setcounter{secnumdepth}{5}
+
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{multirow}
+
+\usepackage[ruled,vlined]{algorithm2e}
+
+% Project title used on every page that names it.
+\newcommand{\ProjectTitle}{Cortex: An Agentic Retrieval-Augmented Generation System over Live Work Data with Explainable Memory and Consent-Gated Actions}
+
+\begin{document}
+
+\setlength{\parindent}{0mm}
+\begin{center}
+ \vspace*{0\baselineskip}
+{\bfseries A  PROJECT REPORT ON \\}
+ \vspace*{2\baselineskip}
+{\bfseries \fontsize{16}{20} \selectfont  \ProjectTitle \\ \vspace*{2\baselineskip}}
+{\fontsize{12}{12} \selectfont SUBMITTED TOWARDS THE
+ \\PARTIAL FULFILLMENT OF THE REQUIREMENTS OF \\
+
+\vspace*{2\baselineskip}}
+{\bfseries \fontsize{14}{12} \selectfont BACHELOR OF ENGINEERING (Computer Engineering) \\
+\vspace*{1\baselineskip}}
+{\bfseries \fontsize{14}{12} \selectfont BY \\
+\vspace*{1\baselineskip}}
+\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17 \\
+\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32 \\
+\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35 \\
+\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47 \\
+\vspace*{2\baselineskip}
+{\bfseries \fontsize{14}{12} \selectfont Under The Guidance of \\
+\vspace*{1\baselineskip}
+Prof. [Guide Name]\par} % FIX: group closed here (was left open in the template)
+\vspace*{2\baselineskip}
+\includegraphics[width=200pt]{DPU_DYP_Logo.png} \\
+\vspace*{1\baselineskip}
+{\bfseries \fontsize{14}{12} \selectfont Department of Computer Engineering \\
+\vspace*{1\baselineskip}
+DR.D.Y.PATIL INSTITUTE OF TECHNOLOGY  \\
+PIMPRI, PUNE \\
+A.Y 2026-2027\par} % FIX: group closed here (was left open in the template)
+\begin{center}\includegraphics[width=100pt]{UNI_LOGO.jpg} \\
+{\bfseries SAVITRIBAI PHULE PUNE UNIVERSITY \\}
+
+\end{center}
+\end{center}
+
+\newpage
+
+
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=200pt]{DPU_DYP_Logo.png}
+\end{figure}
+
+
+{\bfseries \fontsize{14}{12} \selectfont \centerline{DR.D.Y.PATIL INSTITUTE OF TECHNOLOGY}
+\centerline{Department of Computer Engineering}
+\vspace*{2\baselineskip}}
+
+
+{\bfseries \fontsize{16}{12} \selectfont \centerline{CERTIFICATE}
+\vspace*{2\baselineskip}}
+
+\centerline{This is to certify that the Project Entitled}
+\vspace*{.5\baselineskip}
+
+
+% FIX: \centerline cannot wrap a long title, so the title is set in a centred block.
+{\bfseries \fontsize{14}{18} \selectfont \begin{center}\ProjectTitle\end{center}
+\vspace*{0.5\baselineskip}}
+
+\centerline{Submitted by}
+\vspace*{0.5\baselineskip}
+\centerline{\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17}
+\centerline{\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32}
+\centerline{\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35}
+\centerline{\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47}
+
+is a bonafide work carried out by Students under the supervision of Prof. [Guide Name] and it
+is submitted towards the partial fulfillment of the requirement of Bachelor of Engineering (Computer Engineering).\\
+
+
+
+\bgroup
+\def\arraystretch{0.9}\vspace*{0.5\baselineskip}\vspace*{0.5\baselineskip}
+\begin{tabular}{c c }
+Prof. [Guide Name] &  \hspace{50 mm} Prof. [HOD Name] \\
+Internal Guide   &  \hspace{50 mm} H.O.D \\
+Dept. of Computer Engg.  &	\hspace{50 mm}Dept. of Computer Engg.  \\
+\end{tabular}
+\egroup % FIX: closes the \bgroup opened above
+%}
+\begin{center}
+%\fontsize{12}{18}\selectfont
+{
+Dr. Nitin Sherje \\
+Principal\\
+DIT,Pimpri
+}
+\end{center}
+\vspace*{2\baselineskip} % FIX: replaces "\\\\" after \end{center}, which is an error in vertical mode
+
+
+Signature of Project co-ordinator \hspace{15 mm} Signature of External Examiner
+\newpage
+\begin{center}
+\textbf{PROJECT APPROVAL SHEET}
+\end{center}
+\begin{center}
+ A Project Titled
+ \end{center} % FIX: removed "\\" after \end{center}
+\begin{center}
+(\ProjectTitle)
+\end{center} % FIX: removed "\\" after \end{center}
+\begin{center}
+Is successfully completed by
+\end{center}
+\centerline{\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17}
+\centerline{\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32}
+\centerline{\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35}
+\centerline{\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47}
+\begin{center}
+ at
+ \end{center}
+ \begin{center}
+ DEPARTMENT OF COMPUTER ENGINEERING
+ \end{center}
+ \begin{center}
+ Dr.D.Y.PATIL INSTITUTE OF TECHNOLOGY
+ \end{center}
+ \begin{center}
+ SAVITRIBAI PHULE PUNE UNIVERSITY,PUNE
+ \end{center}
+
+ \begin{center}
+ ACADEMIC YEAR 2026-2027
+ \end{center}
+
+ \vspace*{1\baselineskip} % FIX: removed the stray "}" that followed this line
+ \begin{tabular}{c c }
+Prof. [Guide Name] &  \hspace{50 mm} Prof. [HOD Name] \\
+Internal Guide   &  \hspace{50 mm} H.O.D \\
+Dept. of Computer Engg.  &	\hspace{50 mm}Dept. of Computer Engg.  \\
+\end{tabular}
+\newpage
+
+%\pictcertificate{TITLE OF BE PROJECT}{Student Name}{Exam Seat No}{Guide Name}
+\setcounter{page}{0}
+\frontmatter
+\cfoot{Dr.D.Y.Patil Institute of Technology, Department of Computer Engineering 2026-2027}
+\rfoot{\thepage}
+\pagenumbering{Roman}
+%\pictack{BE PROJECT TITLE}{Guide Name}
+
+
+{  \newpage {\bfseries \fontsize{14}{12} \selectfont \centerline{Abstract}
+\vspace*{2\baselineskip}} \setlength{\parindent}{11mm} }
+{ \setlength{\parindent}{0mm} }
+Knowledge workers, developers and students keep their work in many separate tools: e-mail, calendars, shared drives, notes, team chat and code hosting. Answering an ordinary question such as ``what changed in our project this week, and what is at risk?'' means opening each tool, reading, and reconciling what they say. Retrieval-Augmented Generation (RAG) systems help only partly: a typical RAG chatbot runs one similarity search over a static document collection, presents every sentence with equal confidence, silently picks one side when sources disagree, and either cannot act at all or acts without asking.
+
+\vspace*{0.5\baselineskip}
+This project presents \textbf{Cortex}, an agentic RAG system over a user's \emph{live} work data. For each question Cortex checks which sources are reachable, recalls what the user has said matters, plans two to five sub-questions, searches every relevant source in parallel through a uniform connector layer (Composio-managed Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub; any Model Context Protocol server; and the web through Firecrawl), and streams an answer in which every factual sentence must cite numbered evidence. A verification step then checks each claim against the evidence it cites and computes a groundedness score; unsupported claims are struck through, and contradictions between sources are shown as conflicts with both citations. When the user asks for an action (send, create, post), Cortex only \emph{proposes} it with an exact preview; a separate approval endpoint is the only code path that executes it. Memory is explainable and governed: each memory records why it was kept, where it came from, its salience and its expiry, and the user can pin, edit or forget it. The whole system runs on free tiers through a failover router across several large language model providers.
+
+\vspace*{0.5\baselineskip}
+The project's research framing follows recent work on agentic RAG, in particular GRASP (GRanularity-Aware Search Policy for Agentic RAG), which studies when and how finely an agent should retrieve. In a preliminary 12-question evaluation over a fictional sample workspace, using free-tier models, Cortex reached a mean groundedness of 0.88 and a citation recall of 0.92, answered the unanswerable question honestly, executed no action without consent, and had a median latency of 3.7~s (p90 7.1~s). Conflict detection and action proposals each succeeded in one of two cases, which identifies the main directions for further work.
+
+
+{  \newpage {\bfseries \fontsize{14}{12} \selectfont \centerline{Acknowledgments}
+\vspace*{2\baselineskip}} \setlength{\parindent}{11mm} }
+{ \setlength{\parindent}{0mm} }
+\textit{It gives us great pleasure in presenting the project report
+on {\bfseries \fontsize{12}{12} \selectfont `\ProjectTitle'}.}
+\vspace*{1.5\baselineskip}
+
+ \textit{We would like to take this opportunity to thank our internal guide
+ \textbf{Prof. [Guide Name]} for giving us all the help and guidance we needed. We are
+ really grateful to them for their kind support. Their valuable suggestions were very helpful.} \vspace*{1.5\baselineskip}
+
+ \textit{We are also grateful to \textbf{Prof. [HOD Name]}, Head of Computer
+ Engineering Department, Dr. D. Y. Patil Institute of Technology, Pimpri, for their indispensable
+ support and suggestions.}
+\vspace*{1.5\baselineskip}
+
+\textit{In the end our special thanks to \textbf{[Other Person Name]} for
+providing various resources such as  laboratory with all needed software platforms,
+continuous Internet connection, for Our Project.}
+\vspace*{3\baselineskip} \\
+\begin{tabular}{p{8.2cm}c}
+&Ajit Paraskar\\
+&Harshvardhan Patil\\
+&Prathamesh Kumbhar\\
+&Bikram Ghosh\\
+&(B.E. Computer Engg.)
+%}
+\end{tabular}
+
+
+% \maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+
+
+\mainmatter
+
+
+
+  \titleformat{\chapter}[display]
+{\fontsize{16}{15}\filcenter}
+{\vspace*{\fill}
+ \bfseries\LARGE\MakeUppercase{\chaptertitlename}~\thechapter}
+{1pc}
+{\bfseries\LARGE\MakeUppercase}
+[\thispagestyle{empty}\vspace*{\fill}\newpage]
+
+
+
+
+
+
+
+\setlength{\parindent}{11mm}
+\chapter{Synopsis}
+
+\section{Project Title}
+ \ProjectTitle
+
+\section{ Project Option }
+Internal project.
+
+\section{Internal Guide}
+Prof. [Guide Name]
+
+\section{ Sponsorship and External Guide}
+The project is not sponsored, and there is no external guide.
+
+
+\section{Technical Keywords (As per ACM Keywords)}
+% {\bfseries Technical Key Words:}
+% \begin{itemize}
+%   \item 	Cloud Computing
+% \item	Service Composition
+% \item	Online Web services
+% \end{itemize}
+The keywords below follow the 1998 ACM Computing Classification System (\url{http://www.acm.org/about/class/ccs98-html}).
+\begin{enumerate}
+	\item H. Information Systems
+	\begin{enumerate}
+		\item H.3 INFORMATION STORAGE AND RETRIEVAL
+		\begin{enumerate}
+			\item H.3.3 Information Search and Retrieval
+			\begin{enumerate}
+				\item Query formulation
+				\item Retrieval models
+				\item Search process
+				\item Information filtering
+			\end{enumerate}
+			\item H.3.4 Systems and Software
+			\begin{enumerate}
+				\item Question-answering (fact retrieval) systems
+				\item Distributed systems
+				\item Performance evaluation (efficiency and effectiveness)
+			\end{enumerate}
+		\end{enumerate}
+	\end{enumerate}
+	\item I. Computing Methodologies
+	\begin{enumerate}
+		\item I.2 ARTIFICIAL INTELLIGENCE
+		\begin{enumerate}
+			\item I.2.7 Natural Language Processing
+			\begin{enumerate}
+				\item Language generation
+				\item Language models
+			\end{enumerate}
+			\item I.2.8 Problem Solving, Control Methods, and Search
+			\begin{enumerate}
+				\item Plan execution, formation, and generation
+			\end{enumerate}
+			\item I.2.11 Distributed Artificial Intelligence
+			\begin{enumerate}
+				\item Intelligent agents
+			\end{enumerate}
+		\end{enumerate}
+	\end{enumerate}
+\end{enumerate}
+
+
+
+\section{Problem Statement}
+\label{sec:problem}
+To design and implement an agentic retrieval-augmented generation system that answers natural-language questions over a user's live, distributed work data (e-mail, calendar, documents, notes, team chat, code hosting and the web) by decomposing each question into sub-questions, retrieving evidence from all relevant sources in parallel within fixed budgets, and producing an answer in which every factual claim is cited and verified against its evidence; that surfaces contradictions between sources instead of hiding them, says plainly when information is missing, keeps an explainable and user-governed long-term memory, and performs actions in the user's tools only after explicit, per-action consent; all while running on free-tier language model services.
+
+\section{Abstract}
+\begin{itemize}
+	\item Work information is scattered across Gmail, Google Calendar, Google Drive, Notion, Slack, GitHub and the web, and it changes every day. Ordinary RAG chatbots run one similarity search over a static corpus, treat every sentence as equally certain, resolve contradictions silently and either cannot act or act without asking. Cortex is an agentic RAG system that plans two to five sub-questions, searches the connected sources in parallel through a registry of interchangeable connectors, recalls remembered priorities, and streams an answer in which every factual sentence cites numbered evidence. A verifier checks each claim lexically (citation exists, content-word overlap, numbers match) and, in Deep mode, asks a model to re-check only the doubtful claims; the result is a groundedness score and a visual confidence state per claim. Contradictions are reported with both citations, missing information is stated without spending a model call, and connector failures are explained together with their impact on the answer. Actions are proposed as confirmation cards and executed only through a single approval endpoint. A Python memory service keeps provenance, salience decay, expiry, pinning, editing and forgetting for every memory, on Oracle Agent Memory when configured and SQLite otherwise. A failover router over free-tier providers with cooldowns and a response cache keeps the operating cost at zero. A preliminary 12-question evaluation gave a mean groundedness of 0.88 and a citation recall of 0.92.
+\end{itemize}
+
+\section{Goals and Objectives}
+\begin{itemize}
+	\item Answer multi-part questions over several live sources with a bounded plan of sub-questions and parallel retrieval.
+	\item Cite every factual sentence and verify each claim against the evidence it cites; report a groundedness score.
+	\item Surface cross-source contradictions as risks with both citations, and state missing information instead of guessing.
+	\item Never execute an action in a user's tool without an explicit, single-use approval of an exact preview.
+	\item Keep long-term memory selective and explainable (reason, source, salience, expiry), with pin, edit and forget controls.
+	\item Degrade gracefully: name any source that fails, explain the impact, and continue with the rest.
+	\item Keep the number of model calls per question small and predictable (at most four in Deep mode, at most two in Fast mode) so that the system runs on free tiers.
+	\item Provide an evaluation harness and an automated test suite that measure groundedness, citation recall, honesty and consent safety.
+\end{itemize}
+
+
+\section{Relevant mathematics associated with the Project}
+\label{sec:math}
+System Description: the system is modelled as $S = \{X, Y, C, M, P, F, Sc, Fc\}$, where $C$ is the set of connectors, $M$ the user's memory set and $P$ the ordered list of language model providers.
+\begin{itemize}
+\item Input: $X = \{q, m, H, u\}$, where $q$ is the question (a string of at most 2000 characters), $m \in \{\mathit{fast}, \mathit{deep}\}$ the run mode, $H$ the last six turns of the conversation (each truncated to 1500 characters) and $u$ the anonymous user identifier.
+\item Output: $Y = \{A, L, G, K, R, W\}$, where $A$ is the answer in Markdown, $L$ the list of claims with their status in $\{\mathit{supported}, \mathit{partial}, \mathit{unsupported}\}$, $G \in [0,1]$ the groundedness score, $K$ the list of conflicts, $R$ the list of action proposals (all in state \emph{pending}) and $W$ the set of memories written (at most two). The output is delivered as an ordered stream of typed events.
+\item Identify data structures, classes, divide and conquer strategies to exploit distributed/parallel/concurrent processing, constraints: the main data structures are the plan $\Pi = \{(q_i, S_i, k_i)\}_{i \le 5}$ of sub-questions $q_i$ with source sets $S_i \subseteq C$ and keyword queries $k_i$; the evidence list $E$; least-recently-used caches with expiry; and the server-side map of pending actions. The question is divided into sub-questions, and the set of search calls $T = \bigcup_i \{(s, k_i) : s \in S_i\}$ (deduplicated, $|T| \le 18$) is executed concurrently, so the search latency is $\max_{t \in T} \tau_t$ rather than $\sum_{t \in T} \tau_t$, with each $\tau_t$ bounded by a 12~s timeout and one retry. Constraints: at most 5 sub-questions, 18 tool calls, 4 model calls in Deep mode (2 in Fast mode), 16 evidence items in Deep mode (8 in Fast mode), and a 90~s run timeout.
+\item Functions : Identify Objects, Morphisms, Overloading in functions, Functional relations: $F = \{f_{plan}, f_{search}, f_{rank}, f_{synth}, f_{verify}, f_{propose}, f_{remember}, f_{execute}\}$ with $f_{plan}: (q, C, M, H) \rightarrow \Pi$; $f_{search}: (s, k) \rightarrow E_{s,k}$; $f_{rank}: E \rightarrow E^{*}$; $f_{synth}: (q, \Pi, E^{*}, M) \rightarrow (A, K, R', W')$; $f_{verify}: (A, E^{*}) \rightarrow (L, G)$; $f_{propose}: R' \rightarrow R$; $f_{remember}: W' \rightarrow W$; and $f_{execute}: (r, \mathit{approve}) \rightarrow \mathit{result}$. The search function is overloaded (polymorphic) across five connector implementations behind one interface. The composition $f_{verify} \circ f_{synth} \circ f_{rank} \circ f_{search} \circ f_{plan}$ is the agent run; $f_{execute}$ is deliberately \emph{not} part of that composition and can only be invoked by the user.
+\item Mathematical formulation if possible: evidence is ranked by $\mathit{score}(e) = 2\,h(e, q) + \max(0,\, 3 - a(e)/10)$, where $h$ counts question keywords present in the evidence and $a(e)$ is its age in days (30 when unknown). A claim $c$ citing evidence $E_c$ has content-word overlap $o(c) = |T(c) \cap T(E_c)| \,/\, |T(c)|$, and is \emph{supported} if $o(c) \ge 0.4$ and every number in $c$ appears in $E_c$, \emph{partial} if $o(c) \ge 0.2$, and \emph{unsupported} otherwise. Groundedness is $G = \frac{1}{|L|}\sum_{c \in L} w(c)$ with $w = 1, 0.5, 0$ for the three states ($G = 1$ when $L$ is empty). The effective salience of an unpinned memory of age $t$ days is $s_{\mathit{eff}} = s \cdot 0.5^{\,t/30}$.
+\item Success Conditions: an answer is streamed in which every factual sentence carries a citation to existing evidence, $G$ and the conflicts are reported, every proposal remains \emph{pending} until the user approves it, and every unavailable source is named together with its impact.
+\item Failure Conditions: every language model provider is unavailable or rate-limited (the user is told so and offered Fast Mode); the 90~s run timeout expires; no source is connected; or the memory service is unreachable (the run continues without memory and says so).
+\end{itemize}
+
+
+\section{Names of Conferences / Journals where papers can be published}
+\begin{itemize}
+\item  ACM SIGIR Conference on Research and Development in Information Retrieval (ACM).
+\item  ACM IKDD CODS-COMAD (the ACM India data science conference, held in India) and workshops at IITs.
+\item  Central Universities or SPPU Conferences (to be selected by the team with the guide).
+\item IEEE Access (IEEE journal) and the ACL Rolling Review venues (ACL, EMNLP, NAACL) for the verification and evaluation results.
+\end{itemize}
+
+
+\section{Review of Conference/Journal Papers supporting Project idea}
+\label{sec:survey}
+The following papers and white papers support the project idea. Chapter~\ref{ch:intro} discusses them in more detail.
+\begin{enumerate}
+\item \textbf{GRASP: GRanularity-Aware Search Policy for Agentic RAG}~\cite{grasp2026} (base paper). The agent is trained with reinforcement learning to choose, at each step, between a semantic search, a keyword search and reading the paragraph around a retrieved sentence; it therefore starts from sentence-sized evidence and loads a whole paragraph only when it decides to. The training reward has four parts: answer accuracy, grounded reading, complementary search and turn efficiency. It motivates Cortex's mix of retrieval granularities, its preference for small cited quotes over whole documents, and its explicit budget on retrieval turns.
+\item \textbf{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}~\cite{lewis2020rag} introduced RAG: a generator conditioned on passages from a dense retriever over a non-parametric index. Cortex keeps the idea of conditioning on retrieved evidence but retrieves from live tools rather than a fixed index.
+\item \textbf{ReAct}~\cite{yao2023react} interleaves reasoning traces with tool actions. Cortex adopts the reason-then-act structure but fixes the number of steps in advance instead of looping.
+\item \textbf{IRCoT}~\cite{trivedi2023ircot} interleaves retrieval with chain-of-thought steps for multi-step questions, showing that one retrieval round is not enough for multi-hop questions.
+\item \textbf{Self-Ask}~\cite{press2023selfask} measures the compositionality gap and decomposes a question into explicit follow-up questions; Cortex's planner produces explicit sub-questions in the same spirit.
+\item \textbf{Self-RAG}~\cite{asai2024selfrag} trains a model to decide when to retrieve and to critique its own output with reflection tokens; Cortex applies an external critic to each claim instead.
+\item \textbf{Corrective RAG}~\cite{yan2024crag} scores the quality of retrieved documents and triggers corrective actions such as web search; Cortex's bounded broadened retry for empty sub-questions is a light-weight analogue.
+\item \textbf{Adaptive-RAG}~\cite{jeong2024adaptiverag} routes questions by complexity to no-retrieval, single-step or multi-step strategies; Cortex exposes the same trade-off to the user as Fast and Deep modes.
+\item \textbf{ALCE}~\cite{gao2023alce} benchmarks generation with citations and defines citation recall and precision; Cortex's claim-level citation check follows this line.
+\item \textbf{RARR}~\cite{gao2023rarr} researches and revises model output to attribute it to evidence; Cortex verifies after generation and marks unsupported claims instead of rewriting them.
+\item \textbf{FActScore}~\cite{min2023factscore} scores long-form text by the fraction of atomic facts supported by a knowledge source; Cortex's groundedness score is a sentence-level variant.
+\item \textbf{MemGPT}~\cite{packer2023memgpt} and \textbf{Generative Agents}~\cite{park2023generative} show how agents keep long-term memory with retrieval by relevance, recency and importance; Cortex adds user-visible provenance, decay and expiry.
+\item \textbf{Toolformer}~\cite{schick2023toolformer} and the \textbf{Model Context Protocol} survey~\cite{hou2025mcp} cover tool use and the protocol Cortex uses for pluggable connectors, including its security risks.
+\item White papers and web references: the agentic RAG survey~\cite{singh2025agenticrag}, the RAGAS evaluation framework~\cite{es2024ragas}, the \emph{Lost in the Middle} study~\cite{liu2024lost}, and McKinsey Global Institute reports on knowledge-worker time and generative AI~\cite{mckinseyweb,mckinsey}.
+\end{enumerate}
+
+\section{Plan of Project Execution}
+The project follows the waterfall model with the phases listed in Section~\ref{sec:taskset}: requirement analysis and literature survey, feasibility study, design, implementation, testing and evaluation, and documentation. The schedule is tracked in a project planner; the task network is shown in Figure~\ref{fig:tasknet} and the timeline chart in Annexure~\ref{app:plan}.
+
+
+
+\chapter{Technical Keywords}
+\section{Area of Project}
+Information retrieval and natural language processing: agentic retrieval-augmented generation, multi-source question answering, claim verification (attribution), long-term memory for language-model agents, and tool use through the Model Context Protocol; implemented as a full-stack web application.
+
+\section{Technical Keywords}
+% {\bfseries Technical Key Words:}
+% \begin{itemize}
+%   \item 	Cloud Computing
+% \item	Service Composition
+% \item	Online Web services
+% \end{itemize}
+The keywords follow the 1998 ACM Computing Classification System (\url{http://www.acm.org/about/class/ccs98-html}).
+
+\begin{enumerate}
+	\item H. Information Systems
+	\begin{enumerate}
+		\item H.3 INFORMATION STORAGE AND RETRIEVAL
+		\begin{enumerate}
+			\item H.3.3 Information Search and Retrieval
+			\begin{enumerate}
+				\item Query formulation
+				\item Retrieval models
+				\item Search process
+				\item Information filtering
+			\end{enumerate}
+			\item H.3.4 Systems and Software
+			\begin{enumerate}
+				\item Question-answering (fact retrieval) systems
+				\item Distributed systems
+				\item Performance evaluation (efficiency and effectiveness)
+			\end{enumerate}
+		\end{enumerate}
+	\end{enumerate}
+	\item I. Computing Methodologies
+	\begin{enumerate}
+		\item I.2 ARTIFICIAL INTELLIGENCE
+		\begin{enumerate}
+			\item I.2.7 Natural Language Processing
+			\begin{enumerate}
+				\item Language generation
+				\item Language models
+			\end{enumerate}
+			\item I.2.8 Problem Solving, Control Methods, and Search
+			\begin{enumerate}
+				\item Plan execution, formation, and generation
+			\end{enumerate}
+			\item I.2.11 Distributed Artificial Intelligence
+			\begin{enumerate}
+				\item Intelligent agents
+			\end{enumerate}
+		\end{enumerate}
+	\end{enumerate}
+\end{enumerate}
+
+Additional free keywords: agentic RAG, query decomposition, parallel tool calling, claim verification, groundedness, citation, cross-source conflict detection, explainable memory, human-in-the-loop consent, Model Context Protocol, free-tier LLM failover.
+

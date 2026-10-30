@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { motion, MotionConfig } from "motion/react";
-import { Brain, Cable, FileText, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
+import { Brain, Cable, ChevronsUpDown, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
 import { play } from "@/lib/sound";
 import { useClerk, useUser } from "@clerk/nextjs";
-import { openTour, Tour } from "./tour";
+import { Interstitial } from "./interstitial";
+import { endTourOffer, openTour, Tour, tourInSidebar } from "./tour";
 import { Toaster } from "./toaster";
 import { claimThreads, deleteThread, syncThreads, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
@@ -17,14 +18,26 @@ const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
   { href: "/brief", label: "Brief", icon: Newspaper },
   { href: "/memory", label: "Memory", icon: Brain },
-  { href: "/files", label: "Files", icon: FileText },
   { href: "/connections", label: "Connections", icon: Cable },
 ];
 
+const SIDEBAR = { initial: 208, min: 180, max: 360, key: "cortex.sidebarWidth", closedKey: "cortex.sidebarClosed" };
+
+/** The Cortex mark: an open C that folds in on itself, like a fold of the cortex, around the point being answered. */
+export function Mark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={cn("size-5 text-accent", className)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <path d="M18.4 6.6A8.5 8.5 0 1 0 18.4 17.4" />
+      <path d="M15.2 9.4A4.3 4.3 0 1 0 15.2 14.6" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function Wordmark() {
   return (
-    <span className="flex items-center gap-2 text-[17px] font-[650] tracking-[-0.02em] text-ink">
-      <span aria-hidden className="size-[9px] rounded-full bg-accent" />
+    <span className="flex items-center gap-2 font-serif text-[21px] font-[500] tracking-[-0.01em] text-ink">
+      <Mark />
       Cortex
     </span>
   );
@@ -32,11 +45,9 @@ export function Wordmark() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
-  // A hint only (the admin API checks the role itself); the owner is made admin on their first request.
-  const isAdmin = useUser().user?.publicMetadata.role === "admin";
   return (
     <ul className="flex flex-col gap-0.5">
-      {[...NAV, ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
+      {NAV.map(({ href, label, icon: Icon }) => {
         const active = href === "/" ? path === "/" : path.startsWith(href);
         return (
           <li key={href}>
@@ -63,6 +74,44 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
   useEffect(() => setOpen(false), [path]);
+  const [width, setWidth] = useState(SIDEBAR.initial);
+  const [closed, setClosed] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ x: number; w: number } | null>(null);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(SIDEBAR.key));
+      if (saved) setWidth(Math.min(SIDEBAR.max, Math.max(SIDEBAR.min, saved)));
+      setClosed(localStorage.getItem(SIDEBAR.closedKey) === "1");
+    } catch {}
+  }, []);
+  const toggle = () =>
+    setClosed((c) => {
+      try {
+        localStorage.setItem(SIDEBAR.closedKey, c ? "0" : "1");
+      } catch {}
+      return !c;
+    });
+  // Ctrl/Cmd+B opens and closes the sidebar, as in most editors.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const info = useWorkspace();
+  useAccountSync();
+  const resize = (w: number) => {
+    const next = Math.round(Math.min(SIDEBAR.max, Math.max(SIDEBAR.min, w)));
+    setWidth(next);
+    try {
+      localStorage.setItem(SIDEBAR.key, String(next));
+    } catch {}
+  };
   if (path === "/sign-in" || path === "/sso-callback")
     return (
       <MotionConfig reducedMotion="user">
@@ -73,18 +122,81 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-full min-h-dvh">
-      <nav aria-label="Main" className="hidden w-[208px] shrink-0 flex-col px-[18px] py-6 md:flex">
-        <Link href="/" className="mb-8 px-2">
-          <Wordmark />
-        </Link>
-        <NavLinks />
-        <Suspense fallback={<div className="flex-1" />}>
-          <RecentThreads />
-        </Suspense>
-        <WorkspaceFooter />
+      {/* Closing slides the width to 0; the inner column keeps its width so nothing reflows on the way. */}
+      <nav
+        id="sidebar"
+        aria-label="Main"
+        inert={closed}
+        style={{ width: closed ? 0 : width }}
+        className={cn("sticky top-0 hidden h-dvh shrink-0 overflow-hidden md:block", !dragging && "transition-[width] duration-300 ease-[var(--ease-out)]")}
+      >
+        <div style={{ width }} className="flex h-full flex-col px-[18px] py-6">
+          <div className="mb-8 flex items-center justify-between pl-2">
+            <Link href="/">
+              <Wordmark />
+            </Link>
+            <button type="button" onClick={toggle} aria-label="Close sidebar" title="Close sidebar (Ctrl+B)" className="grid size-7 place-items-center rounded-[8px] text-hair hover:bg-hover hover:text-ink">
+              <PanelLeftClose className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+          </div>
+          <NavLinks />
+          <Suspense fallback={<div className="flex-1" />}>
+            <RecentThreads />
+          </Suspense>
+          <SidebarFooter info={info} />
+        </div>
       </nav>
+      <div
+        hidden={closed}
+        role="separator"
+        aria-orientation="vertical"
+        aria-controls="sidebar"
+        aria-label="Resize sidebar"
+        aria-valuemin={SIDEBAR.min}
+        aria-valuemax={SIDEBAR.max}
+        aria-valuenow={width}
+        tabIndex={0}
+        title="Drag to resize, double-click to reset"
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          drag.current = { x: e.clientX, w: width };
+          setDragging(true);
+        }}
+        onPointerMove={(e) => drag.current && resize(drag.current.w + e.clientX - drag.current.x)}
+        onPointerUp={() => {
+          drag.current = null;
+          setDragging(false);
+        }}
+        onDoubleClick={() => resize(SIDEBAR.initial)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            e.preventDefault();
+            resize(width + (e.key === "ArrowLeft" ? -16 : 16));
+          }
+        }}
+        className="group relative z-10 -mr-1.5 hidden w-1.5 shrink-0 cursor-col-resize touch-none outline-none md:block"
+      >
+        <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-line transition-colors group-hover:bg-accent group-focus-visible:bg-accent group-active:bg-accent" />
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col md:border-l md:border-line">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <AnimatePresence>
+          {closed && (
+            <motion.button
+              type="button"
+              onClick={toggle}
+              aria-label="Open sidebar"
+              title="Open sidebar (Ctrl+B)"
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6, transition: { duration: 0.12 } }}
+              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+              className="absolute top-4 left-4 z-20 hidden size-8 place-items-center rounded-[8px] border border-line bg-surface text-muted hover:bg-hover hover:text-ink md:grid"
+            >
+              <PanelLeftOpen className="size-4" strokeWidth={1.75} aria-hidden />
+            </motion.button>
+          )}
+        </AnimatePresence>
         <header className="flex items-center justify-between border-b border-line bg-shell px-4 py-3 md:hidden">
           <Wordmark />
           <button
@@ -103,16 +215,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Suspense fallback={null}>
               <RecentThreads onNavigate={() => setOpen(false)} />
             </Suspense>
-            <div className="mt-3 flex items-center gap-2 border-t border-line px-1 pt-3">
-              <ThemeSwitch />
-              <SoundSwitch />
-            </div>
-            <div className="mt-2">
-              <Account />
+            <div className="mt-3 border-t border-line pt-2">
+              <AccountMenu info={info} placement="down" />
             </div>
           </div>
         )}
-        <main className="min-h-0 flex-1 bg-surface">
+        <main className="min-h-0 flex-1 bg-surface shadow-[var(--raise)]">
           {/* Each page eases in when you move between them; MotionConfig makes springs follow reduced motion too. */}
           <MotionConfig reducedMotion="user">
             <div key={path} className="page-enter h-full">
@@ -127,51 +235,42 @@ export function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WorkspaceFooter() {
-  const [info, setInfo] = useState<{ workspace: string; count: number } | null>(null);
+interface WorkspaceInfo {
+  workspace: "demo" | "live";
+  count: number;
+  admin: boolean;
+}
+
+/** Workspace, connected sources and admin flag, refreshed on every page change. The admin flag comes from the server. */
+function useWorkspace() {
+  const [info, setInfo] = useState<WorkspaceInfo | null>(null);
   const path = usePathname();
   useEffect(() => {
+    if (path === "/sign-in" || path === "/sso-callback") return;
     let live = true;
     fetch("/api/connections")
-      .then((r) => r.json())
-      .then((d: { workspace: string; connectors: { connected: boolean }[] }) => {
-        if (live) setInfo({ workspace: d.workspace, count: d.connectors.filter((c) => c.connected).length });
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { workspace: WorkspaceInfo["workspace"]; admin?: boolean; connectors: { connected: boolean }[] } | null) => {
+        if (live && d) setInfo({ workspace: d.workspace, count: d.connectors.filter((c) => c.connected).length, admin: d.admin === true });
       })
       .catch(() => {});
     return () => {
       live = false;
     };
   }, [path]);
-  return (
-    <div className="mt-4 flex flex-col items-start gap-1.5">
-      <button type="button" onClick={openTour} className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] text-muted hover:text-ink">
-        <Sparkles className="size-3.5" strokeWidth={1.75} aria-hidden /> Take the tour
-      </button>
-      <Account />
-      {info && (
-        <Link href="/connections" className="readout max-w-full truncate rounded-md px-2.5 py-1.5 text-muted hover:text-ink">
-          {info.workspace === "demo" ? "Sample" : "Live"} · {info.count} sources
-        </Link>
-      )}
-      <div className="flex items-center gap-2 px-1.5">
-        <ThemeSwitch />
-        <SoundSwitch />
-      </div>
-    </div>
-  );
+  return info;
 }
 
-function Account() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const owner = user?.id;
+/** Once per signed-in account: claim this browser's chats, and warm the brief so opening it is instant. */
+function useAccountSync() {
+  const owner = useUser().user?.id;
   useEffect(() => {
     if (!owner) return;
     claimThreads(owner);
     void syncThreads();
   }, [owner]);
-  // Once per browser session, a few seconds in: ask the server to (re)build the brief if it is stale, so opening
-  // Brief is instant. The server answers at once and builds in the background; a fresh brief costs nothing.
+  // Once per browser session, a few seconds in: ask the server to (re)build the brief if it is stale. The server answers
+  // at once and builds in the background; a fresh brief costs nothing.
   useEffect(() => {
     if (!owner) return;
     const t = setTimeout(() => {
@@ -184,26 +283,162 @@ function Account() {
     }, 5000);
     return () => clearTimeout(t);
   }, [owner]);
+}
+
+function SidebarFooter({ info }: { info: WorkspaceInfo | null }) {
+  const [tour, setTour] = useState(false);
+  useEffect(() => setTour(tourInSidebar()), []);
+  return (
+    <div className="mt-4 flex flex-col gap-1">
+      {tour && (
+        <button type="button" onClick={openTour} className="enter flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted hover:bg-hover hover:text-ink">
+          <Sparkles className="size-3.5 text-accent" strokeWidth={1.75} aria-hidden /> Take the tour
+        </button>
+      )}
+      <AccountMenu info={info} placement="up" />
+    </div>
+  );
+}
+
+function Avatar({ letter, size }: { letter: string; size: "sm" | "lg" }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid shrink-0 place-items-center rounded-full bg-accent font-[600] text-on-ink uppercase",
+        size === "sm" ? "size-7 text-[12px]" : "size-9 text-[14px]",
+      )}
+    >
+      {letter}
+    </span>
+  );
+}
+
+const ITEM = "flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-[7px] text-left text-[13px] text-ink-2 transition-colors hover:bg-hover hover:text-ink";
+
+/**
+ * The account button at the foot of the sidebar opens a panel: who you are, your sources, the admin panel (admins
+ * only), the tour, theme and sound, and sign out. Escape or a click outside closes it.
+ */
+function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placement: "up" | "down" }) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [open, setOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const path = usePathname();
+  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [open]);
+
+  if (leaving) return <Interstitial label="Signing you out" note="See you soon." />;
   if (!user) return null;
   const email = user.primaryEmailAddress?.emailAddress ?? "";
-  const name = user.fullName ?? "";
+  const name = user.fullName || email.split("@")[0];
+  // The menu is as narrow as the sidebar (144px at its smallest): the row carries the count, the account button the workspace.
+  const workspace = info ? (info.workspace === "demo" ? "Sample data" : "Your apps") : "";
+  const up = placement === "up";
+  const leave = () => {
+    // Cover the app at once, then a full page load, so nothing of this account stays in memory or flashes on the way out.
+    setLeaving(true);
+    endTourOffer();
+    void signOut()
+      .catch(() => {})
+      .finally(() => window.location.replace("/sign-in"));
+  };
+
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 px-1.5">
-      <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[11px] font-[600] text-accent-ink uppercase">
-        {(name || email).charAt(0)}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-2" title={email}>
-        {email}
-      </span>
+    <div ref={root} className="relative">
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="dialog"
+            aria-label="Account"
+            initial={{ opacity: 0, scale: 0.96, y: up ? 6 : -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+            transition={{ type: "spring", duration: 0.28, bounce: 0.12 }}
+            style={{ transformOrigin: up ? "bottom center" : "top center" }}
+            className={cn(
+              "absolute inset-x-0 z-30 rounded-[14px] border border-line bg-surface p-1.5 shadow-[0_18px_44px_-18px_rgb(14_17_22/0.3)]",
+              up ? "bottom-full mb-2" : "top-full mt-2",
+            )}
+          >
+            <div className="flex items-center gap-2.5 px-2 pt-1.5 pb-2.5">
+              <Avatar letter={name.charAt(0)} size="lg" />
+              <div className="min-w-0">
+                <p className="truncate text-[13.5px] font-[550] text-ink">{name}</p>
+                <p className="truncate text-[12px] text-muted" title={email}>
+                  {email}
+                </p>
+              </div>
+            </div>
+            <div className="my-1 h-px bg-line" />
+            <Link href="/connections" className={ITEM}>
+              <Cable className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              <span className="min-w-0 flex-1 truncate">Sources</span>
+              {info && (
+                <span className="shrink-0 rounded-full border border-line px-1.5 text-[11.5px] font-[500] text-muted tabular-nums" title={`${workspace}, ${info.count} sources`}>
+                  {info.count}
+                </span>
+              )}
+            </Link>
+            {info?.admin && (
+              <Link href="/admin" className={ITEM}>
+                <Shield className="size-4 text-muted" strokeWidth={1.75} aria-hidden />
+                Admin panel
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                openTour();
+              }}
+              className={ITEM}
+            >
+              <Sparkles className="size-4 text-muted" strokeWidth={1.75} aria-hidden />
+              Take the tour
+            </button>
+            <div className="my-1 h-px bg-line" />
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
+              Theme <ThemeSwitch />
+            </div>
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
+              Sounds <SoundSwitch />
+            </div>
+            <div className="my-1 h-px bg-line" />
+            <button type="button" onClick={leave} className={cn(ITEM, "hover:bg-risk-soft hover:text-risk")}>
+              <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
+              Sign out
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <button
         type="button"
-        // A full page load on sign-out, so nothing of this account stays in memory.
-        onClick={() => void signOut({ redirectUrl: "/sign-in" })}
-        aria-label="Sign out"
-        title="Sign out"
-        className="grid size-7 shrink-0 place-items-center rounded-[8px] text-hair hover:bg-hover hover:text-ink"
+        aria-label="Account menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="press flex w-full items-center gap-2.5 rounded-[10px] px-1.5 py-1.5 text-left hover:bg-hover active:scale-[0.98] aria-expanded:bg-pressed"
       >
-        <LogOut className="size-3.5" strokeWidth={1.75} aria-hidden />
+        <Avatar letter={name.charAt(0)} size="sm" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-[550] text-ink">{name}</span>
+          <span className="block truncate text-[11.5px] text-muted">{workspace || email}</span>
+        </span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-hair" strokeWidth={1.75} aria-hidden />
       </button>
     </div>
   );

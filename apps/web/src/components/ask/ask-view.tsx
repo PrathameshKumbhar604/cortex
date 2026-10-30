@@ -13,6 +13,8 @@ import { Composer, type PendingFile } from "./composer";
 import { uploadFile } from "@/lib/files";
 import { toast } from "@/lib/toast";
 import { TurnView } from "./turn-view";
+import { useUser } from "@clerk/nextjs";
+import { Mark } from "../shell";
 
 const DEMO_SUGGESTIONS = [
   "What changed in Orbit this week, and what's at risk?",
@@ -154,11 +156,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
         <div ref={content} className="mx-auto w-full max-w-[720px] px-4 pt-10 pb-10 sm:px-6 md:pt-16">
           {!latest && (
             <div className="pt-[8vh]">
-              <h1 className="text-balance text-[38px] font-[250] leading-[1.1] tracking-[-0.04em] text-ink sm:text-[52px]">
-                What do you need to know about your work?
-              </h1>
+              <Greeting />
               <p className="mt-4 max-w-[52ch] text-[15px] leading-relaxed text-muted">
-                Cortex searches your {workspace === "demo" ? "sample " : ""}Gmail, Calendar, Drive, Notion, Slack and GitHub, cites every claim, and
+                What do you need to know about your work? Cortex searches your {workspace === "demo" ? "sample " : ""}Gmail, Calendar, Drive, Notion, Slack and GitHub, cites every claim, and
                 checks each one before you rely on it.
               </p>
               <ul className="mt-10 flex flex-col border-t border-line">
@@ -263,5 +263,26 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** "Good evening, Prathamesh": the hour is read in the browser, so it is the reader's own time of day. */
+function Greeting() {
+  const first = useUser().user?.firstName;
+  const [part, setPart] = useState<string | null>(null);
+  useEffect(() => {
+    const h = new Date().getHours();
+    setPart(h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
+  }, []);
+  return (
+    <h1 className="flex min-h-[1.1em] items-center gap-3 text-balance text-[38px] font-[400] leading-[1.1] tracking-[-0.015em] text-ink sm:text-[48px]">
+      <Mark className="size-9 shrink-0 sm:size-11" />
+      {part && (
+        <span className="rise">
+          {part}
+          {first ? `, ${first}` : ""}
+        </span>
+      )}
+    </h1>
   );
 }

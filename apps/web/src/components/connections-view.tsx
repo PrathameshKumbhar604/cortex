@@ -13,6 +13,7 @@ import { SourceMark } from "./ask/sources";
 interface Info {
   workspace: "demo" | "live";
   liveAvailable: boolean;
+  admin: boolean;
   connectors: ConnectorStatus[];
   memory: { ok: boolean; backend: string };
   llm: { id: string; label: string }[];
@@ -103,7 +104,7 @@ export function ConnectionsView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[760px] px-4 pt-10 pb-16 sm:px-6 md:pt-16">
-        <h1 className="text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">Where Cortex looks</h1>
+        <h1 className="text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">Where Cortex looks</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted">
           Connect an app once. You sign in with that app directly, and Cortex never sees your password. It reads to answer questions and acts only
           after you approve each action.
@@ -113,7 +114,7 @@ export function ConnectionsView() {
           {(
             [
               { id: "demo", label: "Sample workspace", note: "Fictional student team data. Nothing leaves Cortex." },
-              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Connecting your own accounts is coming soon." },
+              { id: "live", label: "Your accounts", note: info?.liveAvailable ? "Your own Gmail, Slack, GitHub and more." : "Not available on this Cortex yet." },
             ] as const
           ).map((w) => (
             <button
@@ -124,7 +125,7 @@ export function ConnectionsView() {
               onClick={() => switchTo(w.id)}
               disabled={w.id === "live" && info ? !info.liveAvailable : false}
               className={cn(
-                "rounded-[12px] border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                "rounded-[12px] border bg-surface p-4 text-left shadow-[var(--raise)] transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 info?.workspace === w.id ? "border-accent bg-accent-soft/50" : "border-line hover:border-line-strong",
               )}
             >
@@ -182,7 +183,7 @@ export function ConnectionsView() {
             </li>
           ))}
           {info && info.connectors.length === 0 && (
-            <li className="border-b border-line py-6 text-[14px] text-muted">Connecting your own apps is coming soon. Use the sample workspace to try Cortex.</li>
+            <li className="border-b border-line py-6 text-[14px] text-muted">No apps to connect here yet. Use the sample workspace to try Cortex.</li>
           )}
         </ul>
 

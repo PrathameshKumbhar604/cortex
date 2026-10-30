@@ -13,6 +13,7 @@ export async function GET() {
   return Response.json({
     workspace: sess.workspace,
     liveAvailable: sess.liveAllowed,
+    admin: sess.admin, // the sidebar shows the admin panel from this, not from a browser-side hint
     defaultWorkspace: defaultWorkspace(),
     connectors: statuses,
     memory,
@@ -25,11 +26,8 @@ export async function PUT(req: Request) {
   if (!sess) return unauthorized();
   const body = (await req.json().catch(() => ({}))) as { workspace?: Workspace };
   if (body.workspace !== "demo" && body.workspace !== "live") return jsonError("workspace must be demo or live");
-  if (body.workspace === "live" && !process.env.COMPOSIO_API_KEY) {
-    return jsonError("Live connections need COMPOSIO_API_KEY in .env. See docs/08-SETUP-KEYS.md.", 409);
-  }
   if (body.workspace === "live" && !sess.liveAllowed) {
-    return jsonError("Connecting your own accounts isn't available on this Cortex yet. Use the sample workspace for now.", 403);
+    return jsonError("Connecting your own apps isn't available on this Cortex yet. You can keep using the sample workspace.", 403);
   }
   await setWorkspace(body.workspace);
   return Response.json({ workspace: body.workspace });

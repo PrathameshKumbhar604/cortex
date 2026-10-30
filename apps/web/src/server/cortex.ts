@@ -1,6 +1,7 @@
 import "server-only";
 import path from "node:path";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { dataIdFor, db, getLocalUser, isOwner, mayUseLive, touchUser, upsertUser } from "./db";
 import { filesConnector } from "./files";
@@ -38,7 +39,7 @@ export interface Session {
   workspace: Workspace;
   email: string;
   name: string;
-  /** False for everyone but the owner while live apps run on a personal Composio key (see mayUseLive). */
+  /** May connect their own apps: always with a Composio project key, admins only with a personal one (see mayUseLive). */
   liveAllowed: boolean;
   /** The account id (usage, roles and the activity log are per account, not per data id). */
   authId: string;
@@ -52,6 +53,7 @@ const RESYNC_MS = 10 * 60_000; // how often the local copy of an account is refr
  * of the account (role, on/off, last active) and refreshes email and name from Clerk every few minutes.
  */
 export async function session(): Promise<Session | null> {
+  await connection(); // per request, never prerendered (it reads the clock and the database)
   const { userId } = await auth();
   if (!userId) return null;
   let local = getLocalUser(userId);
@@ -78,7 +80,7 @@ export async function session(): Promise<Session | null> {
   }
   const jar = await cookies();
   const ws = jar.get("cortex_ws")?.value;
-  const liveAllowed = mayUseLive(local.email, local.verified);
+  const liveAllowed = mayUseLive(admin);
   const wanted: Workspace = ws === "demo" || ws === "live" ? ws : defaultWorkspace();
   const workspace: Workspace = wanted === "live" && !liveAllowed ? "demo" : wanted;
   return { userId: dataIdFor(userId, jar.get("cortex_uid")?.value), workspace, email: local.email, name: local.name, liveAllowed, authId: userId, admin };

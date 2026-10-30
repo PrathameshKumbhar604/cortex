@@ -84,23 +84,27 @@ export function dataIdFor(userId: string, anonymousId?: string): string {
 }
 
 /**
- * The owner of this Cortex: CORTEX_OWNER_EMAILS (comma-separated), or else the first account with a proven email.
- * The owner is the first admin, and the only one who may use live apps on a personal Composio key.
+ * The owners of this Cortex: the proven emails listed in CORTEX_OWNER_EMAILS (comma-separated), and nobody else.
+ * Owners are always admins; anyone else is an admin only if an admin made them one.
  */
 export function isOwner(email: string, verified: boolean): boolean {
   if (!verified) return false;
   const owners = (process.env.CORTEX_OWNER_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-  if (owners.length) return owners.includes(email.toLowerCase());
-  const first = db.prepare("SELECT email FROM users WHERE verified = 1 ORDER BY created_at ASC LIMIT 1").get() as { email: string } | undefined;
-  return first?.email.toLowerCase() === email.toLowerCase();
+  return owners.includes(email.toLowerCase());
+}
+
+/** Which Composio key is configured: a project key keeps each user's connections apart; a personal (ck_) key has one set. */
+export function composioKeyKind(): "project" | "personal" | "none" {
+  const key = process.env.COMPOSIO_API_KEY;
+  return !key ? "none" : key.startsWith("ck_") ? "personal" : "project";
 }
 
 /**
- * With a personal Composio key (ck_), every connected app belongs to the key's owner, whoever signs in to Cortex,
- * so until a project key gives each user their own connections (decision D4) only the owner may use live data.
+ * Who may connect their own apps. With a project key, everyone: connections are kept apart by Cortex user id. A personal
+ * key (ck_) ignores the user id, so every connection is the key owner's; only admins (the owners, and whoever an admin
+ * promotes in the admin panel) may use it, never ordinary members.
  */
-export function mayUseLive(email: string, verified: boolean): boolean {
-  const key = process.env.COMPOSIO_API_KEY;
-  if (!key) return false;
-  return !key.startsWith("ck_") || isOwner(email, verified);
+export function mayUseLive(admin: boolean): boolean {
+  const kind = composioKeyKind();
+  return kind === "project" || (kind === "personal" && admin);
 }

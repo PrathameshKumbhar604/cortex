@@ -4,7 +4,8 @@ import type { NextConfig } from "next";
 
 // One .env at the repo root serves the web app, the agent and the memory service.
 const repoRoot = path.resolve(__dirname, "../..");
-loadEnvConfig(repoRoot);
+// forceReload: Next has already loaded (and cached) env from apps/web, which would make this call a no-op.
+loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production", console, true);
 
 const nextConfig: NextConfig = {
   devIndicators: false,

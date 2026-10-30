@@ -136,7 +136,7 @@ export function BriefView() {
         )}
 
         <div className="flex items-start justify-between gap-6">
-          <h1 className="text-balance text-[32px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[40px]">
+          <h1 className="text-balance text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">
             {brief?.headline ?? (generating ? "Putting your brief together…" : "Your brief")}
           </h1>
           <button

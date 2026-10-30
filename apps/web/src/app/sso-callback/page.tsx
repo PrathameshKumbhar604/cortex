@@ -1,7 +1,7 @@
 "use client";
 
 import { HandleSSOCallback } from "@clerk/nextjs";
-import { Loader2 } from "lucide-react";
+import { Interstitial } from "@/components/interstitial";
 import { NEXT_KEY } from "@/components/sign-in";
 
 /** Where Google and GitHub send people back: Clerk finishes the sign-in here (no Clerk UI), then we go on. */
@@ -16,11 +16,9 @@ export default function SSOCallbackPage() {
     }
   };
   return (
-    <div className="grid min-h-dvh place-items-center bg-shell">
-      <p className="flex items-center gap-2 text-[14px] text-muted">
-        <Loader2 className="size-4 animate-spin" aria-hidden /> Signing you in…
-      </p>
+    <>
+      <Interstitial label="Signing you in" note="Getting your workspace ready." />
       <HandleSSOCallback navigateToApp={({ decorateUrl }) => go(decorateUrl(next()))} navigateToSignIn={() => go("/sign-in")} navigateToSignUp={() => go("/sign-in")} />
-    </div>
+    </>
   );
 }

@@ -43,13 +43,13 @@ try {
     await api(b, "PUT", "/api/admin/settings", { dailyQuestionLimit: 1, allowedConnectors: null }),
   ].map((r) => r.status);
   console.log("member on admin routes:", forbidden.join(", "), "(expect 403s)");
-  await b.goto(base + "/admin");
-  await b.getByText("This page is for admins").waitFor();
-  console.log("member sees a calm 'for admins' page, no Admin link:", (await b.getByRole("link", { name: "Admin" }).count()) === 0);
+  const notFound = (await b.goto(base + "/admin"))?.status();
+  await b.getByRole("button", { name: "Account menu" }).first().click();
+  console.log("member gets 404 on /admin and no Admin panel link:", notFound === 404, (await b.getByRole("link", { name: "Admin panel" }).count()) === 0);
 
   await a.reload();
-  await a.getByRole("link", { name: "Admin" }).first().waitFor();
-  await a.getByRole("link", { name: "Admin" }).first().click();
+  await a.getByRole("button", { name: "Account menu" }).first().click();
+  await a.getByRole("link", { name: "Admin panel" }).first().click();
   await a.getByText(emailB).waitFor();
   console.log("admin sees the panel with the member listed: yes");
   console.log("admin can't change themself:", (await api(a, "PATCH", `/api/admin/users/${idA}`, { role: "member" })).status, "(expect 400)");
