@@ -7,7 +7,7 @@ import type { ConnectorStatus } from "@cortex/shared";
 import { cn } from "@/lib/ui";
 import { explainError } from "@cortex/shared";
 import { toast } from "@/lib/toast";
-import { SourceMark } from "./ask/sources";
+import { Logo } from "./ask/sources";
 
 interface Info {
   workspace: "demo" | "live";
@@ -192,8 +192,8 @@ export function ConnectionsView() {
           {(info?.connectors ?? []).filter((c) => c.kind !== "upload").map((c) => (
             <li key={c.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-4">
               <div className="min-w-0">
-                <p className="flex items-center gap-2 text-[15.5px] font-[500] text-ink">
-                  <SourceMark source={c.id} className="size-2" />
+                <p className="flex items-center gap-2.5 text-[15.5px] font-[500] text-ink">
+                  <Logo source={c.id} className="size-5" />
                   {c.name}
                 </p>
                 <p className="mt-0.5 text-[13px] text-muted">

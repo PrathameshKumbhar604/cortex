@@ -43,15 +43,25 @@ export type SourceItem = Evidence & { host?: string };
 /** The site a web source came from ("granola.ai"); undefined for app items (mail, docs, chats). */
 export const siteOf = (ev: SourceItem) => (ev.source === "web" ? (hostOf(ev.url) ?? ev.host) : undefined);
 
-/** A web source's real favicon, or the app tile when there is none (or it fails to load). */
-export function Favicon({ ev, className }: { ev: SourceItem; className?: string }) {
-  const host = siteOf(ev);
+/** Each app's own logo, so connected apps show the mark people already know. Google's subdomains share one "G". */
+const gstatic = (app: string) => `https://ssl.gstatic.com/images/branding/product/2x/${app}_2020q4_48dp.png`;
+const APP_LOGO: Record<string, string> = {
+  gmail: gstatic("gmail"),
+  calendar: gstatic("calendar"),
+  drive: gstatic("drive"),
+  notion: faviconUrl("notion.so"),
+  slack: faviconUrl("slack.com"),
+  github: faviconUrl("github.com"),
+};
+
+/** An app's or site's real logo, or the app tile when there is none (or it fails to load). */
+export function Logo({ source, src = APP_LOGO[source], className }: { source: string; src?: string; className?: string }) {
   const [broken, setBroken] = useState(false);
-  if (!host || broken) return <SourceIcon source={ev.source} className={className} />;
+  if (!src || broken) return <SourceIcon source={source} className={className} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- a 16px third-party icon; next/image would proxy every one
     <img
-      src={faviconUrl(host)}
+      src={src}
       alt=""
       width={18}
       height={18}
@@ -61,6 +71,12 @@ export function Favicon({ ev, className }: { ev: SourceItem; className?: string 
       className={cn("size-[18px] shrink-0 rounded-[5px] bg-white object-contain p-px", className)}
     />
   );
+}
+
+/** A web source's favicon, or its app's logo. */
+export function Favicon({ ev, className }: { ev: SourceItem; className?: string }) {
+  const host = siteOf(ev);
+  return <Logo source={ev.source} src={host ? faviconUrl(host) : APP_LOGO[ev.source]} className={className} />;
 }
 
 /**
