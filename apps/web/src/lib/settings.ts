@@ -78,24 +78,3 @@ export function writeSound(on: boolean) {
   }
   window.dispatchEvent(new Event(EVENT));
 }
-
-const LABS = "cortex.experimental";
-
-/** Experimental features (the Commitments radar) are shown unless the user switched them off. */
-export function readLabs(): boolean {
-  try {
-    return localStorage.getItem(LABS) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-export function writeLabs(on: boolean) {
-  try {
-    if (on) localStorage.removeItem(LABS);
-    else localStorage.setItem(LABS, "off");
-  } catch {
-    // storage blocked: the choice lasts for this page only
-  }
-  window.dispatchEvent(new Event(EVENT));
-}

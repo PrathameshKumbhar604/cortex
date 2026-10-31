@@ -3,18 +3,21 @@
 import { Children, isValidElement, useId, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Copy } from "lucide-react";
-import { sourceName, type Claim, type Evidence } from "@cortex/shared";
+import { sourceName, type Claim } from "@cortex/shared";
+import { cleanSnippet, plainText } from "@/lib/snippet";
 import { cn, shortDate } from "@/lib/ui";
-import { SourceIcon } from "./sources";
+import { CopyGlyph, useCopied } from "./answer-actions";
+import { Favicon, siteOf, type SourceItem } from "./sources";
 
 interface Props {
   text: string;
   claims: Claim[];
-  evidence: Evidence[];
+  evidence: SourceItem[];
   verified: boolean;
   streaming: boolean;
-  onCite: (id: string | null) => void;
+  /** A marker was hovered or focused (null when it lets go). */
+  onCite?: (id: string | null) => void;
+  /** A marker was clicked: show its source. */
   onJump: (id: string) => void;
 }
 
@@ -82,12 +85,11 @@ const SHELL = new Set(["bash", "sh", "shell", "zsh", "console", "powershell", "p
 
 /** Code is shown the way it will be used: a terminal panel, copyable in one click. */
 function Terminal({ lang, code }: { lang?: string; code: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, flash] = useCopied();
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      flash();
     } catch {
       // clipboard blocked: the text is still selectable
     }
@@ -99,10 +101,10 @@ function Terminal({ lang, code }: { lang?: string; code: string }) {
         <button
           type="button"
           onClick={copy}
-          aria-label={copied ? "Copied" : "Copy code"}
+          aria-label="Copy code"
           className="press inline-flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-[12px] text-[#a9aeb8] hover:bg-[#1d2027] hover:text-white"
         >
-          {copied ? <Check className="size-3.5 text-[#3dd68c]" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+          <CopyGlyph copied={copied} tick="text-[#3dd68c]" />
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
@@ -150,16 +152,17 @@ function markPartial(s: string, partial: string[]): ReactNode {
 }
 
 /**
- * A numbered superscript pill. Hover (mouse) or keyboard focus previews the source; click jumps to it in the list.
+ * A numbered superscript pill. Hover (mouse) or keyboard focus previews the source; click opens it in the sources sheet.
  * The preview stays open while hovered, and Escape closes it.
  */
-export function Cite({ n, ev, onCite, onJump }: { n: number; ev: Evidence; onCite: (id: string | null) => void; onJump: (id: string) => void }) {
+export function Cite({ n, ev, onCite, onJump }: { n: number; ev: SourceItem; onCite?: (id: string | null) => void; onJump: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const tipId = useId();
   const card = useRef<HTMLSpanElement>(null);
+  const snippet = cleanSnippet(ev.quote, "", 200);
   const show = (on: boolean) => {
     setOpen(on);
-    onCite(on ? ev.id : null);
+    onCite?.(on ? ev.id : null);
   };
 
   // Keep the preview inside the viewport: shift it sideways, and drop it below the marker near the top.
@@ -210,15 +213,15 @@ export function Cite({ n, ev, onCite, onJump }: { n: number; ev: Evidence; onCit
         )}
       >
         <span className="block rounded-[10px] border border-line-strong bg-surface p-3 shadow-[0_10px_30px_-12px_rgb(14_17_22/0.28)]">
-          <span className="readout flex items-center gap-1.5 text-muted">
-            <SourceIcon source={ev.source} />
+          <span className="flex items-center gap-2 text-[12.5px] text-muted">
+            <Favicon ev={ev} className="size-4" />
             <span className="truncate">
-              {sourceName(ev.source)}
-              {ev.timestamp ? ` · ${shortDate(ev.timestamp)}` : ""}
+              {siteOf(ev) ?? sourceName(ev.source)}
+              {!siteOf(ev) && ev.timestamp ? ` · ${shortDate(ev.timestamp)}` : ""}
             </span>
           </span>
-          <span className="mt-1.5 block text-[13.5px] font-[550] leading-snug text-ink">{ev.title}</span>
-          {ev.quote && <span className="mt-1 line-clamp-3 block text-[13px] leading-[1.45] text-ink-2">{ev.quote}</span>}
+          <span className="mt-1.5 line-clamp-2 block text-[13.5px] font-[550] leading-snug text-ink">{plainText(ev.title)}</span>
+          {snippet && <span className="mt-1 line-clamp-3 block text-[13px] leading-[1.45] text-ink-2">{snippet}</span>}
         </span>
       </span>
     </span>

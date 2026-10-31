@@ -222,13 +222,15 @@ export function useAgent() {
   /**
    * Answers a turn's question again in place, keeping the earlier answer as a version to switch back to. Only the turns
    * before it are sent as history. Later turns stay as they are (they were asked after the attempt they followed).
+   * `question` edits the prompt: the edited attempt is a new version too, so the original question and answer stay one step back.
    */
   const regenerate = useCallback(
-    async (turnId: string) => {
+    async (turnId: string, question?: string) => {
       const i = turns.findIndex((t) => t.id === turnId);
       const old = turns[i];
-      if (!old || abort.current) return;
-      const next = addVersion(old, { ...newTurn(old.question, old.mode), attachments: old.attachments });
+      const q = question?.trim() || old?.question;
+      if (!old || !q || abort.current) return;
+      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments });
       setTurns((all) => all.map((t) => (t.id === turnId ? next : t)));
       await run(next, turns.slice(0, i), true);
     },

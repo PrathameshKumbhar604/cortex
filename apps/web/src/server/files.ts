@@ -147,9 +147,11 @@ export const filesConnector: Connector = {
       created_at: string;
       text: string;
     }[];
+    // A file must match at least a third of the query's words: one shared filler word ("into", "note") isn't a match.
+    const need = Math.max(1, Math.ceil(words.length / 3));
     const scored = rows
       .map((f) => ({ f, s: words.filter((w) => `${f.name} ${f.text}`.toLowerCase().includes(w)).length }))
-      .filter((x) => !words.length || x.s > 0)
+      .filter((x) => !words.length || x.s >= need)
       .sort((a, b) => b.s - a.s);
     return scored.slice(0, input.limit ?? 4).flatMap(({ f }) => evidenceFor(f, words, 1));
   },

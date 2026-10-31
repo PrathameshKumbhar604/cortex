@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
-import { Brain, FileText } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Brain, FileText, Pencil } from "lucide-react";
 import { explainError, explainFailure } from "@cortex/shared";
 import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
@@ -11,20 +11,9 @@ import { cn } from "@/lib/ui";
 import { ActionCard } from "./action-card";
 import { AnswerActions, VersionSwitch } from "./answer-actions";
 import { Answer, Cite } from "./answer";
+import { MAX } from "./composer";
 import { Readout } from "./readout";
 import { Sources } from "./sources";
-
-// Jump to the source row (unfolding "also searched" if it lives there), move focus to it and flash it once. Module-level so the memoised answer markdown stays stable.
-function jump(id: string) {
-  const el = document.getElementById(`ev-${id}`);
-  if (!el) return;
-  const fold = el.closest("details");
-  if (fold) fold.open = true;
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
-  el.focus({ preventScroll: true });
-  el.animate([{ backgroundColor: "var(--accent-soft)" }, { backgroundColor: "transparent" }], { duration: 1400, easing: "ease-out" });
-}
 
 export function TurnView({
   turn,
@@ -32,6 +21,7 @@ export function TurnView({
   onFollowup,
   onRetry,
   onVersion,
+  onEdit,
   latest,
   chatId,
 }: {
@@ -42,12 +32,15 @@ export function TurnView({
   onRetry?: () => void;
   /** Shows another version (attempt) of this turn. */
   onVersion?: (version: number) => void;
+  /** Asks this turn again with an edited question, as a new version; absent while an answer is running. */
+  onEdit?: (question: string) => void;
   latest: boolean;
   /** The saved chat this turn belongs to; sharing needs it. */
   chatId?: string;
 }) {
   const answerRef = useRef<HTMLDivElement>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
+  // The sources sheet: null closed, "" open at the top, an evidence id open at that card (a marker was clicked).
+  const [sheetAt, setSheetAt] = useState<string | null>(null);
   const verified = turn.groundedness != null || (turn.done && !turn.claims.length);
   const citedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -61,7 +54,7 @@ export function TurnView({
 
   return (
     <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", duration: 0.3, bounce: 0 }}>
-      <h2 className="mb-3 text-balance text-[30px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[38px]">{turn.question}</h2>
+      <Question question={turn.question} done={turn.done} onEdit={onEdit} />
       {turn.attachments && turn.attachments.length > 0 && (
         <ul className="-mt-1 mb-3 flex flex-wrap gap-1.5" aria-label="Attached files">
           {turn.attachments.map((f) => (
@@ -95,15 +88,21 @@ export function TurnView({
           evidence={turn.evidence}
           verified={verified}
           streaming={!turn.done && turn.steps.synthesize.status === "active"}
-          onCite={setHovered}
-          onJump={jump}
+          onJump={setSheetAt}
         />
         </div>
       ) : (
         !turn.done && !turn.error && <AnswerSkeleton />
       )}
 
-      {turn.done && !turn.error && turn.answer && <AnswerActions turn={turn} chatId={chatId} answerRef={answerRef} onRetry={onRetry} onVersion={onVersion} />}
+      {turn.answer && (turn.evidence.length > 0 || (turn.done && !turn.error)) && (
+        <div className="mt-1 mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {turn.evidence.length > 0 && <Sources evidence={turn.evidence} citedIds={citedIds} query={turn.question} at={sheetAt} onAt={setSheetAt} />}
+          {turn.done && !turn.error && (
+            <AnswerActions turn={turn} chatId={chatId} answerRef={answerRef} onRetry={onRetry} onVersion={onVersion} className={turn.evidence.length ? "m-0" : "my-0"} />
+          )}
+        </div>
+      )}
 
       {turn.error && (
         <div className="mb-5">
@@ -123,7 +122,7 @@ export function TurnView({
                 {c.evidenceIds.map((id) => {
                   const n = turn.evidence.findIndex((e) => e.id === id) + 1;
                   const ev = turn.evidence[n - 1];
-                  return ev ? <Cite key={id} n={n} ev={ev} onCite={setHovered} onJump={jump} /> : null;
+                  return ev ? <Cite key={id} n={n} ev={ev} onJump={setSheetAt} /> : null;
                 })}
               </span>
             </div>
@@ -138,8 +137,6 @@ export function TurnView({
           ))}
         </div>
       )}
-
-      {turn.evidence.length > 0 && turn.answer && <Sources evidence={turn.evidence} citedIds={citedIds} hovered={hovered} />}
 
       {turn.actions.map((a) => (
         <ActionCard key={a.id} proposal={a} onDecide={(d, edits) => onDecide(a.id, d, edits)} />
@@ -166,6 +163,121 @@ export function TurnView({
       )}
 
     </motion.article>
+  );
+}
+
+const HEADING = "text-[30px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[38px]";
+
+/** The question, with an Edit action on hover or focus (tap the question on touch) that turns it into an inline editor. */
+function Question({ question, done, onEdit }: { question: string; done: boolean; onEdit?: (q: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(question);
+  const [shown, setShown] = useState(false);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const editBtn = useRef<HTMLButtonElement>(null);
+
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft, editing]);
+
+  const open = () => {
+    setDraft(question);
+    setEditing(true);
+    requestAnimationFrame(() => {
+      const el = box.current;
+      el?.focus();
+      el?.setSelectionRange(el.value.length, el.value.length);
+    });
+  };
+  const close = () => {
+    setEditing(false);
+    requestAnimationFrame(() => editBtn.current?.focus());
+  };
+  const q = draft.trim();
+  const canSend = !!onEdit && !!q && q !== question.trim();
+  const send = () => {
+    if (!canSend) return;
+    setEditing(false);
+    setShown(false);
+    onEdit(q);
+  };
+
+  if (editing)
+    return (
+      <form
+        className="-mx-3 mb-3 rounded-[14px] border border-accent/60 bg-surface px-3 pt-2 pb-2.5 shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_12%,transparent)]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
+        <textarea
+          ref={box}
+          rows={1}
+          value={draft}
+          maxLength={MAX}
+          aria-label="Edit your question"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              close();
+            }
+          }}
+          className={cn(HEADING, "no-ring block w-full resize-none overflow-hidden bg-transparent outline-none focus-visible:outline-none")}
+        />
+        <div className="mt-2 flex items-center justify-end gap-2">
+          {draft.length > MAX * 0.9 && (
+            <span className="mr-auto font-mono text-[12px] tabular-nums text-muted">
+              {draft.length}/{MAX}
+            </span>
+          )}
+          <button type="button" onClick={close} className="press h-8 rounded-[8px] px-3 text-[13px] text-ink-2 hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!canSend}
+            title={onEdit ? undefined : "Wait for the current answer to finish"}
+            className="press h-8 rounded-[8px] bg-accent px-3 text-[13px] font-[500] text-on-ink hover:bg-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-line-strong disabled:text-muted"
+          >
+            Send
+          </button>
+        </div>
+      </form>
+    );
+
+  return (
+    <div className="group relative">
+      {/* Touch has no hover: tapping the question reveals Edit. */}
+      <h2 onClick={() => setShown((v) => !v)} className={cn(HEADING, "mb-3 text-balance pr-10")}>
+        {question}
+      </h2>
+      {done && (
+        <button
+          ref={editBtn}
+          type="button"
+          onClick={open}
+          disabled={!onEdit}
+          aria-label="Edit question"
+          title={onEdit ? "Edit question" : "Wait for the current answer to finish"}
+          className={cn(
+            "press absolute top-1 right-0 grid size-8 place-items-center rounded-[8px] text-muted hover:bg-hover hover:text-ink focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-accent disabled:text-line-strong",
+            "[@media(hover:hover)]:group-hover:opacity-100",
+            shown ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <Pencil className="size-3.5" aria-hidden />
+        </button>
+      )}
+    </div>
   );
 }
 

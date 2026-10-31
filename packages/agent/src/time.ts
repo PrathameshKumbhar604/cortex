@@ -41,7 +41,8 @@ export function parseWindow(text: string, now = new Date()): TimeWindow | undefi
 
 export function keywords(text: string, max = 6): string {
   const stop = new Set(
-    "a an the and or of to in on for with at by from is are was were be been what which who when where why how did do does this that these those my our your me i we you it its any all about since last week month quarter today yesterday please tell show give summarize summary changed change happen happened anything there can could would should will".split(" "),
+    ("a an the and or of to in on for with at by from is are was were be been what which who when where why how did do does this that these those my our your me i we you it its any all about since last week month quarter today yesterday please tell show give summarize summary changed change happen happened anything there can could would should will " +
+      "into onto also just like have has had not but some more very then than them they their get got yet still bit lot way thing things").split(" "),
   );
   return text
     .toLowerCase()

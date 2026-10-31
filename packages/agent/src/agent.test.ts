@@ -500,6 +500,87 @@ describe("attached files", () => {
   });
 });
 
+describe("text given in the message", () => {
+  const VOICE =
+    "Turn this voice note into clean notes: a short summary, key points, and action items. Hello, what's up? The words are... not appearing yet and it does take a bit delay. So how can I fix them?";
+  const MIC = `Turn this voice note transcript into clean notes (a short summary, key points, and action items), using only the transcript below:\n\nHello, what's up? The words are not appearing yet and it does take a bit of delay. So how can I fix them?`;
+
+  it("routes transform requests to a direct answer, but not ones that name a source", () => {
+    const ids = ["gmail", "files", "web"];
+    for (const q of [VOICE, MIC, "Fix the grammar in this paragraph:\nme and him goes to the store yesterday and buyed three apple for the trip", "Translate the following into French: I will send the report to my advisor by Friday evening."]) {
+      expect(routeByRules(q, ids), q).toMatchObject({ route: "general", sources: [] });
+    }
+    expect(routeByRules("Summarise my emails from Priya: anything about the launch date", ids)?.route).not.toBe("general");
+    expect(routeByRules("Summarise this: my emails about the budget review", ids)?.route).not.toBe("general");
+    expect(routeByRules("Summarise the Q3 report", ids)?.route ?? "model").not.toBe("general"); // no text given
+  });
+
+  it("answers the voice note without searching or 'not in your sources'", async () => {
+    const searched: string[] = [];
+    const reg = new ConnectorRegistry();
+    reg.register(unrelatedFile((q) => searched.push(q)));
+    const { llm, calls } = stubLlm("**Summary**: the dictation shows words late.");
+    const events = await collect(runAgent({ question: VOICE, mode: "fast", userId: "u1" }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() }));
+    expect(searched).toEqual([]);
+    expect(calls.route).toBe(0);
+    expect(events.some((e) => e.type === "tool_call" || e.type === "evidence")).toBe(false);
+    const verdict = events.find((e) => e.type === "verdict");
+    expect(verdict).toBeUndefined(); // no "Not in your sources", nothing verified against unrelated evidence
+    expect(calls.prompt).toContain("not appearing yet");
+  });
+});
+
+/** An uploaded invoice the old search returned for any query sharing a filler word with it. */
+function unrelatedFile(onSearch: (q: string) => void = () => {}): Connector {
+  return {
+    id: "files",
+    name: "Your files",
+    kind: "upload",
+    describes: "uploads",
+    impact: "",
+    actions: [],
+    status: async () => ({ id: "files", name: "Your files", kind: "upload", connected: true, available: true, canAct: false }),
+    search: async (input) => {
+      onSearch(input.query);
+      return [{ source: "files", title: "Wakefit_evidence.pdf", quote: "Tax invoice. Ergonomic chair, qty 1, Rs 8,999. Note: goods once sold are not taken back.", ref: "f9" }];
+    },
+    execute: async () => ({ ok: false, message: "" }),
+  };
+}
+
+describe("relevance floor", () => {
+  const OK = "Push notifications are blocked on credentials [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]";
+  it("never cites an unrelated uploaded file, but keeps the app evidence", async () => {
+    const reg = buildRegistry("demo", {});
+    reg.register(unrelatedFile());
+    const { llm } = stubLlm(OK);
+    const events = await collect(runAgent({ question: "What is blocking push notifications?", mode: "fast", userId: "u1" }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() }));
+    const ev = events.find((e) => e.type === "evidence");
+    const items = ev?.type === "evidence" ? ev.items : [];
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.some((e) => e.source === "files")).toBe(false);
+  });
+
+  it("keeps an uploaded file that matches the question", async () => {
+    const reg = new ConnectorRegistry();
+    reg.register(unrelatedFile());
+    const { llm } = stubLlm("The chair cost Rs 8,999 [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]");
+    const events = await collect(runAgent({ question: "How much did my Wakefit chair cost?", mode: "fast", userId: "u1" }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() }));
+    const ev = events.find((e) => e.type === "evidence");
+    expect(ev?.type === "evidence" && ev.items.map((e) => e.title)).toEqual(["Wakefit_evidence.pdf"]);
+  });
+
+  it("says nothing was found instead of answering from an unrelated file", async () => {
+    const reg = new ConnectorRegistry();
+    reg.register(unrelatedFile());
+    const { llm, calls } = stubLlm(OK);
+    const events = await collect(runAgent({ question: "What did my advisor say about the thesis outline?", mode: "fast", userId: "u1" }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() }));
+    const ev = events.find((e) => e.type === "evidence");
+    expect(ev?.type === "evidence" && ev.items).toEqual([]);
+    expect(calls.stream).toBe(0);
+  });
+});
+
 describe("regenerate", () => {
   it("does not store or remember the same question twice", async () => {
     const mem = memStub();

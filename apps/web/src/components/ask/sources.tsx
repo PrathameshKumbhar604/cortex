@@ -1,7 +1,9 @@
 "use client";
 
-import { ArrowUpRight, Brain, Calendar, ChevronRight, FileText, GitBranch, Globe, HardDrive, Hash, Mail, NotebookText, Paperclip, type LucideIcon } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Brain, Calendar, ChevronRight, FileText, GitBranch, Globe, HardDrive, Hash, Mail, NotebookText, Paperclip, X, type LucideIcon } from "lucide-react";
 import { sourceName, type Evidence } from "@cortex/shared";
+import { cleanSnippet, faviconUrl, hostOf, plainText } from "@/lib/snippet";
 import { cn, shortDate, sourceColor } from "@/lib/ui";
 
 export function SourceMark({ source, className }: { source: string; className?: string }) {
@@ -35,91 +37,157 @@ export function SourceIcon({ source, className }: { source: string; className?: 
   );
 }
 
-/**
- * The evidence behind an answer, grouped by app and numbered exactly like the markers in the text.
- * What was searched but not cited stays folded away until asked for.
- */
-export function Sources({ evidence, citedIds, hovered }: { evidence: Evidence[]; citedIds: Set<string>; hovered: string | null }) {
-  const cited = evidence.filter((e) => citedIds.has(e.id));
-  const shown = cited.length ? cited : evidence.slice(0, 6);
-  const rest = evidence.filter((e) => !shown.includes(e));
-  if (!shown.length) return null;
-  const apps = [...new Set(shown.map((e) => e.source))];
-  const row = (e: Evidence, i: number) => <SourceRow key={e.id} ev={e} n={evidence.indexOf(e) + 1} i={i} active={hovered === e.id} />;
+/** Evidence as the sources UI reads it; a shared page has no links, only the site's domain. */
+export type SourceItem = Evidence & { host?: string };
 
+/** The site a web source came from ("granola.ai"); undefined for app items (mail, docs, chats). */
+export const siteOf = (ev: SourceItem) => (ev.source === "web" ? (hostOf(ev.url) ?? ev.host) : undefined);
+
+/** A web source's real favicon, or the app tile when there is none (or it fails to load). */
+export function Favicon({ ev, className }: { ev: SourceItem; className?: string }) {
+  const host = siteOf(ev);
+  const [broken, setBroken] = useState(false);
+  if (!host || broken) return <SourceIcon source={ev.source} className={className} />;
   return (
-    <section aria-label="Sources" className="mt-2 border-t border-line pt-4">
-      <h3 className="readout mb-2 flex items-center gap-2 text-muted">
-        {cited.length ? `${cited.length} source${cited.length > 1 ? "s" : ""} cited` : "Evidence"}
-        <span className="flex -space-x-1">
-          {apps.map((s) => (
-            <SourceIcon key={s} source={s} className="ring-2 ring-surface" />
-          ))}
-        </span>
-      </h3>
-
-      {apps.map((s) => {
-        const items = shown.filter((e) => e.source === s);
-        return (
-          <div key={s} className="mt-1">
-            {apps.length > 1 && (
-              <p className="readout flex items-center gap-1.5 pt-2 pb-0.5 text-muted">
-                {sourceName(s)} <span className="text-hair">{items.length}</span>
-              </p>
-            )}
-            <ol className="-mx-2 flex flex-col">{items.map(row)}</ol>
-          </div>
-        );
-      })}
-
-      {rest.length > 0 && (
-        <details className="group/more mt-3">
-          <summary className="readout -mx-2 flex w-fit cursor-pointer list-none items-center gap-1 rounded-[6px] px-2 py-1 text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
-            <ChevronRight className="size-3 transition-transform duration-150 group-open/more:rotate-90" aria-hidden />
-            {cited.length ? "Also searched, not cited" : "More evidence"} · {rest.length}
-          </summary>
-          <ol className="-mx-2 mt-1 flex flex-col">{rest.map(row)}</ol>
-        </details>
-      )}
-    </section>
+    // eslint-disable-next-line @next/next/no-img-element -- a 16px third-party icon; next/image would proxy every one
+    <img
+      src={faviconUrl(host)}
+      alt=""
+      width={18}
+      height={18}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      className={cn("size-[18px] shrink-0 rounded-[5px] bg-white object-contain p-px", className)}
+    />
   );
 }
 
-function SourceRow({ ev, n, i, active }: { ev: Evidence; n: number; i: number; active: boolean }) {
-  const author = ev.author?.replace(/\s*<.*>/, "");
+/**
+ * The evidence behind an answer, folded into one quiet pill ("[icons] 4 sources"). It opens a sheet of source cards,
+ * cited ones first and numbered like the markers in the text; what was searched but not cited stays folded away.
+ * `at` is controlled: null closed, "" open at the top, an evidence id open and scrolled to that card.
+ */
+export function Sources({
+  evidence,
+  citedIds,
+  query = "",
+  at,
+  onAt,
+  className,
+}: {
+  evidence: SourceItem[];
+  citedIds: Set<string>;
+  query?: string;
+  at: string | null;
+  onAt: (at: string | null) => void;
+  className?: string;
+}) {
+  const sheet = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const items = evidence.filter(Boolean); // a shared answer's evidence is sparse
+  const cited = items.filter((e) => citedIds.has(e.id));
+  const main = cited.length ? cited : items;
+  const rest = cited.length ? items.filter((e) => !citedIds.has(e.id)) : [];
+  const faces = main.filter((e, i) => main.findIndex((x) => (siteOf(x) ?? x.source) === (siteOf(e) ?? e.source)) === i).slice(0, 3);
+
+  useEffect(() => {
+    const d = sheet.current;
+    if (!d) return;
+    if (at === null) return void (d.open && d.close());
+    if (!d.open) d.showModal();
+    if (!at) return;
+    const card = d.querySelector<HTMLElement>(`[data-ev="${CSS.escape(at)}"]`);
+    if (!card) return;
+    const fold = card.closest("details");
+    if (fold) fold.open = true;
+    card.scrollIntoView({ block: "center" });
+    card.focus({ preventScroll: true });
+    card.animate([{ backgroundColor: "var(--accent-soft)" }, { backgroundColor: "transparent" }], { duration: 1400, easing: "ease-out" });
+  }, [at]);
+
+  if (!main.length) return null;
+  const card = (e: SourceItem) => <SourceCard key={e.id} ev={e} n={citedIds.has(e.id) ? evidence.indexOf(e) + 1 : undefined} query={query} />;
+
   return (
-    <li
-      id={`ev-${ev.id}`}
-      tabIndex={-1}
-      style={{ "--i": i } as React.CSSProperties}
-      className={cn(
-        "rise group/row flex scroll-mt-24 items-start gap-3 rounded-[8px] px-2 py-2 outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent/50",
-        active && "bg-accent-wash",
-      )}
-    >
-      <span className={cn("mt-px inline-grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full px-1 font-mono text-[10.5px] font-medium leading-none ring-1 ring-inset", active ? "bg-accent-soft text-accent-ink ring-transparent" : "bg-accent-wash text-ink-2 ring-line-strong/70")}>
-        {n}
+    <>
+      <button
+        type="button"
+        onClick={() => onAt("")}
+        aria-haspopup="dialog"
+        className={cn(
+          "press inline-flex h-8 items-center gap-2 rounded-full border border-line bg-surface pr-3 pl-1.5 text-[13px] text-ink-2 hover:border-line-strong hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent",
+          className,
+        )}
+      >
+        <span className="flex -space-x-1.5">
+          {faces.map((e) => (
+            <Favicon key={e.id} ev={e} className="size-5 rounded-full ring-2 ring-surface" />
+          ))}
+        </span>
+        {main.length} source{main.length > 1 ? "s" : ""}
+      </button>
+
+      <dialog
+        ref={sheet}
+        aria-labelledby={titleId}
+        onClose={() => onAt(null)}
+        onClick={(e) => e.target === e.currentTarget && sheet.current?.close()} // the backdrop
+        className="sheet"
+      >
+        <div className="flex h-full flex-col">
+          <header className="flex items-center justify-between gap-3 border-b border-line py-2.5 pr-2.5 pl-5">
+            <h2 id={titleId} className="text-[15px] font-[600] text-ink">
+              Sources <span className="ml-1 font-[400] text-muted tabular-nums">{main.length}</span>
+            </h2>
+            <button type="button" onClick={() => sheet.current?.close()} aria-label="Close sources" className="press grid size-8 place-items-center rounded-[8px] text-muted hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent">
+              <X className="size-4" aria-hidden />
+            </button>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2.5">
+            <ol className="flex flex-col gap-0.5">{main.map(card)}</ol>
+            {rest.length > 0 && (
+              <details className="group/more mt-3 border-t border-line pt-2">
+                <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded-[6px] px-2.5 py-1.5 text-[13px] text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="size-3.5 transition-transform duration-150 group-open/more:rotate-90" aria-hidden />
+                  Also searched, not cited · {rest.length}
+                </summary>
+                <ol className="mt-1 flex flex-col gap-0.5">{rest.map(card)}</ol>
+              </details>
+            )}
+          </div>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
+function SourceCard({ ev, n, query }: { ev: SourceItem; n?: number; query: string }) {
+  const site = siteOf(ev);
+  const snippet = cleanSnippet(ev.quote, query, 220);
+  const body = (
+    <>
+      <span className="flex items-center gap-2 text-[12.5px] text-muted">
+        {n != null && (
+          <span className="inline-grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent-wash px-[4px] font-mono text-[10.5px] font-medium leading-none text-ink-2 ring-1 ring-line-strong/70 ring-inset">{n}</span>
+        )}
+        <Favicon ev={ev} className="size-4" />
+        <span className="min-w-0 truncate">{site ?? sourceName(ev.source)}</span>
+        {!site && ev.timestamp && <span className="shrink-0 text-hair">· {shortDate(ev.timestamp)}</span>}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="flex items-baseline gap-2">
-          <span className="min-w-0 truncate text-[13.5px] font-[550] leading-snug text-ink">{ev.title}</span>
-          {ev.timestamp && <span className="readout shrink-0 text-muted">{shortDate(ev.timestamp)}</span>}
-        </p>
-        <p className="mt-0.5 line-clamp-1 text-[13px] leading-[1.45] text-ink-2">
-          {author && <span className="text-muted">{author} · </span>}
-          {ev.quote}
-        </p>
-      </div>
-      {ev.url && (
-        <a
-          href={ev.url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Open source ${n} in ${sourceName(ev.source)}`}
-          className="grid size-7 shrink-0 place-items-center rounded-[6px] text-muted hover:bg-shell hover:text-accent-ink"
-        >
-          <ArrowUpRight className="size-3.5" aria-hidden />
+      <span className="mt-1 line-clamp-2 block text-[14px] font-[550] leading-snug text-ink">{plainText(ev.title) || site || sourceName(ev.source)}</span>
+      {snippet && <span className="mt-0.5 line-clamp-3 block text-[13px] leading-[1.5] text-ink-2">{snippet}</span>}
+    </>
+  );
+  const box = "block rounded-[10px] px-2.5 py-2.5 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent/50";
+  return (
+    <li data-ev={ev.id} tabIndex={-1} className="scroll-my-4 rounded-[10px] outline-none">
+      {ev.url ? (
+        <a href={ev.url} target="_blank" rel="noreferrer" className={cn(box, "hover:bg-hover")}>
+          {body}
         </a>
+      ) : (
+        <div className={box}>{body}</div>
       )}
     </li>
   );

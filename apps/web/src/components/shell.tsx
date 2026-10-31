@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { Brain, Cable, ChevronsUpDown, FlaskConical, Radar, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
-import { onSettings, readLabs, readSound, readTheme, writeLabs, writeSound, writeTheme, type Theme } from "@/lib/settings";
+import { Brain, Cable, ChevronsUpDown, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, Search, SquarePen, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
 import { play } from "@/lib/sound";
 import { useClerk, useUser } from "@clerk/nextjs";
+import { ChatSearch, openChatSearch } from "./chat-search";
 import { Interstitial } from "./interstitial";
 import { endTourOffer, openTour, Tour, tourInSidebar } from "./tour";
 import { Toaster } from "./toaster";
@@ -20,7 +21,6 @@ const NAV = [
   { href: "/brief", label: "Brief", icon: Newspaper },
   { href: "/memory", label: "Memory", icon: Brain },
   { href: "/connections", label: "Connections", icon: Cable },
-  { href: "/commitments", label: "Commitments", icon: Radar, labs: true },
 ];
 
 const SIDEBAR = { initial: 208, min: 180, max: 360, key: "cortex.sidebarWidth", closedKey: "cortex.sidebarClosed" };
@@ -47,10 +47,9 @@ export function Wordmark() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
-  const labs = useSyncExternalStore(onSettings, readLabs, () => false);
   return (
     <ul className="flex flex-col gap-0.5">
-      {NAV.filter((n) => labs || !n.labs).map(({ href, label, icon: Icon, labs: exp }) => {
+      {NAV.map(({ href, label, icon: Icon }) => {
         const active = href === "/" ? path === "/" : path.startsWith(href);
         return (
           <li key={href}>
@@ -65,12 +64,58 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             >
               <Icon className="size-4" strokeWidth={1.75} aria-hidden />
               {label}
-              {exp && <span className="ml-auto rounded-full border border-line px-1.5 text-[10.5px] font-[500] leading-[16px] text-muted">Beta</span>}
             </Link>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/** A fresh chat: the Ask page drops the open thread when its ?t= goes away; the composer gets the cursor. */
+function useNewThread(onNavigate?: () => void) {
+  const router = useRouter();
+  return () => {
+    onNavigate?.();
+    router.push("/");
+    setTimeout(() => document.querySelector<HTMLTextAreaElement>("main textarea")?.focus(), 150);
+  };
+}
+
+/** New thread and Search, at the top of the sidebar and the phone menu; icons only when the sidebar is closed. */
+function ThreadActions({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
+  const newThread = useNewThread(onNavigate);
+  const search = () => {
+    onNavigate?.();
+    openChatSearch();
+  };
+  if (compact)
+    return (
+      <>
+        <button type="button" onClick={newThread} aria-label="New thread" title="New thread" className="grid size-8 place-items-center rounded-[8px] border border-line bg-surface text-muted hover:bg-hover hover:text-ink">
+          <SquarePen className="size-4" strokeWidth={1.75} aria-hidden />
+        </button>
+        <button type="button" onClick={search} aria-label="Search chats" title="Search chats (Ctrl+K)" className="grid size-8 place-items-center rounded-[8px] border border-line bg-surface text-muted hover:bg-hover hover:text-ink">
+          <Search className="size-4" strokeWidth={1.75} aria-hidden />
+        </button>
+      </>
+    );
+  return (
+    <div className="mb-3 flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={newThread}
+        className="press mb-1 flex items-center gap-2.5 rounded-[10px] border border-line bg-surface px-2.5 py-[7px] text-sm font-[550] text-ink shadow-[0_1px_2px_rgb(14_17_22/0.05)] hover:bg-hover active:scale-[0.98]"
+      >
+        <SquarePen className="size-4 text-accent" strokeWidth={1.75} aria-hidden />
+        New thread
+      </button>
+      <button type="button" onClick={search} title="Search chats (Ctrl+K)" className="flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-left text-sm whitespace-nowrap text-muted hover:bg-hover hover:text-ink">
+        <Search className="size-4" strokeWidth={1.75} aria-hidden />
+        Search chats
+        <kbd className="ml-auto hidden rounded-[5px] border border-line px-1 font-sans text-[10.5px] leading-[16px] text-hair md:block">Ctrl K</kbd>
+      </button>
+    </div>
   );
 }
 
@@ -139,7 +184,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             closed && "hidden", // leaving display:none is what replays the starting style on reopen
           )}
         >
-          <div className="mb-8 flex items-center justify-between pl-2">
+          <div className="mb-6 flex items-center justify-between pl-2">
             <Link href="/">
               <Wordmark />
             </Link>
@@ -147,6 +192,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <PanelLeftClose className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
           </div>
+          <ThreadActions />
           <NavLinks />
           <Suspense fallback={<div className="flex-1" />}>
             <RecentThreads />
@@ -190,19 +236,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="relative flex min-w-0 flex-1 flex-col">
         <AnimatePresence>
           {closed && (
-            <motion.button
-              type="button"
-              onClick={toggle}
-              aria-label="Open sidebar"
-              title="Open sidebar (Ctrl+B)"
+            <motion.div
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -6, transition: { duration: 0.12 } }}
               transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-              className="absolute top-4 left-4 z-20 hidden size-8 place-items-center rounded-[8px] border border-line bg-surface text-muted hover:bg-hover hover:text-ink md:grid"
+              className="absolute top-4 left-4 z-20 hidden flex-col gap-1.5 md:flex"
             >
-              <PanelLeftOpen className="size-4" strokeWidth={1.75} aria-hidden />
-            </motion.button>
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label="Open sidebar"
+                title="Open sidebar (Ctrl+B)"
+                className="grid size-8 place-items-center rounded-[8px] border border-line bg-surface text-muted hover:bg-hover hover:text-ink"
+              >
+                <PanelLeftOpen className="size-4" strokeWidth={1.75} aria-hidden />
+              </button>
+              <ThreadActions compact />
+            </motion.div>
           )}
         </AnimatePresence>
         <header className="flex items-center justify-between border-b border-line bg-shell px-4 py-3 md:hidden">
@@ -227,6 +278,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               transition={{ type: "spring", duration: 0.28, bounce: 0 }}
               className="relative z-20 border-b border-line bg-shell px-3 py-3 md:hidden"
             >
+              <ThreadActions onNavigate={() => setOpen(false)} />
               <NavLinks onNavigate={() => setOpen(false)} />
               <Suspense fallback={null}>
                 <RecentThreads onNavigate={() => setOpen(false)} />
@@ -244,6 +296,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <Tour />
           <Toaster />
+          <ChatSearch />
         </main>
       </div>
     </div>
@@ -433,9 +486,6 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
             <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
               Sounds <SoundSwitch />
             </div>
-            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
-              Experimental <LabsSwitch />
-            </div>
             <div className="my-1 h-px bg-line" />
             <button type="button" onClick={leave} className={cn(ITEM, "hover:bg-risk-soft hover:text-risk")}>
               <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
@@ -512,23 +562,6 @@ function SoundSwitch() {
       className={cn("grid size-7 place-items-center rounded-[8px] border border-line transition-colors", on ? "text-ink-2 hover:text-ink" : "text-hair hover:text-ink")}
     >
       <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
-    </button>
-  );
-}
-
-function LabsSwitch() {
-  const on = useSyncExternalStore(onSettings, readLabs, () => true);
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label="Experimental features"
-      title={on ? "Experimental features shown" : "Experimental features hidden"}
-      onClick={() => writeLabs(!on)}
-      className={cn("grid size-7 place-items-center rounded-[8px] border border-line transition-colors", on ? "text-ink-2 hover:text-ink" : "text-hair hover:text-ink")}
-    >
-      <FlaskConical className="size-3.5" strokeWidth={1.75} aria-hidden />
     </button>
   );
 }

@@ -35,6 +35,31 @@ const SOURCE_HINTS: [RegExp, string][] = [
   [/\b(upload(ed|s)?|attach(ed|ment)?|my (files?|pdfs?|documents?|notes)|the (pdf|document|file) i (sent|gave|shared|added))\b/i, "files"],
 ];
 
+// "Summarise this:", "Turn this voice note into notes", "Fix the grammar below": works on text in the message itself.
+const TRANSFORM =
+  /^\s*(please\s+)?((can|could|would) you\s+)?(summari[sz]e|sum up|turn|convert|rewrite|rephrase|paraphrase|reword|translate|format|reformat|proofread|fix|correct|polish|clean up|tidy( up)?|shorten|simplify|condense|edit|improve|outline|bullet|make notes)\b/i;
+const LOOKUP_VERB = /^\s*(please\s+)?((can|could|would) you\s+)?(summari[sz]e|sum up|outline|turn|convert|make notes)\b/i;
+const SUPPLIED = /\b(this|these|the following|following|below|text|transcript|voice note|paragraph|passage|draft)\b|:\s*$/i;
+
+/**
+ * A request to transform text the user pasted in: the instruction (first line, or up to the first colon) starts
+ * with a transform verb and points at supplied text, and real material follows. No source has anything to add.
+ */
+export function transformsGivenText(question: string): boolean {
+  const q = question.trim();
+  const nl = q.indexOf("\n");
+  const colon = q.indexOf(":");
+  const cut = nl > 0 && nl < 300 ? nl : colon > 0 && colon < 200 ? colon + 1 : -1;
+  if (cut < 0) return false;
+  const instruction = q.slice(0, cut);
+  const material = q.slice(cut).trim();
+  if (!TRANSFORM.test(instruction) || !SUPPLIED.test(instruction) || material.length < 40) return false;
+  // "Summarise my emails from Priya:" names where to look; short material like "my emails about the budget" too.
+  if (PERSONAL.test(instruction) && SOURCE_WORDS.test(instruction)) return false;
+  // Only verbs that could also mean "go and fetch" (summarise, outline); translate/fix/rewrite always take text.
+  return !(material.length < 120 && LOOKUP_VERB.test(instruction) && PERSONAL.test(material) && SOURCE_WORDS.test(material));
+}
+
 function hintedSources(q: string, available: string[]): string[] {
   return SOURCE_HINTS.filter(([re, id]) => re.test(q) && available.includes(id)).map(([, id]) => id);
 }
@@ -43,6 +68,7 @@ function hintedSources(q: string, available: string[]): string[] {
 export function routeByRules(question: string, available: string[]): RouteDecision | null {
   const q = question.trim();
   if (GREETING.test(q) || ABOUT_CORTEX.test(q)) return { route: "general", sources: [], tier: "fast", reason: "greeting or question about Cortex", by: "rules" };
+  if (transformsGivenText(q)) return { route: "general", sources: [], tier: "fast", reason: "works on the text you gave", by: "rules" };
   if ((ABOUT_CHAT.test(q) || ABOUT_PAST_CHATS.test(q)) && !SOURCE_WORDS.test(q)) return { route: "general", sources: [], tier: "fast", reason: "about this chat or you", by: "rules" };
   if ((TELLING.test(q) || (ABOUT_ME.test(q) && !SOURCE_WORDS.test(q))) && !/\?\s*$/.test(q)) return { route: "general", sources: [], tier: "fast", reason: "something to remember", by: "rules" };
   if (URL.test(q) && available.includes("web")) return { route: "web", sources: ["web"], tier: "fast", reason: "contains a link", by: "rules" };
@@ -111,7 +137,7 @@ Return only JSON {${rewrite ? `"standalone":string,` : ""}"route":"general"|"per
           ? `\n- standalone: the question rewritten to make sense without the conversation, resolving "it", "that" and the like from it ("who sent it?" → "who sent the Q3 budget email?"). Classify the standalone question.`
           : ""
       }
-- general: answerable from general knowledge (facts, explanations, coding, writing help, maths) and not about the user's own emails, files, meetings, projects, people or tasks. Also questions about this conversation itself ("what did I ask?", "summarise our chat") or about what the assistant knows of the user ("what's my name?").
+- general: answerable from general knowledge (facts, explanations, coding, writing help, maths) and not about the user's own emails, files, meetings, projects, people or tasks. Also summarising, rewriting, translating, formatting or turning into notes text the user pasted into the message itself (a transcript, a draft, a passage): that text is the material, nothing needs looking up. Also questions about this conversation itself ("what did I ask?", "summarise our chat") or about what the assistant knows of the user ("what's my name?").
 - personal: needs the user's own data. Projects, people or product names the user mentions without "my" are usually theirs.
 - web: needs current public information from the internet.
 - action: asks to send, draft, post, create, schedule or update something in their tools.

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ChevronRight, CornerDownRight, Plus } from "lucide-react";
+import { ArrowDown, ChevronRight, CornerDownRight } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
 import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
@@ -138,12 +138,12 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     setSaveTick((n) => n + 1);
   };
 
-  const retry = (turnId: string) => {
+  const retry = (turnId: string, question?: string) => {
     if (busy) return;
     follow();
     asked.current = true;
     play("send");
-    void regenerate(turnId);
+    void regenerate(turnId, question);
   };
 
   const switchVersion = (turnId: string, v: number) => {
@@ -205,6 +205,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
                 onDecide={onDecide(t.id)}
                 onFollowup={submit}
                 onRetry={busy ? undefined : () => retry(t.id)}
+                onEdit={busy ? undefined : (q) => retry(t.id, q)}
                 onVersion={(v) => switchVersion(t.id, v)}
               />
             </section>
@@ -262,13 +263,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
             placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
           />
-          <div className="text-[12.5px] text-muted mt-2 flex items-center justify-end">
-            {turns.length > 0 && (
-              <button type="button" onClick={newThread} disabled={busy} className={cn("ml-auto flex items-center gap-1 whitespace-nowrap hover:text-ink", busy && "opacity-40")}>
-                <Plus className="size-3" aria-hidden /> New thread
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

@@ -110,6 +110,23 @@ function sanitizePlan(raw: z.infer<typeof PlanSchema>, question: string, connect
   return { intent: raw.intent, rewritten: raw.rewritten || question, window: window ?? undefined, subQuestions };
 }
 
+/** What the question and the plan's searches are about: their content words, cut to a stem ("meetings" → "meeti"). */
+function topicTerms(question: string, plan: Plan): string[] {
+  const words = keywords([question, plan.rewritten, ...plan.subQuestions.map((q) => q.query)].join(" "), 40).split(" ");
+  return [...new Set(words.map((w) => w.replace(/[^a-z0-9#]/g, "").slice(0, 5)).filter((w) => w.length >= 3))];
+}
+
+/**
+ * Relevance floor: a piece of evidence that shares no content word with what was asked is off-topic (an unrelated
+ * upload matched on a filler word) and never reaches the answer. Time-scoped questions ("what changed this week")
+ * are exempt: there recency is the match.
+ */
+function onTopic(e: Pick<Evidence, "title" | "quote" | "author">, terms: string[], windowed = false): boolean {
+  if (windowed || !terms.length) return true;
+  const text = `${e.title} ${e.author ?? ""} ${e.quote}`.toLowerCase();
+  return terms.some((t) => text.includes(t));
+}
+
 function rankEvidence(items: Evidence[], question: string, max: number): Evidence[] {
   const q = new Set(keywords(question, 12).split(" ").filter(Boolean));
   const now = Date.now();
@@ -430,6 +447,11 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     }
 
     if (deferRecall) yield* recallStep();
+
+    // Off-topic results are dropped before anything else sees them (so "nothing found" still falls back to the web).
+    const terms = topicTerms(question, plan);
+    const relevant = evidence.filter((e) => onTopic(e, terms, !!plan.window));
+    evidence.splice(0, evidence.length, ...relevant);
 
     // Nothing in the user's apps: rather than a dead end, look it up on the web once (unless they named where to look).
     const namedApps = route.by === "rules" && route.sources.length > 0;

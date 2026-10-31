@@ -9,7 +9,7 @@ import { cn } from "@/lib/ui";
 import { toast } from "@/lib/toast";
 import { useMic } from "./mic";
 
-const MAX = 2000; // /api/ask's limit
+export const MAX = 2000; // /api/ask's limit
 
 export interface PendingFile {
   key: string;
@@ -61,7 +61,7 @@ export function Composer({
     },
     (transcript) => {
       sendNext.current = true;
-      const ask = "Turn this voice note into clean notes: a short summary, key points, and action items.";
+      const ask = "Turn this voice note transcript into clean notes (a short summary, key points, and action items), using only the transcript below:";
       const cut = "\n\n(The recording ran longer; this is the first part.)";
       const room = MAX - ask.length - 2;
       onChange(`${ask}\n\n${transcript.length > room ? transcript.slice(0, room - cut.length) + cut : transcript}`);

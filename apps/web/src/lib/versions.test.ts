@@ -53,4 +53,17 @@ describe("answer versions", () => {
       expect(versionInfo(t)).toEqual({ count: 1, index: 0 });
     }
   });
+
+  it("an edited question is a new version that keeps its own question; switching restores the original", () => {
+    const orig = turn("a", "first");
+    const edited = addVersion(orig, { ...attempt("b", "second"), question: "q, but sharper" });
+    expect(edited).toMatchObject({ id: "b", question: "q, but sharper", answer: "second", version: 1 });
+    expect(edited.versions![0]).toMatchObject({ id: "a", question: "q", answer: "first" });
+
+    const back = selectVersion(edited, 0);
+    expect(back).toMatchObject({ id: "a", question: "q", answer: "first" });
+    expect(back.versions![1]).toMatchObject({ question: "q, but sharper" });
+    expect(selectVersion(back, 1)).toEqual(edited);
+    expect(normalizeTurn(JSON.parse(JSON.stringify(edited)))).toEqual(edited);
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { Check, ChevronLeft, ChevronRight, Copy, RotateCw, Share } from "lucide-react";
 import { sourceName } from "@cortex/shared";
 import { snapshot, toMarkdown, type SharedSource } from "@/lib/share";
@@ -29,6 +29,33 @@ function richHtml(el: HTMLElement | null, sources: SharedSource[]) {
   });
   const list = sources.map((s) => `<li>[${s.n}] ${esc(s.title)} (${esc(sourceName(s.source))}${s.date ? `, ${s.date.slice(0, 10)}` : ""})</li>`).join("");
   return copy.innerHTML + (list ? `<p><strong>Sources</strong></p><ul>${list}</ul>` : "");
+}
+
+/** True for 1.5 s after `flash()`: a copy confirms itself in place, never with a toast. */
+export function useCopied(): [boolean, () => void] {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const flash = useCallback(() => {
+    clearTimeout(timer.current);
+    setCopied(true);
+    timer.current = setTimeout(() => setCopied(false), 1500);
+  }, []);
+  return [copied, flash];
+}
+
+/** The copy icon morphs into a check (and back), and screen readers hear "Copied" once. */
+export function CopyGlyph({ copied, tick = "text-accent" }: { copied: boolean; tick?: string }) {
+  const morph = "absolute inset-0 size-3.5 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]";
+  return (
+    <span className="relative inline-block size-3.5 shrink-0">
+      <Copy aria-hidden className={cn(morph, copied ? "scale-50 opacity-0 blur-[2px]" : "scale-100 opacity-100")} />
+      <Check aria-hidden className={cn(morph, tick, copied ? "scale-100 opacity-100" : "scale-50 opacity-0 blur-[2px]")} />
+      <span aria-live="polite" className="sr-only">
+        {copied ? "Copied" : ""}
+      </span>
+    </span>
+  );
 }
 
 /** "‹ 2/3 ›": steps between the attempts at a regenerated turn. Renders nothing for a turn answered once. */
@@ -64,15 +91,17 @@ export function AnswerActions({
   answerRef,
   onRetry,
   onVersion,
+  className,
 }: {
   turn: Turn;
   chatId?: string;
+  className?: string;
   answerRef: RefObject<HTMLDivElement | null>;
   /** Answers again as a new version; absent while another answer is running. */
   onRetry?: () => void;
   onVersion?: (version: number) => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, flash] = useCopied();
 
   const copy = async () => {
     const snap = snapshot(turn);
@@ -85,20 +114,18 @@ export function AnswerActions({
       } catch {
         await navigator.clipboard.writeText(md);
       }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-      toast("Answer copied", { body: "As Markdown, with its sources." });
+      flash();
     } catch {
       toast("Couldn't copy", { body: "Your browser blocked the clipboard. Select the text and copy it instead.", tone: "warn" });
     }
   };
 
   return (
-    <div className="-ml-2 mt-1 mb-4 flex items-center gap-0.5">
+    <div className={cn("-ml-2 mt-1 mb-4 flex items-center gap-0.5", className)}>
       {onVersion && <VersionSwitch turn={turn} onVersion={onVersion} className="mr-1" />}
-      <button type="button" onClick={copy} aria-label={copied ? "Copied" : "Copy answer"} className={QUIET}>
-        {copied ? <Check className="size-3.5 text-accent" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-        Copy
+      <button type="button" onClick={copy} aria-label="Copy answer" className={QUIET}>
+        <CopyGlyph copied={copied} />
+        {copied ? "Copied" : "Copy"}
       </button>
       {chatId && <ShareButton chatId={chatId} turn={turn} />}
       <button type="button" onClick={onRetry} disabled={!onRetry} aria-label="Answer again" title="Answer again (keeps this answer as a version)" className={cn(QUIET, "disabled:opacity-40")}>
@@ -113,6 +140,7 @@ function ShareButton({ chatId, turn }: { chatId: string; turn: Turn }) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, flash] = useCopied();
   const box = useRef<HTMLDivElement>(null);
   // The system share sheet on phones and tablets; desktops copy the link instead. False on the server.
   const canShare = useSyncExternalStore(noop, () => "share" in navigator && matchMedia("(pointer: coarse)").matches, () => false);
@@ -139,7 +167,7 @@ function ShareButton({ chatId, turn }: { chatId: string; turn: Turn }) {
       setUrl(data.url);
       try {
         await navigator.clipboard.writeText(data.url);
-        toast("Link copied", { body: "Anyone with it can view this answer." });
+        flash();
       } catch {
         // the clipboard can refuse after the wait; the link is on screen to copy
       }
@@ -154,7 +182,7 @@ function ShareButton({ chatId, turn }: { chatId: string; turn: Turn }) {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
-      toast("Link copied");
+      flash();
     } catch {
       toast("Couldn't copy", { body: "Select the link and copy it instead.", tone: "warn" });
     }
@@ -202,8 +230,9 @@ function ShareButton({ chatId, turn }: { chatId: string; turn: Turn }) {
                 onFocus={(e) => e.currentTarget.select()}
                 className="h-8 min-w-0 flex-1 rounded-[8px] border border-line bg-shell px-2.5 font-mono text-[12px] text-ink-2 outline-none focus-visible:border-accent"
               />
-              <button type="button" onClick={copyLink} className="press h-8 shrink-0 rounded-[8px] bg-ink px-3 text-[12.5px] font-[550] text-surface hover:opacity-90">
-                Copy
+              <button type="button" onClick={copyLink} aria-label="Copy link" className="press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] bg-ink px-3 text-[12.5px] font-[550] text-surface hover:opacity-90">
+                <CopyGlyph copied={copied} tick="text-surface" />
+                {copied ? "Copied" : "Copy"}
               </button>
             </div>
             <div className="mt-2.5 flex items-center justify-between">
