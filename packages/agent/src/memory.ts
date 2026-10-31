@@ -34,6 +34,11 @@ export interface PastChat {
   createdAt: string;
 }
 
+/** True when no memory service answers at all (not deployed or not started), as opposed to one that errored. */
+export function memoryNotRunning(err: unknown): boolean {
+  return /^(ECONNREFUSED|ENOTFOUND|EAI_AGAIN)$/.test((err as { cause?: { code?: string } } | undefined)?.cause?.code ?? "");
+}
+
 /** HTTP client for the Python memory sidecar (Oracle Agent Memory). */
 export class MemoryClient implements MemoryBackend {
   constructor(

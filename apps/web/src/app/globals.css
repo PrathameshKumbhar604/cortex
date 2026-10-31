@@ -1,27 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  /* Each colour holds its light and its dark value; the theme picks one (light-dark() follows color-scheme). */
+  /* Each colour holds its light and its dark value; the theme picks one (light-dark() follows color-scheme).
+     Dark is "night ink": blue-tinted near-black layers (hue ~230) and a periwinkle signal accent, not warm greys. */
   color-scheme: light dark;
-  --shell: light-dark(#f4f3f0, #1a1917);
-  --surface: light-dark(#ffffff, #211f1c);
-  --ink: light-dark(#1a1916, #ece9e2);
-  --ink-2: light-dark(#3b3a36, #cfcbc2);
-  --muted: light-dark(#625f58, #a29e95);
-  --hair: light-dark(#6f6b63, #938f86);
-  --line: light-dark(#e8e6e1, #2e2c28);
-  --line-strong: light-dark(#cdc9c1, #3a3732);
-  --hover: light-dark(#ebe9e4, #282622);
-  --pressed: light-dark(#e3e1db, #2f2d29);
-  --on-ink: light-dark(#ffffff, #1a1917);
-  --accent: light-dark(#5443d6, #9d8cff);
-  --accent-soft: light-dark(#eeebfd, #2a2450);
-  --accent-wash: light-dark(#f7f6fe, #221e3a);
-  --accent-ink: light-dark(#4434c0, #c2b8ff);
+  --shell: light-dark(#f4f3f0, #0b0c10);
+  --surface: light-dark(#ffffff, #111318);
+  --ink: light-dark(#1a1916, #e8eaf0);
+  --ink-2: light-dark(#3b3a36, #c5c9d3);
+  --muted: light-dark(#625f58, #9097a6);
+  --hair: light-dark(#6f6b63, #848b9c);
+  --line: light-dark(#e8e6e1, #1d2028);
+  --line-strong: light-dark(#cdc9c1, #2c303b);
+  --hover: light-dark(#ebe9e4, #1a1d24);
+  --pressed: light-dark(#e3e1db, #22252e);
+  --on-ink: light-dark(#ffffff, #0b0c10);
+  --accent: light-dark(#5443d6, #8794ff);
+  --accent-soft: light-dark(#eeebfd, #1c2142);
+  --accent-wash: light-dark(#f7f6fe, #151933);
+  --accent-ink: light-dark(#4434c0, #b3bbff);
   --risk: light-dark(#d93a3f, #ff6b70);
-  --risk-soft: light-dark(#fdf2f2, #2b1517);
+  --risk-soft: light-dark(#fdf2f2, #2a1519);
   --warn: light-dark(#b35a00, #f5a04f);
-  --warn-soft: light-dark(#fff6ea, #2a1d0f);
+  --warn-soft: light-dark(#fff6ea, #291e12);
   --warn-ink: light-dark(#7a3d00, #ffcf9c);
   --ok: light-dark(#0b7a57, #3dd68c);
 
@@ -29,18 +30,18 @@
   --src-gmail: light-dark(#e5484d, #ff6369);
   --src-calendar: light-dark(#12a594, #2ebdab);
   --src-drive: light-dark(#e5a000, #f5b52e);
-  --src-notion: light-dark(#646b78, #9aa0ab);
+  --src-notion: light-dark(#646b78, #9aa1b0);
   --src-slack: light-dark(#8e4ec6, #b07ee6);
-  --src-github: light-dark(#1b1a17, #ece9e2);
+  --src-github: light-dark(#1b1a17, #e8eaf0);
   --src-web: light-dark(#3e63dd, #6e8df5);
-  --src-memory: light-dark(#5443d6, #9d8cff);
+  --src-memory: light-dark(#5443d6, #8794ff);
   --src-files: light-dark(#c2410c, #fb8b4c);
   /* Light mode separates layers by tone, a hairline and a soft two-part shadow; dark mode by tone alone (all transparent). */
   --raise: 0 0 0 1px light-dark(rgb(26 25 22 / 0.06), transparent), 0 1px 2px light-dark(rgb(26 25 22 / 0.05), transparent),
     0 8px 24px -12px light-dark(rgb(26 25 22 / 0.1), transparent);
   --raise-sm: 0 0 0 1px light-dark(rgb(26 25 22 / 0.06), transparent), 0 1px 2px light-dark(rgb(26 25 22 / 0.06), transparent);
-  --nav-active: light-dark(#ffffff, #2f2d29);
-  --divider: light-dark(transparent, #2e2c28);
+  --nav-active: light-dark(#ffffff, #1d2029);
+  --divider: light-dark(transparent, #1d2028);
   --panel-gap: 0px;
 }
 /* An explicit choice overrides the system setting (set before paint by the script in layout.tsx). */
@@ -244,7 +245,7 @@ button:not(:disabled):active {
    reduced motion (rule at the end of this file) stills all of it. */
 .promo-panel {
   --promo-shadow: light-dark(rgb(14 17 22 / 0.22), rgb(0 0 0 / 0.75));
-  --promo-glow: light-dark(rgb(91 71 224 / 0.14), rgb(157 140 255 / 0.24));
+  --promo-glow: light-dark(rgb(91 71 224 / 0.14), rgb(135 148 255 / 0.24));
 }
 .promo-glow {
   background: radial-gradient(closest-side, var(--promo-glow), transparent);

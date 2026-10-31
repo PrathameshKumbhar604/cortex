@@ -6,7 +6,8 @@ import { ConnectorError, type Connector, type ConnectorContext, type SearchInput
 import type { ComposioToolkitSpec } from "./toolkits";
 
 const ENDPOINT = "https://connect.composio.dev/mcp";
-const STATUS_TTL_MS = 5_000; // short so a finished sign-in shows up while the Connections page polls
+const STATUS_TTL_MS = 2_000; // short so a finished sign-in shows up while the Connections page polls (one list call for all users)
+const PREFETCHED_MS = 60_000; // connect() may reuse the list the Connections page already loaded (manage() clears it on every change)
 
 /** One connected account in the Composio Connect project. */
 export interface ComposioAccount {
@@ -68,8 +69,8 @@ class ComposioMcpSession {
   }
 
   /** Every account per toolkit slug (all users), from one cached list call; callers keep only their own. */
-  async accounts(toolkits: string[]): Promise<Map<string, ComposioAccount[]>> {
-    if (this.statusCache && Date.now() - this.statusCache.at < STATUS_TTL_MS) return this.statusCache.accounts;
+  async accounts(toolkits: string[], maxAgeMs = STATUS_TTL_MS): Promise<Map<string, ComposioAccount[]>> {
+    if (this.statusCache && Date.now() - this.statusCache.at < maxAgeMs) return this.statusCache.accounts;
     this.statusPending ??= (async () => {
       const data = await this.call("COMPOSIO_MANAGE_CONNECTIONS", { toolkits: toolkits.map((name) => ({ name, action: "list" })) });
       const results = (data.results ?? {}) as Record<string, { accounts?: { id?: string; alias?: string; status?: string }[] }>;
@@ -154,6 +155,7 @@ export class ComposioMcpConnector implements Connector {
 
   async status(ctx: ConnectorContext): Promise<ConnectorStatus> {
     const state = (await this.mine(ctx.userId))?.status;
+    const lapsed = !!state && !["ACTIVE", "INITIATED", "INITIALIZING"].includes(state);
     return {
       id: this.id,
       name: this.name,
@@ -162,14 +164,18 @@ export class ComposioMcpConnector implements Connector {
       available: true,
       canAct: this.actions.length > 0,
       // A sign-in that lapsed (EXPIRED, FAILED, INACTIVE…) is reported, so Ask and Connections can say "reconnect".
-      detail: state && !["ACTIVE", "INITIATED", "INITIALIZING"].includes(state) ? "its sign-in expired; reconnect it on the Connections page" : undefined,
+      detail: lapsed ? "its sign-in expired; reconnect it on the Connections page" : undefined,
+      reconnect: lapsed || undefined,
     };
   }
 
   async connect(ctx: ConnectorContext & { callbackUrl: string }) {
     // One account per user and app: drop this user's earlier one (expired or never finished) so the alias is free again.
-    const all = (await this.session.accounts(ALL_TOOLKITS)).get(this.spec.toolkit) ?? [];
-    for (const a of all.filter((a) => a.alias === aliasFor(ctx.userId))) await this.session.manage(this.spec.toolkit, { action: "remove", account_id: a.id });
+    // The prefetched list saves a ~0.6 s round trip per click; an account already gone just fails its remove harmlessly.
+    const all = (await this.session.accounts(ALL_TOOLKITS, PREFETCHED_MS)).get(this.spec.toolkit) ?? [];
+    await Promise.all(
+      all.filter((a) => a.alias === aliasFor(ctx.userId)).map((a) => this.session.manage(this.spec.toolkit, { action: "remove", account_id: a.id }).catch(() => null)),
+    );
     const r = await this.session.manage(this.spec.toolkit, { action: "add", alias: aliasFor(ctx.userId) });
     const url = r?.redirect_url?.match(/https?:\/\/\S+?(?=[\s)\]]|$)/)?.[0];
     if (!url) {
@@ -178,6 +184,13 @@ export class ComposioMcpConnector implements Connector {
       throw new ConnectorError(this.id, full ? `Cortex has no room for another ${this.name} account right now` : "Composio did not return a sign-in link", false);
     }
     return { redirectUrl: url };
+  }
+
+  /** Removes only this user's own accounts for this app, from a fresh list. */
+  async disconnect(ctx: ConnectorContext) {
+    this.session.invalidate();
+    const own = ((await this.session.accounts(ALL_TOOLKITS)).get(this.spec.toolkit) ?? []).filter((a) => a.alias === aliasFor(ctx.userId));
+    await Promise.all(own.map((a) => this.session.manage(this.spec.toolkit, { action: "remove", account_id: a.id })));
   }
 
   async search(input: SearchInput, ctx: ConnectorContext) {

@@ -56,6 +56,8 @@ export interface Connector {
   execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext): Promise<ActionResult>;
   /** Starts OAuth; returns the URL the browser should open. */
   connect?(ctx: ConnectorContext & { callbackUrl: string }): Promise<{ redirectUrl: string }>;
+  /** Removes this user's own connection to the app (never anyone else's). */
+  disconnect?(ctx: ConnectorContext): Promise<void>;
 }
 
 export class ConnectorError extends Error {

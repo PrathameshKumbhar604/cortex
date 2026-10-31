@@ -52,6 +52,12 @@ export class ComposioConnector implements Connector {
     return { redirectUrl: req.redirectUrl };
   }
 
+  /** Deletes only this user's accounts for this app (Composio scopes the list by user id). */
+  async disconnect(ctx: ConnectorContext) {
+    const res = await client(this.apiKey).connectedAccounts.list({ userIds: [ctx.userId], toolkitSlugs: [this.spec.toolkit] });
+    await Promise.all(res.items.map((a) => client(this.apiKey).connectedAccounts.delete(a.id)));
+  }
+
   private async run(slug: string, args: Record<string, unknown>, ctx: ConnectorContext) {
     const clean = Object.fromEntries(Object.entries(args).filter(([, v]) => v !== undefined && v !== ""));
     const res = await client(this.apiKey).tools.execute(

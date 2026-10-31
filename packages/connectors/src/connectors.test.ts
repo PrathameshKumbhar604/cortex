@@ -191,4 +191,12 @@ describe("Composio Connect (ck_) keeps each user's connections apart", () => {
       { name: "gmail", action: "add", alias: aliasFor("bob") },
     ]);
   });
+
+  it("disconnects only the user's own account", async () => {
+    const { conn, calls } = setup();
+    await conn.disconnect({ userId: "alice" });
+    await conn.disconnect({ userId: "carol" }); // has none: removes nothing, least of all the owner's
+    const ops = calls.map((c) => (c.args.toolkits as Record<string, unknown>[] | undefined)?.[0]).filter((t) => t && t.action !== "list");
+    expect(ops).toEqual([{ name: "gmail", action: "remove", account_id: "gmail_alice" }]);
+  });
 });

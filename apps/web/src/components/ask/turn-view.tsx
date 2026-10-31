@@ -13,6 +13,18 @@ import { Answer, Cite } from "./answer";
 import { Readout } from "./readout";
 import { Sources } from "./sources";
 
+// Jump to the source row (unfolding "also searched" if it lives there), move focus to it and flash it once. Module-level so the memoised answer markdown stays stable.
+function jump(id: string) {
+  const el = document.getElementById(`ev-${id}`);
+  if (!el) return;
+  const fold = el.closest("details");
+  if (fold) fold.open = true;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+  el.focus({ preventScroll: true });
+  el.animate([{ backgroundColor: "var(--accent-soft)" }, { backgroundColor: "transparent" }], { duration: 1400, easing: "ease-out" });
+}
+
 export function TurnView({
   turn,
   onDecide,
@@ -38,10 +50,9 @@ export function TurnView({
     return ids;
   }, [turn.answer, turn.evidence]);
   const failures = turn.error ? turn.failures.filter((f) => f.source !== "llm") : turn.failures;
-  const jump = (id: string) => document.getElementById(`ev-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
   return (
-    <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
+    <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", duration: 0.3, bounce: 0 }}>
       <h2 className="mb-3 text-balance text-[30px] font-[300] leading-[1.15] tracking-[-0.035em] text-ink sm:text-[38px]">{turn.question}</h2>
       {turn.attachments && turn.attachments.length > 0 && (
         <ul className="-mt-1 mb-3 flex flex-wrap gap-1.5" aria-label="Attached files">

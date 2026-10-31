@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronRight, ChevronUp, CornerDownRight, Plus } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
 import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
@@ -225,14 +225,16 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
         <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
           {latest?.done && latest.followups.length > 0 && !busy && (
-            <div className="mb-2 flex gap-2 overflow-x-auto pr-6 pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)] [scrollbar-width:none]" aria-label="Suggested next questions">
-              {latest.followups.map((f) => (
+            // Wrapping, never scrolling: every suggestion is fully readable, even at phone width.
+            <div className="mb-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Suggested next questions">
+              {latest.followups.slice(0, 3).map((f) => (
                 <button
                   key={f}
                   type="button"
                   onClick={() => submit(f)}
-                  className="shrink-0 rounded-full border border-line px-3 py-1 text-[13px] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink"
+                  className="press group flex max-w-full items-start gap-1.5 rounded-[14px] border border-line bg-surface py-1 pr-3 pl-2 text-left text-[13px] leading-[1.4] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                 >
+                  <CornerDownRight className="mt-[2px] size-3.5 shrink-0 text-hair transition-colors group-hover:text-accent" aria-hidden />
                   {f}
                 </button>
               ))}

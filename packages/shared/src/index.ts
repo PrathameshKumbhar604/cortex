@@ -95,6 +95,8 @@ export interface ConnectorStatus {
   available: boolean; // configured on the server (keys present)
   canAct: boolean;
   detail?: string;
+  /** The user's own connection lapsed and needs a new sign-in: the one status problem Ask tells them about. */
+  reconnect?: boolean;
 }
 
 export interface SourceFailure {

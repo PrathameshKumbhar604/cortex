@@ -55,6 +55,7 @@ export class ConnectorRegistry {
         try {
           return await withTimeout(c.status(ctx), 6000, c.name);
         } catch (err) {
+          console.warn(`[connectors] status of ${c.id} failed:`, describeError(err)); // the user isn't told: they may never have set it up
           return {
             id: c.id,
             name: c.name,

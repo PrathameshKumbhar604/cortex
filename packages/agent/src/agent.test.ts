@@ -125,6 +125,27 @@ describe("runAgent", () => {
     expect(events.some((e) => e.type === "answer")).toBe(true);
   });
 
+  it("notes only failures of things the user actually set up", async () => {
+    const reg = buildRegistry("demo", {});
+    const source = (id: string, extra: object) => ({
+      id, name: id, kind: "upload" as const, describes: "", impact: "", actions: [],
+      status: async () => ({ id, name: id, kind: "upload" as const, connected: false, available: true, canAct: false, ...extra }),
+      search: async () => [],
+      execute: async () => ({ ok: false, message: "" }),
+    });
+    reg.register(source("files", { detail: "Upload a file to make it searchable." }));
+    reg.register(source("x", { detail: "its sign-in expired", reconnect: true }));
+    const notRunning = Object.assign(new Error("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+    const ask = async (err: Error) => {
+      const { llm } = stubLlm("ok");
+      const memory = { ...memStub(), recall: async () => { throw err; } };
+      const events = await collect(runAgent({ question: "hello there friend", mode: "fast", userId: "u1" }, { llm, registry: reg, memory, actions: new ActionStore() }));
+      return events.flatMap((e) => (e.type === "source_error" ? [e.failure.source] : []));
+    };
+    expect(await ask(notRunning)).toEqual(["x"]); // not "files" (no uploads), not memory (no service here)
+    expect(await ask(new Error("memory service 500: boom"))).toEqual(["x", "memory"]);
+  });
+
   it("answers 'not found' without an LLM call when there is no evidence", async () => {
     const { llm, calls } = stubLlm("unused");
     const events = await collect(runAgent({ question: "quantum chromodynamics lecture", mode: "fast", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));

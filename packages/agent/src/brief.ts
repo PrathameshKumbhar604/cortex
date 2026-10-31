@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Evidence, MemoryItem, SourceFailure } from "@cortex/shared";
 import type { AgentDeps } from "./run";
 import { briefPrompt } from "./prompts";
+import { memoryNotRunning } from "./memory";
 
 export interface BriefCard {
   kind: "changed" | "risk" | "conflict" | "upcoming";
@@ -61,8 +62,9 @@ export async function runBrief(deps: AgentDeps, userId: string, only?: string[])
   let memories: MemoryItem[] = [];
   try {
     memories = await deps.memory.recall(userId, "priorities projects deadlines", 5);
-  } catch {
-    failures.push({ source: "memory", name: "Memory", reason: "unreachable", impact: "The brief isn't ranked by your saved priorities." });
+  } catch (err) {
+    console.warn("[memory] brief recall failed:", err instanceof Error ? err.message : err);
+    if (!memoryNotRunning(err)) failures.push({ source: "memory", name: "Memory", reason: "unreachable", impact: "The brief isn't ranked by your saved priorities." });
   }
 
   if (ranked.length === 0) {

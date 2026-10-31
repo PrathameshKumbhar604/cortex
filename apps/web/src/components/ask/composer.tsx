@@ -6,6 +6,7 @@ import type { RunMode } from "@cortex/shared";
 import { motion } from "motion/react";
 import { formatSize } from "@/lib/files";
 import { cn } from "@/lib/ui";
+import { useMic } from "./mic";
 
 export interface PendingFile {
   key: string;
@@ -47,6 +48,23 @@ export function Composer({
   const picker = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const uploading = attachments.some((a) => a.status === "uploading");
+  const sendNext = useRef(false);
+  const mic = useMic(
+    (text) => {
+      onChange(value.trim() ? `${value.trim()} ${text}` : text);
+      ref.current?.focus();
+    },
+    (transcript) => {
+      sendNext.current = true;
+      onChange(`Turn this voice note into clean notes: a short summary, key points, and action items.\n\n${transcript}`.slice(0, 2000));
+    },
+  );
+  // Send once the parent has re-rendered with the notes prompt, so onSubmit sees the new value.
+  useEffect(() => {
+    if (!sendNext.current) return;
+    sendNext.current = false;
+    if (!busy && !uploading) onSubmit();
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -97,6 +115,7 @@ export function Composer({
           ))}
         </ul>
       )}
+      {mic.panel}
       <label htmlFor="ask" className="sr-only">
         Ask Cortex
       </label>
@@ -142,6 +161,7 @@ export function Composer({
             </button>
           </>
         )}
+        {mic.button}
         <div role="radiogroup" aria-label="Depth" className="flex gap-0.5 rounded-lg bg-shell p-0.5">
           {(["fast", "deep"] as const).map((m) => (
             <button

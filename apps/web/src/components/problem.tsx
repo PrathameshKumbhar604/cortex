@@ -13,13 +13,17 @@ export function Problem({ problem, onRetry, variant = "note" }: { problem: Expla
   const Icon = variant === "card" ? CloudOff : Info;
   const action = problem.action;
   return (
-    <div role={variant === "card" ? "alert" : undefined} className={cn("flex items-start gap-2.5 rounded-[10px] border border-line text-ink-2", variant === "card" ? "bg-surface px-4 py-3.5" : "bg-shell px-3 py-2.5")}>
+    <div role={variant === "card" ? "alert" : undefined} className={cn("flex items-start gap-2.5 rounded-[10px] border border-line text-ink-2", variant === "card" ? "bg-surface px-4 py-3.5" : "border-transparent px-0 py-1")}>
       <Icon className={cn("mt-0.5 shrink-0 text-muted", variant === "card" ? "size-4" : "size-3.5")} aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className={cn("font-[550] text-ink", variant === "card" ? "text-[14.5px]" : "text-[13.5px]")}>{problem.title}</p>
-        <p className={cn("mt-0.5 leading-snug text-muted", variant === "card" ? "text-[14px]" : "text-[13px]")}>{problem.body}</p>
+        <p className={cn(variant === "card" ? "text-[14.5px] font-[550] text-ink" : "text-[13px] text-ink-2")}>
+          {problem.title}
+          {/* A note is one quiet line: the rest of the answer still worked. */}
+          {variant === "note" && <span className="text-muted"> · {problem.body}</span>}
+        </p>
+        {variant === "card" && <p className="mt-0.5 text-[14px] leading-snug text-muted">{problem.body}</p>}
         {(action || problem.detail) && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+          <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1", variant === "card" ? "mt-2 text-[13px]" : "mt-1 text-[12.5px]")}>
             {action?.kind === "retry" && onRetry && (
               <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 font-[550] text-accent-ink hover:underline">
                 <RotateCw className="size-3.5" aria-hidden /> Try again

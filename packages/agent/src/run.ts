@@ -17,7 +17,7 @@ import type {
   SubQuestion,
 } from "@cortex/shared";
 import type { ActionStore } from "./actions";
-import type { MemoryBackend, PastChat } from "./memory";
+import { memoryNotRunning, type MemoryBackend, type PastChat } from "./memory";
 import { remember } from "./remember";
 import { actionPrompt, chatPrompt, generalPrompt, planPrompt, shortDate, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
 import { ABOUT_PAST_CHATS, decideRoute } from "./route";
@@ -184,7 +184,9 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     yield { type: "step", step: "understand", status: "active" };
     const statuses = await deps.registry.statuses(ctx);
     const connected = deps.registry.list().filter((c) => statuses.find((s) => s.id === c.id)?.connected);
-    for (const s of statuses.filter((s) => !s.connected && s.detail)) {
+    // Only a connection the user made and that lapsed is worth a note; an app they never set up (or uploads they never
+    // made) isn't a failure. Status errors are logged by the registry.
+    for (const s of statuses.filter((s) => !s.connected && s.reconnect && s.detail)) {
       const c = deps.registry.get(s.id);
       const failure = { source: s.id, name: s.name, reason: s.detail!, impact: c?.impact ?? "" };
       failures.push(failure);
@@ -222,7 +224,9 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         impact: "Your saved priorities and preferences won't be used for this answer.",
       };
       failures.push(failure);
-      yield { type: "source_error", failure };
+      console.warn("[memory] recall failed:", failure.reason);
+      // No memory service running here (not deployed, or not started) is how this Cortex is set up, not a failure to report.
+      if (!memoryNotRunning(err)) yield { type: "source_error", failure };
       yield { type: "step", step: "recall", status: "skipped", detail: "memory offline" };
     }
 

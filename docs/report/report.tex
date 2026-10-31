@@ -35,6 +35,7 @@
 \usetikzlibrary{positioning,fit,calc} % FIX: used by the diagrams drawn in this report
 
 \usepackage{tabularx}
+\usepackage{longtable} % use-case table breaks across pages instead of running into the footer
 
 \usepackage[nottoc,notlot,notlof,numbib]{tocbibind}
 \usepackage[titletoc]{appendix}
@@ -84,19 +85,24 @@
 {\bfseries A PROJECT REPORT ON}\\[1.1em]
 {\bfseries\large ``\ProjectTitle''}\\[0.9em]
 \includegraphics[width=3.05cm]{UNI_LOGO.jpg}\\[0.35em]
-{\bfseries SAVITRIBAI PHULE PUNE UNIVERSITY}\\[1.4em]
+{\bfseries SAVITRIBAI PHULE PUNE UNIVERSITY}\\[1.0em]
 SUBMITTED TOWARDS THE\\
-PARTIAL FULFILLMENT OF THE REQUIREMENTS OF\\[1.4em]
-{\bfseries\large BACHELOR OF ENGINEERING\\[0.15em] IN\\[0.15em] COMPUTER ENGINEERING}\\[1.4em]
+PARTIAL FULFILLMENT OF THE REQUIREMENTS OF\\[1.0em]
+{\bfseries\large BACHELOR OF ENGINEERING\\[0.15em] IN\\[0.15em] COMPUTER ENGINEERING}\\[1.0em]
 {\bfseries\large BY}\\[1em]
 \begin{tabular}{@{}l@{\hspace{1.6cm}}l@{}}
 \textbf{AJIT PARASKAR}      & BCOC17\\
 \textbf{HARSHVARDHAN PATIL} & BCOC32\\
 \textbf{PRATHAMESH KUMBHAR} & BCOC35\\
 \textbf{BIKRAM GHOSH}       & BCOC47\\
-\end{tabular}\\[1.6em]
-UNDER THE GUIDANCE OF\\[0.2em]
-{\bfseries\large PROF. SWAPNALI GAIKWAD}\\[1.4em]
+\end{tabular}\\[1.2em]
+UNDER THE GUIDANCE OF\\[0.4em]
+\begin{tabular}{@{}c@{\hspace{1.2cm}}c@{}}
+{\bfseries PROF. SWAPNALI GAIKWAD} & {\bfseries MR. SUBHASH KANDHARE}\\
+Internal Guide & External Guide\\
+\end{tabular}\\[0.9em]
+SPONSORED BY\\[0.2em]
+{\bfseries\large TECHTRIX SOLUTIONS PVT LTD}\\[1.0em]
 \includegraphics[width=0.98\textwidth]{DYPIT_Banner.png}\\[0.6em]
 {\bfseries DEPARTMENT OF COMPUTER ENGINEERING}\\[0.4em]
 {\bfseries (2026-2027)}
@@ -108,35 +114,43 @@ UNDER THE GUIDANCE OF\\[0.2em]
 {\fontfamily{ptm}\selectfont
 \begin{center}
 \vspace*{-0.6cm}
-\includegraphics[width=0.92\textwidth]{DYPIT_Banner.png}\\[2.6em]
+\includegraphics[width=0.92\textwidth]{DYPIT_Banner.png}\\[1.8em]
 {\bfseries\LARGE CERTIFICATE}
 \end{center}
-\vspace{1.2em}
+\vspace{0.6em}
 {\linespread{1.5}\selectfont
 This is to certify that the Final Year Project report entitled \textbf{``\ProjectTitle''} submitted by
 \textbf{Ajit Paraskar} (BCOC17), \textbf{Harshvardhan Patil} (BCOC32), \textbf{Prathamesh Kumbhar} (BCOC35) and
 \textbf{Bikram Ghosh} (BCOC47) is a bonafide work carried out by them under the guidance of
-\textbf{Prof. Swapnali Gaikwad} in partial fulfillment of requirements for BE (Computer Engineering) of
+\textbf{Prof. Swapnali Gaikwad} (internal guide) and \textbf{Mr. Subhash Kandhare} (external guide), and sponsored by
+\textbf{Techtrix Solutions Pvt Ltd}, in partial fulfillment of requirements for BE (Computer Engineering) of
 Savitribai Phule Pune University, Pune in the academic year 2026-27.\par}
-\vspace{3.2em}
+\vspace{2.2em}
+{\small
 \noindent
 \begin{minipage}[t]{0.5\textwidth}\centering
-Prof. Swapnali Gaikwad\\ Guide\\ Department of Computer Engineering\\ Dr. DYPIT, Pune
+Prof. Swapnali Gaikwad\\ Internal Guide\\ Department of Computer Engineering\\ Dr. DYPIT, Pune
 \end{minipage}%
+\begin{minipage}[t]{0.5\textwidth}\centering
+Mr. Subhash Kandhare\\ External Guide\\ Techtrix Solutions Pvt Ltd
+\end{minipage}
+
+\vspace{2.4em}
+\noindent
 \begin{minipage}[t]{0.5\textwidth}\centering
 Prof. (Dr.) Omkaresh Kulkarni\\ Head of Department\\ Department of Computer Engineering\\ Dr. DYPIT, Pune
-\end{minipage}
-
-\vspace{4.2em}
-\noindent
-\begin{minipage}[t]{0.5\textwidth}\centering
-External\\ Name and Signature
 \end{minipage}%
 \begin{minipage}[t]{0.5\textwidth}\centering
-Prof. (Dr.) Nitin Sherje\\ Principal\\ Dr. DYPIT, Pune
+External Examiner\\ Name and Signature
 \end{minipage}
 
-\vspace{3.4em}
+\vspace{2.4em}
+\noindent
+\begin{minipage}[t]{\textwidth}\centering
+Prof. (Dr.) Nitin Sherje\\ Principal\\ Dr. DYPIT, Pune
+\end{minipage}\par}
+
+\vspace{2.2em}
 \noindent Date: \makebox[3.2cm]{\dotfill}\hfill Place: \makebox[3.2cm]{\dotfill}
 \par}
 \newpage
@@ -194,6 +208,11 @@ work data. Our discussions with our guide have been of immense help in defining 
 and in identifying ways to achieve them.
 
 \vspace{1em}
+We are grateful to \textbf{Techtrix Solutions Pvt Ltd} for sponsoring this project, and to our external guide
+\textbf{Mr. Subhash Kandhare} of Techtrix Solutions Pvt Ltd for his guidance and for the industry perspective he
+brought to our work.
+
+\vspace{1em}
 Our honourable mention goes to \textbf{Prof. (Dr.) Nitin Sherje}, Principal of Dr. D. Y. Patil Institute of
 Technology, Pune, and \textbf{Prof. (Dr.) Omkaresh Kulkarni}, Head of the Computer Engineering Department,
 for granting us the opportunity to work as students, for providing us access to the laboratory and other
@@ -203,7 +222,7 @@ encouragement.
 \vspace{1em}
 It is a great pleasure and immense satisfaction to express our deepest sense of gratitude and thanks to
 everyone who has directly or indirectly helped us in completing our project work successfully.\par
-\vspace{3\baselineskip}
+\vspace{2\baselineskip}
 \hfill\begin{tabular}{@{}l@{}}
 \textbf{Ajit Paraskar}\\
 \textbf{Harshvardhan Patil}\\
@@ -258,13 +277,13 @@ The project's research framing follows recent work on agentic RAG, in particular
  \ProjectTitle
 
 \section{ Project Option }
-Internal project.
+Industry-sponsored project.
 
 \section{Internal Guide}
 Prof. Swapnali Gaikwad
 
 \section{ Sponsorship and External Guide}
-The project is not sponsored, and there is no external guide.
+The project is sponsored by Techtrix Solutions Pvt Ltd. The external guide is Mr. Subhash Kandhare of Techtrix Solutions Pvt Ltd.
 
 
 \section{Technical Keywords (As per ACM Keywords)}
@@ -359,7 +378,7 @@ System Description: the system is modelled as $S = \{X, Y, C, M, P, F, Sc, Fc\}$
 \begin{itemize}
 \item  ACM SIGIR Conference on Research and Development in Information Retrieval (ACM).
 \item  ACM IKDD CODS-COMAD (the ACM India data science conference, held in India) and workshops at IITs.
-\item  Central Universities or SPPU Conferences (to be selected by the team with the guide).
+\item  Central Universities or SPPU Conferences.
 \item IEEE Access (IEEE journal) and the ACL Rolling Review venues (ACL, EMNLP, NAACL) for the verification and evaluation results.
 \end{itemize}
 
@@ -664,7 +683,7 @@ with an average staffing of $E/D \approx 2.2$ persons. With four team members wo
 
 \subsection{Project Resources}
 \begin{itemize}
-\item \textbf{People:} four students (see Section~\ref{sec:team}) and the internal guide.
+\item \textbf{People:} four students (see Section~\ref{sec:team}) the internal guide and the external guide from the sponsor, Techtrix Solutions Pvt Ltd.
 \item \textbf{Hardware:} the team's laptops (Table~\ref{tab:hreq}); no dedicated server is needed for development.
 \item \textbf{Software and tools:} as listed in the software resources section; Git for version control.
 \item \textbf{Memory sharing, IPC and concurrency:} the web server and the memory service run as two processes and talk over HTTP/JSON on the same machine. The browser receives the agent's progress as a server-sent event stream. Inside the server, search calls run at the same time as asynchronous promises, while the memory service puts a lock around its SQLite database so that writes do not collide. A few objects exist once per Node.js process (the model router, the action store and the connector registries), and every request shares them.
@@ -676,7 +695,7 @@ Here we list what could derail Cortex and what we did about each item.
 We went back over our scope, the requirements and the schedule, and answered the risk questionnaire from Pressman and Maxim~\cite{bookPressman}. The questions below are quoted from that book, with our answer in italics after each one. The risks it surfaced are sorted into Pressman's categories and collected in Table~\ref{tab:risk}.
 
 \begin{enumerate}
-\item Have top software and customer managers formally committed to support the project? \emph{Yes; it is an internal project approved by the department, with no external customer.}
+\item Have top software and customer managers formally committed to support the project? \emph{Yes; the project is approved by the department and sponsored by Techtrix Solutions Pvt Ltd, with Mr. Subhash Kandhare as external guide.}
 \item Are end-users enthusiastically committed to the project and the system/product to be built? \emph{Not yet established; there are no real users yet, so the sample workspace and the evaluation stand in for user feedback.}
 \item Are requirements fully understood by the software engineering team and its customers? \emph{Mostly; the core requirements are fixed, while some vision items (time-travel queries, editable plan) are deferred.}
 \item Have customers been involved fully in the definition of requirements? \emph{No external customer; requirements come from the team and the guide.}
@@ -923,9 +942,9 @@ The month-by-month timeline is in the planner in Annexure~\ref{app:plan}, drawn 
 
 \section{Team Organization}
 \label{sec:team}
-The team consists of four students supervised by the internal guide. Work is divided by subsystem, and each subsystem has one owner and one reviewer.
+The team consists of four students supervised by the internal guide and the external guide from the sponsor. Work is divided by subsystem, and each subsystem has one owner and one reviewer.
 \subsection{Team structure}
-Table~\ref{tab:roles} lists the roles. The assignment of members to roles is to be completed by the team.
+Table~\ref{tab:roles} lists the roles.
 
 \begin{table}[!htbp]
 \begin{center}
@@ -933,11 +952,12 @@ Table~\ref{tab:roles} lists the roles. The assignment of members to roles is to 
 \begin{tabularx}{\textwidth}{| p{4.2cm} | X | p{2.8cm} |}
 \hline
 Role & Responsibilities & Member \\ \hline
-Agent and verification & Planner, parallel search, synthesis prompt, claim verification, action store, evaluation harness & [to be filled] \\ \hline
-Connectors and model router & Composio, MCP, Firecrawl and sample connectors; free-tier router, cooldowns and cache & [to be filled] \\ \hline
-Memory service & FastAPI service, SQLite ledger, Oracle Agent Memory adapter, memory policy & [to be filled] \\ \hline
-Web application and testing & Ask, Brief, Memory and Connections screens; event stream client; tests and documentation & [to be filled] \\ \hline
+Agent and verification & Planner, parallel search, synthesis prompt, claim verification, action store, evaluation harness &  \\ \hline
+Connectors and model router & Composio, MCP, Firecrawl and sample connectors; free-tier router, cooldowns and cache &  \\ \hline
+Memory service & FastAPI service, SQLite ledger, Oracle Agent Memory adapter, memory policy &  \\ \hline
+Web application and testing & Ask, Brief, Memory and Connections screens; event stream client; tests and documentation &  \\ \hline
 Internal guide & Review of design and progress, approval of milestones & Prof. Swapnali Gaikwad \\ \hline
+External guide & Industry guidance on behalf of the sponsor, Techtrix Solutions Pvt Ltd & Mr. Subhash Kandhare \\ \hline
 \end{tabularx}
 \end{center}
 \caption{Team roles}
@@ -977,36 +997,26 @@ Below are the people and systems that interact with Cortex, followed by what eac
 \subsection{Use-cases}
 Table~\ref{tab:usecase} lists the eight use cases.
 
-\begin{table}[!htbp]
-\begin{center}
-%\def\arraystretch{1.5}
+{\small
 \def\arraystretch{1.3}
-\small
-\begin{tabularx}{\textwidth}{| c | p{2.6cm} | X | p{2.3cm} | X |}
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{| >{\centering\arraybackslash}p{0.9cm} | >{\raggedright\arraybackslash}p{2.3cm} | >{\raggedright\arraybackslash}p{4.3cm} | >{\raggedright\arraybackslash}p{2.2cm} | >{\raggedright\arraybackslash}p{2.5cm} |}
 \hline
-Sr No.	& Use Case	& Description	& Actors	& Assumptions \\
+Sr No. & Use Case & Description & Actors & Assumptions \\ \hline
+\endfirsthead
 \hline
-1& Ask a question & Cortex plans sub-questions, searches sources in parallel, streams a cited answer and verifies each claim & User, connected apps, model providers & At least one source connected and one provider key configured \\
-\hline
-2& Choose Fast or Deep mode & Fast: local single-step plan and one model call; Deep: model plan, empty-result retry and model re-check of doubtful claims & User & -- \\
-\hline
-3& Inspect trace and evidence & Open citations, cited sources, the plan, each tool call with its count and latency, and model usage & User & A run has started \\
-\hline
-4& Approve, edit or decline an action & Review the exact preview of a proposed action, optionally edit it, then approve (executes once) or decline & User, connected app & Proposal is pending, less than 30 minutes old, same user \\
-\hline
-5& Read the Daily Brief & Cited cards for what changed, what is at risk, conflicts and what is upcoming & User, connected apps, model providers & Sources connected \\
-\hline
-6& Manage memory & Teach a memory, pin, edit or forget it, and see why it was kept & User, memory service & Memory service running \\
-\hline
-7& Connect an app or choose a workspace & Start OAuth through Composio, or switch between the sample workspace and the user's own accounts & User, Composio & Composio key configured for own accounts \\
-\hline
-8& Add an MCP server & Declare a server, its search tool and its actions in the configuration file; no code change & Operator & Server reachable \\
-\hline
-\end{tabularx}
-\end{center}
-\caption{Use Cases}
-\label{tab:usecase}
-\end{table}
+Sr No. & Use Case & Description & Actors & Assumptions \\ \hline
+\endhead
+1 & Ask a question & Cortex plans sub-questions, searches sources in parallel, streams a cited answer and verifies each claim & User, connected apps, model providers & At least one source connected and one provider key configured \\ \hline
+2 & Choose Fast or Deep mode & Fast: local single-step plan and one model call; Deep: model plan, empty-result retry and model re-check of doubtful claims & User & -- \\ \hline
+3 & Inspect trace and evidence & Open citations, cited sources, the plan, each tool call with its count and latency, and model usage & User & A run has started \\ \hline
+4 & Approve, edit or decline an action & Review the exact preview of a proposed action, optionally edit it, then approve (executes once) or decline & User, connected app & Proposal is pending, less than 30 minutes old, same user \\ \hline
+5 & Read the Daily Brief & Cited cards for what changed, what is at risk, conflicts and what is upcoming & User, connected apps, model providers & Sources connected \\ \hline
+6 & Manage memory & Teach a memory, pin, edit or forget it, and see why it was kept & User, memory service & Memory service running \\ \hline
+7 & Connect an app or choose a workspace & Start OAuth through Composio, or switch between the sample workspace and the user's own accounts & User, Composio & Composio key configured for own accounts \\ \hline
+8 & Add an MCP server & Declare a server, its search tool and its actions in the configuration file; no code change & Operator & Server reachable \\ \hline
+\caption{Use Cases}\label{tab:usecase}
+\end{longtable}}
 
 
 \subsection{Use Case View}
@@ -1528,63 +1538,81 @@ The main components are described below; their classes and relationships are sho
 \item \textbf{Memory client and service}: HTTP client in the agent; FastAPI service with the SQLite ledger and the optional Oracle store.
 \end{itemize}
 \subsection{Class Diagram}
- \begin{center}
-	\begin{figure}[!htbp]
-		\centering
-		\begin{subfigure}{\textwidth}
-		\centering
-		\fbox{\resizebox{0.97\textwidth}{!}{%
-\begin{tikzpicture}[>=stealth, thick,
-  cls/.style={draw, rectangle split, rectangle split parts=3, align=left, font=\scriptsize, inner sep=3pt, fill=white, text width=3.9cm, rectangle split part fill={blue!8,white,white}}]
-\node[cls] (router) at (0,0) {\textbf{LlmRouter}\nodepart{second}-providers: ProviderConfig[]\\-health: Map\\-cache: TtlCache\nodepart{third}+complete(opts): Completion\\+json(opts, validate)\\+stream(opts): AsyncGenerator};
-\node[cls] (deps) at (5,0) {\textbf{AgentDeps}\nodepart{second}+llm: LlmRouter\\+registry: ConnectorRegistry\\+memory: MemoryBackend\\+actions: ActionStore\nodepart{third}runAgent(input, deps)\\runBrief(deps, userId)};
-\node[cls] (membe) at (10,0) {$\ll$interface$\gg$ \textbf{MemoryBackend}\nodepart{second}\mbox{}\nodepart{third}+recall(user, query, n)\\+add(m)\\+list(user), update, remove\\+appendThread(...)};
-\node[cls] (memcl) at (15,0) {\textbf{MemoryClient}\nodepart{second}-baseUrl\\-timeoutMs = 5000\nodepart{third}+recall, add, list, update,\\remove, appendThread};
-\node[cls] (cache) at (0,-5) {\textbf{TtlCache}\nodepart{second}-map: Map\\-maxEntries\\-persistPath\nodepart{third}+get(key)\\+set(key, value, ttl)\\+key(...parts)};
-\node[cls] (reg) at (5,-5) {\textbf{ConnectorRegistry}\nodepart{second}-connectors: Map\\-cache: TtlCache\nodepart{third}+register(c)\\+statuses(ctx)\\+safeSearch(id, input, ctx)};
-\node[cls] (store) at (10,-5) {\textbf{ActionStore}\nodepart{second}-items: Map (30 min TTL)\nodepart{third}+propose(user, registry, raw)\\+decide(user, id, decision,\\\quad registry, edits?)};
-\node[cls] (svc) at (15,-5) {\textbf{MemoryService} (FastAPI)\nodepart{second}-ledger: Ledger\\-oracle: OracleStore?\nodepart{third}/memories, /search,\\/threads, /health};
-\node[cls] (ledger) at (12.5,-10) {\textbf{Ledger} (SQLite)\nodepart{second}TTL\_DAYS\\HALF\_LIFE\_DAYS = 30\nodepart{third}+add, reinforce, update,\\delete, keyword\_search};
-\node[cls] (ora) at (17.5,-10) {\textbf{OracleStore}\nodepart{second}-client: OracleAgentMemory\nodepart{third}+add, update, delete\\+search(user, query, n)\\+append\_messages, context};
-\draw[open diamond->] (deps) -- (router);
-\draw[open diamond->] (deps) -- (membe);
-\draw[open diamond->] (deps) -- (reg);
-\draw[open diamond->] (deps) -- (store);
-\draw[dashed, ->] (store) -- node[above, font=\scriptsize] {uses} (reg);
-\draw[dashed, -open triangle 45] (memcl) -- node[above, font=\scriptsize] {implements} (membe);
-\draw[->] (router) -- (cache);
-\draw[->] (reg) -- (cache);
-\draw[dashed, ->] (memcl) -- node[right, font=\scriptsize] {HTTP/JSON} (svc);
-\draw[->] (svc) -- (ledger);
-\draw[->] (svc) -- (ora);
-\end{tikzpicture}}}
-		\caption{Agent, model router, actions and memory}
-		\end{subfigure}
+Figure~\ref{fig:class-dig} gives the main classes and interfaces under the names used in the source code: part (a) covers the agent, the model router, the action store and memory, and part (b) the connector layer.
 
-		\vspace{0.4cm}
-		\begin{subfigure}{\textwidth}
-		\centering
-		\fbox{\resizebox{0.97\textwidth}{!}{%
-\begin{tikzpicture}[>=stealth, thick,
-  cls/.style={draw, rectangle split, rectangle split parts=3, align=left, font=\scriptsize, inner sep=3pt, fill=white, text width=3.5cm, rectangle split part fill={blue!8,white,white}}]
-\node[cls] (reg) at (0,0) {\textbf{ConnectorRegistry}\nodepart{second}-connectors: Map\nodepart{third}+safeSearch(...)};
-\node[cls] (conn) at (8,0) {$\ll$interface$\gg$ \textbf{Connector}\nodepart{second}+id, name, kind\\+describes, impact\\+actions: ActionDef[]\nodepart{third}+status(ctx)\\+search(input, ctx)\\+execute(action, args, ctx)\\+connect?(ctx)};
-\node[cls] (adef) at (15,0) {\textbf{ActionDef}\nodepart{second}+id, title, risk\\+params: ActionParam[]\nodepart{third}+preview(args): string};
-\node[cls] (c1) at (0,-5.5) {\textbf{ComposioConnector}\nodepart{second}-spec: ToolkitSpec\nodepart{third}Composio SDK tools,\\managed OAuth};
-\node[cls] (c2) at (4,-5.5) {\textbf{ComposioMcpConnector}\nodepart{second}-session (shared)\nodepart{third}hosted MCP endpoint\\(consumer key)};
-\node[cls] (c3) at (8,-5.5) {\textbf{McpConnector}\nodepart{second}-cfg: McpServerConfig\nodepart{third}HTTP or stdio MCP\\server from config};
-\node[cls] (c4) at (12,-5.5) {\textbf{FirecrawlConnector}\nodepart{second}id = web\nodepart{third}search or scrape URL;\\read-only};
-\node[cls] (c5) at (16,-5.5) {\textbf{DemoConnector}\nodepart{second}sample data\nodepart{third}keyword + time-window\\search; sandboxed actions};
-\draw[open diamond->] (reg) -- node[above, font=\scriptsize] {0..*} (conn);
-\draw[->] (conn) -- node[above, font=\scriptsize] {0..*} (adef);
-\foreach \cc in {c1,c2,c3,c4,c5} \draw[dashed, -open triangle 45] (\cc.north) -- (conn.south);
-\end{tikzpicture}}}
-		\caption{Connector layer}
-		\end{subfigure}
-	  \caption{Class Diagram}
-	  \label{fig:class-dig}
-	\end{figure}
-\end{center}
+\texttt{AgentDeps} is the composition root. It holds one \texttt{LlmRouter}, one \texttt{ConnectorRegistry}, one \texttt{ActionStore} and one \texttt{MemoryBackend}, and is passed to \texttt{runAgent} and \texttt{runBrief}, which are plain functions rather than methods. The router and the registry each keep a \texttt{TtlCache} for model replies and search results. \texttt{ActionStore} never calls a connector on its own: \texttt{propose} only validates a draft against the registry, and \texttt{decide} executes it once after the user approves. \texttt{MemoryBackend} is an interface; \texttt{MemoryClient} implements it over HTTP against the FastAPI \texttt{MemoryService}, which keeps the SQLite \texttt{Ledger} and, when configured, an \texttt{OracleStore}. In the connector layer, the registry holds any number of \texttt{Connector} objects, each declaring its \texttt{ActionDef}s, and five classes implement the interface.
+\begin{figure}[p]
+\centering
+\begin{subfigure}{\textwidth}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[>=stealth, semithick,
+  cls/.style={draw, rectangle split, rectangle split parts=3, align=left, font=\scriptsize, inner sep=3pt,
+    fill=white, text width=4.0cm, anchor=north, rectangle split part fill={blue!10,white,white}},
+  agg/.style={open diamond->},
+  dep/.style={dashed, ->},
+  impl/.style={dashed, -open triangle 45},
+  lbl/.style={font=\scriptsize, fill=white, inner sep=1pt}]
+% row 1
+\node[cls] (router) at (0,0) {\textbf{LlmRouter}\nodepart{second}-providers: ProviderConfig[]\\-health: Map\\-cache: TtlCache\nodepart{third}+complete(opts): Completion\\+json(opts, validate)\\+stream(opts): AsyncGenerator};
+\node[cls] (deps) at (5,0) {\textbf{AgentDeps} \hfill\textit{run.ts}\nodepart{second}+llm: LlmRouter\\+registry: ConnectorRegistry\\+memory: MemoryBackend\\+actions: ActionStore\nodepart{third}runAgent(input, deps)\\runBrief(deps, userId)};
+\node[cls] (membe) at (10,0) {$\ll$interface$\gg$\\\textbf{MemoryBackend}\nodepart{second}\mbox{}\nodepart{third}+recall(user, query, n)\\+add(m), list(user)\\+update(id, patch), remove(id)\\+appendThread(...), searchChats(...)};
+% row 2
+\node[cls] (store) at (0,-4.2) {\textbf{ActionStore}\nodepart{second}-items: Map (30 min TTL)\nodepart{third}+propose(user, registry, raw)\\+get(user, id)\\+decide(user, id, decision,\\\hspace*{1em}registry, edits?)};
+\node[cls] (reg) at (5,-4.2) {\textbf{ConnectorRegistry}\nodepart{second}-connectors: Map\\-cache: TtlCache\nodepart{third}+register(connector)\\+statuses(ctx), connected(ctx)\\+safeSearch(id, input, ctx)};
+\node[cls] (memcl) at (10,-4.2) {\textbf{MemoryClient}\nodepart{second}-baseUrl, -timeoutMs\nodepart{third}every MemoryBackend method,\\sent over HTTP};
+% row 3
+\node[cls] (cache) at (0,-8.0) {\textbf{TtlCache}\nodepart{second}-map: Map\\-maxEntries, -persistPath\nodepart{third}+get(key)\\+set(key, value, ttl)};
+\node[cls] (ledger) at (5,-8.0) {\textbf{Ledger} (SQLite)\nodepart{second}HALF\_LIFE\_DAYS = 30\nodepart{third}+add, reinforce, update, delete\\+keyword\_search, pinned\\+search\_chats};
+\node[cls] (svc) at (10,-8.0) {\textbf{MemoryService} (FastAPI)\nodepart{second}-ledger: Ledger\\-oracle: OracleStore (optional)\nodepart{third}/memories, /search\\/threads/..., /health};
+% row 4
+\node[cls] (ora) at (10,-11.3) {\textbf{OracleStore}\nodepart{second}-client: OracleAgentMemory\nodepart{third}+add, update, delete\\+search(user, query, n)\\+append\_messages};
+% edges
+\draw[agg] (deps.west |- router.text) -- (router.east |- router.text);
+\draw[agg] (deps.east |- membe.text) -- (membe.west |- membe.text);
+\draw[agg] (deps.south) -- (reg.north);
+\draw[agg] (deps.south west) -- (store.north east);
+\draw[dep] (store.east |- reg.text) -- node[lbl, above] {uses} (reg.west |- reg.text);
+\draw[impl] (memcl.north) -- node[lbl, right] {implements} (membe.south);
+\draw[dep] (memcl.south) -- node[lbl, right] {HTTP/JSON} (svc.north);
+\draw[->] (svc.west |- ledger.text) -- (ledger.east |- ledger.text);
+\draw[->] (svc.south) -- node[lbl, right] {0..1} (ora.north);
+\draw[->] (reg.south west) -- (cache.north east);
+\draw[->] (router.west) -- ++(-0.45,0) |- (cache.west);
+\end{tikzpicture}}
+\caption{Agent, model router, actions and memory}
+\end{subfigure}
+
+\vspace{0.6cm}
+
+\begin{subfigure}{\textwidth}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[>=stealth, semithick,
+  cls/.style={draw, rectangle split, rectangle split parts=3, align=left, font=\scriptsize, inner sep=2.5pt,
+    fill=white, text width=2.45cm, anchor=north, rectangle split part fill={blue!10,white,white}},
+  lbl/.style={font=\scriptsize, fill=white, inner sep=1pt}]
+\node[cls, text width=3.05cm] (reg) at (0.4,0) {\textbf{ConnectorRegistry}\nodepart{second}-connectors: Map\nodepart{third}+safeSearch(id, input, ctx)};
+\node[cls, text width=3.6cm] (conn) at (5.6,0) {$\ll$interface$\gg$ \textbf{Connector}\nodepart{second}+id, name, kind\\+describes, impact\\+actions: ActionDef[]\nodepart{third}+status(ctx)\\+search(input, ctx)\\+execute(action, args, ctx)\\+connect?(ctx)};
+\node[cls, text width=3.05cm] (adef) at (10.8,0) {\textbf{ActionDef}\nodepart{second}+id, title, risk\\+params: ActionParam[]\nodepart{third}+preview(args): string};
+\node[cls] (c1) at (0,-3.75) {\textbf{Composio}\\\textbf{Connector}\nodepart{second}-spec: ToolkitSpec\nodepart{third}Composio SDK tools, managed OAuth};
+\node[cls] (c2) at (2.8,-3.75) {\textbf{ComposioMcp}\\\textbf{Connector}\nodepart{second}-session (shared)\nodepart{third}hosted MCP endpoint};
+\node[cls] (c3) at (5.6,-3.75) {\textbf{McpConnector}\nodepart{second}-cfg: McpServerConfig\nodepart{third}HTTP or stdio MCP server from config};
+\node[cls] (c4) at (8.4,-3.75) {\textbf{Firecrawl}\\\textbf{Connector}\nodepart{second}id = web\nodepart{third}search or scrape a URL; read-only};
+\node[cls] (c5) at (11.2,-3.75) {\textbf{DemoConnector}\nodepart{second}sample data\nodepart{third}keyword and time-window search; sandboxed actions};
+\draw[open diamond->] (reg.east |- reg.text) -- node[lbl, above] {0..*} (conn.west |- reg.text);
+\draw[->] (conn.east |- adef.text) -- node[lbl, above] {0..*} (adef.west |- adef.text);
+\coordinate (bus) at ($(conn.south)+(0,-0.55)$);
+\draw[dashed, -open triangle 45] (bus) -- (conn.south);
+\draw[dashed] (c1.north |- bus) -- (c5.north |- bus);
+\foreach \cc in {c1,c2,c3,c4,c5} \draw[dashed] (\cc.north) -- (\cc.north |- bus);
+\node[lbl, right] at ($(conn.south)+(0.1,-0.28)$) {implements};
+\end{tikzpicture}}
+\caption{Connector layer}
+\end{subfigure}
+\caption{Class Diagram}
+\label{fig:class-dig}
+\end{figure}
 
 \subsection{Interaction diagram for a consent-gated action}
 Figure~\ref{fig:seq} shows the sequence of messages from a question that asks for an action to its execution. The agent's run ends after the proposal is stored; execution happens in a separate request, triggered only by the user.
@@ -1669,6 +1697,10 @@ run safeSearch for every $t \in T$ concurrently; collect evidence $E$; emit one 
 }
 $E^{*} \leftarrow$ the top $k$ items of $E$ by score after deduplication ($k = 16$ Deep, $8$ Fast), numbered $e_1, e_2, \ldots$\;
 \If{$E^{*} = \emptyset$}{emit an honest ``not found'' answer naming the sources searched, without a model call\; \KwRet{}\;}
+\end{algorithm}
+\addtocounter{algocf}{-1}% the second half keeps the number of Algorithm 1
+\begin{algorithm}[H]
+\caption{Bounded agent run (runAgent), continued: synthesis, verification and proposals}
 stream the synthesis (strong tier in Deep mode, fast tier in Fast mode), forwarding tokens only up to the first section marker\;
 split the output into answer, conflicts, missing, actions, memory and follow-ups\;
 $(L, G) \leftarrow$ VerifyClaims$(\mathit{answer}, E^{*})$\;
@@ -2167,17 +2199,17 @@ It should include assignments such as
 
 \begin{figure}[!htbp]
 \centering
-\begin{tikzpicture}[thick]
-\draw[rounded corners] (-4.6,-2.6) rectangle (6.6,2.9);
-\node[font=\small, anchor=north west] at (-4.5,2.8) {All sentences of the answer};
-\draw[fill=blue!15, fill opacity=0.6] (0,0) circle (2.1);
-\draw[fill=orange!20, fill opacity=0.6] (2.2,0) circle (2.1);
-\node[font=\small, align=center] at (-1.1,0) {factual,\\no citation:\\unsupported\\(unless the\\previous\\sentence's\\evidence\\supports it)};
-\node[font=\small, align=center] at (1.1,0) {cited and\\factual:\\overlap\\and number\\check};
-\node[font=\small, align=center] at (3.3,0) {cited,\\not\\factual-\\looking:\\checked};
-\node[font=\small] at (0,-2.35) {Factual};
-\node[font=\small] at (2.2,-2.35) {Cited};
-\node[font=\small, align=center] at (5.5,1.4) {hedges and\\connectives:\\skipped};
+\begin{tikzpicture}[thick, lab/.style={font=\small, align=center, text width=#1}]
+\draw[rounded corners] (-3.4,-3.85) rectangle (9.6,3.75);
+\node[font=\small, anchor=north west] at (-3.3,3.68) {All sentences of the answer};
+\draw[fill=blue!15, fill opacity=0.6] (0,0) circle (3);
+\draw[fill=orange!20, fill opacity=0.6] (3.4,0) circle (3);
+\node[lab=2.3cm] at (-1.2,0) {factual, no citation: unsupported (unless the previous sentence's evidence supports it)};
+\node[lab=1.9cm] at (1.7,0) {cited and factual: overlap and number check};
+\node[lab=2.3cm] at (4.6,0) {cited, not factual-looking: checked};
+\node[font=\small\bfseries] at (0,-3.4) {Factual};
+\node[font=\small\bfseries] at (3.4,-3.4) {Cited};
+\node[lab=2.4cm] at (8.0,0) {hedges and connectives: skipped};
 \end{tikzpicture}
 \caption{Venn diagram of answer sentences and their verification}
 \label{fig:venn}
@@ -2249,7 +2281,7 @@ remember & ``Remember that X'' & Memory X stored with salience 0.95 \\ \hline
 
 \item Additional assignments by the guide. If project type as Entreprenaur, Refer \cite{ehr},\cite{mckinsey},\cite{mckinseyweb}, \cite{govwebsite}
 
-This is an internal project, so the entrepreneurship assignments do not apply. The references are kept for completeness; the McKinsey reports are also used in the motivation. [Additional assignments by the guide, if any, to be added by the team.]
+This is an industry-sponsored project (Techtrix Solutions Pvt Ltd), not an entrepreneurship project, so the entrepreneurship assignments do not apply. The references are kept for completeness; the McKinsey reports are also used in the motivation.
 \end{itemize}
 
 
@@ -2320,20 +2352,20 @@ T10 & Final report and demo & Mar 2027 & Apr 2027 & T9 \\ \hline
 (At-least one technical paper must be submitted in Term-I on the project design in the
 conferences/workshops in IITs, Central Universities or UoP Conferences or equivalent International Conferences Sponsored by IEEE/ACM)
 \begin{enumerate}
-\item Paper Title: Agentic Retrieval-Augmented Generation over Live Workspace Data: A Survey and the Cortex Assistant (draft prepared in IEEE conference format; submission details to be filled by the team)
-\item Name of the Conference/Journal where paper submitted : [to be filled by the team]
-\item Paper accepted/rejected : [to be filled by the team]
-\item Review comments by reviewer : [to be filled by the team]
-\item Corrective actions if any : [to be filled by the team]
+\item Paper Title: Agentic Retrieval-Augmented Generation over Live Workspace Data: A Survey and the Cortex Assistant
+\item Name of the Conference/Journal where paper submitted :
+\item Paper accepted/rejected :
+\item Review comments by reviewer :
+\item Corrective actions if any :
 
 \end{enumerate}
 
 \chapter{Plagiarism Report}
-Plagiarism report: [to be attached by the team after the plagiarism check of the final report].
+Plagiarism report:
 \chapter{ Term-II Project Laboratory Assignments}
 \begin{enumerate}
 \item Review of design and necessary corrective actions taking into consideration the feedback report of Term I assessment, and other competitions/conferences participated like IIT, Central Universities, University Conferences or equivalent centers of excellence etc.\\
-\emph{Status:} to be completed after the Term-I assessment. [Feedback and corrective actions to be added by the team.]
+\emph{Status:} to be completed after the Term-I assessment.
 \item Project workstation selection, installations along with setup and installation report preparations.\\
 \emph{Status:} done for development workstations; the setup is described in Chapter~\ref{ch:deploy} and the hardware and software in Tables~\ref{tab:hreq} and~\ref{tab:tools}.
 \item Programming of the project functions, interfaces and GUI (if any) as per 1 st Term term-work submission using corrective actions recommended in Term-I assessment of Term-work.\\
@@ -2342,7 +2374,7 @@ Plagiarism report: [to be attached by the team after the plagiarism check of the
 \emph{Status:} Vitest and the evaluation harness are in use (Chapter~\ref{ch:testing}, Figures~\ref{fig:chart-g} and~\ref{fig:chart-t}); a larger evaluation with repeated runs is planned.
 \textbf{Additional assignments for the Entrepreneurship Project:}
 \item Installations and Reliability Testing Reports at the client end.\\
-\emph{Status:} not applicable (internal project).
+\emph{Status:} not applicable (not an entrepreneurship project).
 
 \end{enumerate}
 \chapter{Information of Project Group Members}
@@ -2350,49 +2382,49 @@ one page for each student .
 \newpage
 \begin{enumerate}
 \item Name : Ajit Paraskar \hspace{60 mm}\fbox{\parbox[c][75pt][c]{60pt}{\centering\scriptsize [Photo]}}
-\item Date of Birth : [to be filled]
-\item Gender : [to be filled]
-\item Permanent Address : [to be filled]
-\item E-Mail : [to be filled]
-\item Mobile/Contact No. : [to be filled]
-\item Placement Details : [to be filled]
-\item Paper Published : [to be filled]
+\item Date of Birth : 27-02-2003
+\item Gender : Male
+\item Permanent Address : Umrad Khalasa, Beed
+\item E-Mail : ajitparaskar87@gmail.com
+\item Mobile/Contact No. : 9673706382
+\item Placement Details : Placed at Cognizant
+\item Paper Published : Ongoing
 
 \end{enumerate}
 \newpage
 \begin{enumerate}
 \item Name : Harshvardhan Patil \hspace{52 mm}\fbox{\parbox[c][75pt][c]{60pt}{\centering\scriptsize [Photo]}}
-\item Date of Birth : [to be filled]
-\item Gender : [to be filled]
-\item Permanent Address : [to be filled]
-\item E-Mail : [to be filled]
-\item Mobile/Contact No. : [to be filled]
-\item Placement Details : [to be filled]
-\item Paper Published : [to be filled]
+\item Date of Birth :
+\item Gender :
+\item Permanent Address :
+\item E-Mail :
+\item Mobile/Contact No. :
+\item Placement Details :
+\item Paper Published :
 
 \end{enumerate}
 \newpage
 \begin{enumerate}
-\item Name : Prathamesh Kumbhar \hspace{50 mm}\fbox{\parbox[c][75pt][c]{60pt}{\centering\scriptsize [Photo]}}
-\item Date of Birth : [to be filled]
-\item Gender : [to be filled]
-\item Permanent Address : [to be filled]
-\item E-Mail : [to be filled]
-\item Mobile/Contact No. : [to be filled]
-\item Placement Details : [to be filled]
-\item Paper Published : [to be filled]
+\item Name : Prathamesh Kumbhar \hspace{46 mm}\fbox{\parbox[c][75pt][c]{60pt}{\centering\scriptsize [Photo]}}
+\item Date of Birth : 25-07-2005
+\item Gender : Male
+\item Permanent Address : Life Republic R13, Marunji, Hinjewadi, Pune 411057
+\item E-Mail : prathameshkumbhar.tech@gmail.com
+\item Mobile/Contact No. : 8421506853
+\item Placement Details : Placed at GoDaddy
+\item Paper Published : Ongoing
 
 \end{enumerate}
 \newpage
 \begin{enumerate}
 \item Name : Bikram Ghosh \hspace{62 mm}\fbox{\parbox[c][75pt][c]{60pt}{\centering\scriptsize [Photo]}}
-\item Date of Birth : [to be filled]
-\item Gender : [to be filled]
-\item Permanent Address : [to be filled]
-\item E-Mail : [to be filled]
-\item Mobile/Contact No. : [to be filled]
-\item Placement Details : [to be filled]
-\item Paper Published : [to be filled]
+\item Date of Birth :
+\item Gender :
+\item Permanent Address :
+\item E-Mail :
+\item Mobile/Contact No. :
+\item Placement Details :
+\item Paper Published :
 
 \end{enumerate}
 \end{appendices}

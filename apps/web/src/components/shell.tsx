@@ -121,16 +121,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
     ); // no app chrome (sidebar, tour) before sign-in
 
   return (
+    // MotionConfig wraps the sidebar too, so its menus and list springs follow reduced motion like the page does.
+    <MotionConfig reducedMotion="user">
     <div className="flex h-full min-h-dvh">
-      {/* Closing slides the width to 0; the inner column keeps its width so nothing reflows on the way. */}
-      <nav
-        id="sidebar"
-        aria-label="Main"
-        inert={closed}
-        style={{ width: closed ? 0 : width }}
-        className={cn("sticky top-0 hidden h-dvh shrink-0 overflow-hidden md:block", !dragging && "transition-[width] duration-300 ease-[var(--ease-out)]")}
-      >
-        <div style={{ width }} className="flex h-full flex-col px-[18px] py-6">
+      {/* The width snaps (animating width reflows the whole page every frame); the column itself slides and fades in,
+          transform/opacity only. Closing is instant: Ctrl+B is a keyboard action used many times a day. */}
+      <nav id="sidebar" aria-label="Main" inert={closed} style={{ width: closed ? 0 : width }} className="sticky top-0 hidden h-dvh shrink-0 overflow-hidden md:block">
+        <div
+          style={{ width }}
+          className={cn(
+            "flex h-full flex-col px-[18px] py-6 transition-[opacity,translate] duration-200 ease-[var(--ease-out)] starting:-translate-x-3 starting:opacity-0",
+            dragging && "transition-none",
+            closed && "hidden", // leaving display:none is what replays the starting style on reopen
+          )}
+        >
           <div className="mb-8 flex items-center justify-between pl-2">
             <Link href="/">
               <Wordmark />
@@ -209,29 +213,37 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         </header>
-        {open && (
-          <div className="border-b border-line bg-shell px-3 py-3 md:hidden">
-            <NavLinks onNavigate={() => setOpen(false)} />
-            <Suspense fallback={null}>
-              <RecentThreads onNavigate={() => setOpen(false)} />
-            </Suspense>
-            <div className="mt-3 border-t border-line pt-2">
-              <AccountMenu info={info} placement="down" />
-            </div>
-          </div>
-        )}
+        {/* The phone menu drops from the header it belongs to and goes back up the same way. */}
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, transform: "translateY(-8px)" }}
+              animate={{ opacity: 1, transform: "translateY(0px)" }}
+              exit={{ opacity: 0, transform: "translateY(-6px)", transition: { duration: 0.14 } }}
+              transition={{ type: "spring", duration: 0.28, bounce: 0 }}
+              className="relative z-20 border-b border-line bg-shell px-3 py-3 md:hidden"
+            >
+              <NavLinks onNavigate={() => setOpen(false)} />
+              <Suspense fallback={null}>
+                <RecentThreads onNavigate={() => setOpen(false)} />
+              </Suspense>
+              <div className="mt-3 border-t border-line pt-2">
+                <AccountMenu info={info} placement="down" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <main className="app-panel min-h-0 flex-1 bg-surface shadow-[var(--raise)]">
-          {/* Each page eases in when you move between them; MotionConfig makes springs follow reduced motion too. */}
-          <MotionConfig reducedMotion="user">
-            <div key={path} className="page-enter h-full">
-              {children}
-            </div>
-            <Tour />
-            <Toaster />
-          </MotionConfig>
+          {/* Each page eases in when you move between them. */}
+          <div key={path} className="page-enter h-full">
+            {children}
+          </div>
+          <Tour />
+          <Toaster />
         </main>
       </div>
     </div>
+    </MotionConfig>
   );
 }
 
@@ -564,11 +576,22 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
       {groups.map((g) => (
         <section key={g.label} className="mb-4">
           <p className="readout mb-1.5 px-2.5 text-hair">{g.label}</p>
-          <ul className="flex flex-col">
+          <ul className="relative flex flex-col">
+            {/* New chats fade down into place; a deleted one fades out and the rest glide up (layout = transforms). */}
+            <AnimatePresence initial={false} mode="popLayout">
             {g.list.map((t) => {
               const active = path === "/" && current === t.id;
               return (
-                <li key={t.id} className="enter group relative" data-thread-menu={menu === t.id ? "" : undefined}>
+                <motion.li
+                  key={t.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                  transition={{ type: "spring", duration: 0.28, bounce: 0 }}
+                  className="group relative"
+                  data-thread-menu={menu === t.id ? "" : undefined}
+                >
                   {renaming === t.id ? (
                     <input
                       autoFocus
@@ -612,8 +635,18 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
                       <MoreHorizontal className="size-4" aria-hidden />
                     </button>
                   )}
+                  <AnimatePresence>
                   {menu === t.id && (
-                    <div role="menu" data-thread-menu className="absolute top-full right-0 z-10 mt-1 flex w-36 flex-col rounded-md border border-line bg-surface py-1 text-[13px]">
+                    <motion.div
+                      role="menu"
+                      data-thread-menu
+                      initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
+                      transition={{ type: "spring", duration: 0.22, bounce: 0 }}
+                      style={{ transformOrigin: "top right" }}
+                      className="absolute top-full right-0 z-10 mt-1 flex w-36 flex-col rounded-md border border-line bg-surface py-1 text-[13px] shadow-[0_12px_32px_-16px_rgb(14_17_22/0.3)]"
+                    >
                       <button type="button" role="menuitem" onClick={() => (setMenu(null), setRenaming(t.id))} className="flex items-center gap-2 px-3 py-1.5 text-left text-ink-2 hover:bg-hover">
                         <Pencil className="size-3.5" aria-hidden /> Rename
                       </button>
@@ -623,16 +656,26 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
                       <button type="button" role="menuitem" onClick={() => remove(t.id)} className="flex items-center gap-2 px-3 py-1.5 text-left text-risk hover:bg-risk-soft">
                         <Trash2 className="size-3.5" aria-hidden /> Delete
                       </button>
-                    </div>
+                    </motion.div>
                   )}
-                </li>
+                  </AnimatePresence>
+                </motion.li>
               );
             })}
+            </AnimatePresence>
           </ul>
         </section>
       ))}
+      <AnimatePresence>
       {removed && (
-        <p role="status" className="enter mx-1 flex items-center justify-between gap-2 rounded-md bg-hover px-2.5 py-2 text-[13px] text-ink-2">
+        <motion.p
+          role="status"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0.12 } }}
+          transition={{ type: "spring", duration: 0.25, bounce: 0 }}
+          className="mx-1 flex items-center justify-between gap-2 rounded-md bg-hover px-2.5 py-2 text-[13px] text-ink-2"
+        >
           <span className="truncate">Chat deleted</span>
           <button
             type="button"
@@ -645,8 +688,9 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
           >
             Undo
           </button>
-        </p>
+        </motion.p>
       )}
+      </AnimatePresence>
     </div>
   );
 }
