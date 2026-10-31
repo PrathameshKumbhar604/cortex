@@ -6,7 +6,7 @@ import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { dataIdFor, db, getLocalUser, isOwner, mayUseLive, touchUser, upsertUser } from "./db";
 import { filesConnector } from "./files";
 import { ActionStore, MemoryClient, type AgentDeps } from "@cortex/agent";
-import { buildRegistry, ConnectorRegistry, type Workspace } from "@cortex/connectors";
+import { buildRegistry, claimUntaggedAccounts, ConnectorRegistry, type Workspace } from "@cortex/connectors";
 import { getSettings } from "./admin";
 import { LlmRouter } from "@cortex/llm";
 
@@ -39,7 +39,7 @@ export interface Session {
   workspace: Workspace;
   email: string;
   name: string;
-  /** May connect their own apps: always with a Composio project key, admins only with a personal one (see mayUseLive). */
+  /** May connect their own apps: everyone, whenever a Composio key is set (see mayUseLive). */
   liveAllowed: boolean;
   /** The account id (usage, roles and the activity log are per account, not per data id). */
   authId: string;
@@ -80,10 +80,21 @@ export async function session(): Promise<Session | null> {
   }
   const jar = await cookies();
   const ws = jar.get("cortex_ws")?.value;
-  const liveAllowed = mayUseLive(admin);
+  const liveAllowed = mayUseLive();
   const wanted: Workspace = ws === "demo" || ws === "live" ? ws : defaultWorkspace();
   const workspace: Workspace = wanted === "live" && !liveAllowed ? "demo" : wanted;
-  return { userId: dataIdFor(userId, jar.get("cortex_uid")?.value), workspace, email: local.email, name: local.name, liveAllowed, authId: userId, admin };
+  const dataId = dataIdFor(userId, jar.get("cortex_uid")?.value);
+  if (isOwner(local.email, local.verified)) claimOwnerAccounts(dataId);
+  return { userId: dataId, workspace, email: local.email, name: local.name, liveAllowed, authId: userId, admin };
+}
+
+const claimed = new Set<string>();
+/** The ck_ key owner's own Composio accounts (untagged) go to the owner's Cortex user; once per process, in the background. */
+function claimOwnerAccounts(dataId: string) {
+  const key = process.env.COMPOSIO_API_KEY;
+  if (!key?.startsWith("ck_") || claimed.has(dataId)) return;
+  claimed.add(dataId);
+  claimUntaggedAccounts(key, dataId).catch(() => claimed.delete(dataId)); // try again on a later request
 }
 
 /** Mirrors the role into Clerk's public metadata, so the browser knows to show the Admin link (a hint only). */

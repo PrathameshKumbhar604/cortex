@@ -3,21 +3,21 @@
 :root {
   /* Each colour holds its light and its dark value; the theme picks one (light-dark() follows color-scheme). */
   color-scheme: light dark;
-  --shell: light-dark(#eeebe4, #1a1917);
+  --shell: light-dark(#f4f3f0, #1a1917);
   --surface: light-dark(#ffffff, #211f1c);
-  --ink: light-dark(#1b1a17, #ece9e2);
-  --ink-2: light-dark(#36342f, #cfcbc2);
-  --muted: light-dark(#625e56, #a29e95);
-  --hair: light-dark(#6b675f, #938f86);
-  --line: light-dark(#dbd6cb, #2e2c28);
-  --line-strong: light-dark(#b8b1a3, #3a3732);
-  --hover: light-dark(#e4e0d6, #282622);
-  --pressed: light-dark(#dcd7cc, #2f2d29);
+  --ink: light-dark(#1a1916, #ece9e2);
+  --ink-2: light-dark(#3b3a36, #cfcbc2);
+  --muted: light-dark(#625f58, #a29e95);
+  --hair: light-dark(#6f6b63, #938f86);
+  --line: light-dark(#e8e6e1, #2e2c28);
+  --line-strong: light-dark(#cdc9c1, #3a3732);
+  --hover: light-dark(#ebe9e4, #282622);
+  --pressed: light-dark(#e3e1db, #2f2d29);
   --on-ink: light-dark(#ffffff, #1a1917);
-  --accent: light-dark(#5b47e0, #9d8cff);
-  --accent-soft: light-dark(#efecfd, #2a2450);
-  --accent-wash: light-dark(#f6f4fe, #221e3a);
-  --accent-ink: light-dark(#4a37c9, #c2b8ff);
+  --accent: light-dark(#5443d6, #9d8cff);
+  --accent-soft: light-dark(#eeebfd, #2a2450);
+  --accent-wash: light-dark(#f7f6fe, #221e3a);
+  --accent-ink: light-dark(#4434c0, #c2b8ff);
   --risk: light-dark(#d93a3f, #ff6b70);
   --risk-soft: light-dark(#fdf2f2, #2b1517);
   --warn: light-dark(#b35a00, #f5a04f);
@@ -33,10 +33,15 @@
   --src-slack: light-dark(#8e4ec6, #b07ee6);
   --src-github: light-dark(#1b1a17, #ece9e2);
   --src-web: light-dark(#3e63dd, #6e8df5);
-  --src-memory: light-dark(#5b47e0, #9d8cff);
+  --src-memory: light-dark(#5443d6, #9d8cff);
   --src-files: light-dark(#c2410c, #fb8b4c);
-  /* Light mode lifts white panels off the tinted shell with a soft shadow; dark mode separates by tone alone. */
-  --raise: 0 1px 2px light-dark(rgb(27 26 23 / 0.06), transparent), 0 4px 16px -8px light-dark(rgb(27 26 23 / 0.1), transparent);
+  /* Light mode separates layers by tone, a hairline and a soft two-part shadow; dark mode by tone alone (all transparent). */
+  --raise: 0 0 0 1px light-dark(rgb(26 25 22 / 0.06), transparent), 0 1px 2px light-dark(rgb(26 25 22 / 0.05), transparent),
+    0 8px 24px -12px light-dark(rgb(26 25 22 / 0.1), transparent);
+  --raise-sm: 0 0 0 1px light-dark(rgb(26 25 22 / 0.06), transparent), 0 1px 2px light-dark(rgb(26 25 22 / 0.06), transparent);
+  --nav-active: light-dark(#ffffff, #2f2d29);
+  --divider: light-dark(transparent, #2e2c28);
+  --panel-gap: 0px;
 }
 /* An explicit choice overrides the system setting (set before paint by the script in layout.tsx). */
 :root[data-theme="light"] {
@@ -44,6 +49,26 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+/* Light mode floats the main panel as a white sheet on the tinted shell; dark keeps it flush. */
+:root[data-theme="light"] {
+  --panel-gap: 8px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --panel-gap: 8px;
+  }
+}
+@media (min-width: 768px) {
+  .app-panel {
+    margin: var(--panel-gap) var(--panel-gap) var(--panel-gap) 0;
+    border-radius: calc(var(--panel-gap) * 1.5);
+    overflow: hidden;
+  }
+}
+.nav-active {
+  background: var(--nav-active);
+  box-shadow: var(--raise-sm);
 }
 
 @theme inline {

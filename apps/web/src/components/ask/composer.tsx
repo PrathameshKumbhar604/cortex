@@ -74,7 +74,7 @@ export function Composer({
         setDragging(false);
         onAttach([...e.dataTransfer.files]);
       }}
-      className={cn("rounded-[14px] border bg-surface shadow-[0_8px_24px_-12px_rgba(14,17,22,0.14)] transition-colors focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgba(67,83,255,0.10),0_8px_24px_-12px_rgba(14,17,22,0.14)]", dragging ? "border-accent bg-accent-wash" : "border-line-strong")}
+      className={cn("rounded-[14px] border bg-surface shadow-[0_8px_24px_-12px_rgba(14,17,22,0.14)] transition-colors focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_12%,transparent),0_8px_24px_-12px_rgba(14,17,22,0.14)]", dragging ? "border-accent bg-accent-wash" : "border-line-strong")}
     >
       {attachments.length > 0 && (
         <ul className="flex flex-wrap gap-1.5 px-3 pt-3" aria-label="Attached files">

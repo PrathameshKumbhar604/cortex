@@ -67,140 +67,113 @@
 \begin{document}
 
 \setlength{\parindent}{0mm}
+% ---- Front pages, laid out after the department's corrected template ----
+% Thin page border used on the title, certificate and declaration pages.
+\newcommand{\pageborder}{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \draw[line width=0.4pt]
+      ($(current page.north west)+(2.52cm,-1.25cm)$) rectangle
+      ($(current page.south east)+(-1.43cm,2.54cm)$);
+  \end{tikzpicture}}
+
+% Title page
+\thispagestyle{empty}\pageborder
 \begin{center}
- \vspace*{0\baselineskip}
-{\bfseries A  PROJECT REPORT ON \\}
- \vspace*{2\baselineskip}
-{\bfseries \fontsize{16}{18} \selectfont  \ProjectTitle \\ \vspace*{2\baselineskip}}
-{\fontsize{12}{12} \selectfont SUBMITTED TOWARDS THE
- \\PARTIAL FULFILLMENT OF THE REQUIREMENTS OF \\
-
-\vspace*{2\baselineskip}}
-{\bfseries \fontsize{14}{12} \selectfont BACHELOR OF ENGINEERING (Computer Engineering) \\
-\vspace*{1\baselineskip}}
-{\bfseries \fontsize{14}{12} \selectfont BY \\
-\vspace*{1\baselineskip}}
-\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17 \\
-\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32 \\
-\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35 \\
-\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47 \\
-\vspace*{2\baselineskip}
-{\bfseries \fontsize{14}{12} \selectfont Under The Guidance of \\
-\vspace*{1\baselineskip}
-Prof. Swapnali Gaikwad\par} % FIX: group closed here (was left open in the template)
-\vspace*{2\baselineskip}
-\includegraphics[width=200pt]{DPU_DYP_Logo.png} \\
-\vspace*{1\baselineskip}
-{\bfseries \fontsize{14}{12} \selectfont Department of Computer Engineering \\
-\vspace*{1\baselineskip}
-DR.D.Y.PATIL INSTITUTE OF TECHNOLOGY  \\
-PIMPRI, PUNE \\
-A.Y 2026-2027\par} % FIX: group closed here (was left open in the template)
-\begin{center}\includegraphics[width=100pt]{UNI_LOGO.jpg} \\
-{\bfseries SAVITRIBAI PHULE PUNE UNIVERSITY \\}
-
+\fontfamily{ptm}\selectfont
+\vspace*{-1.2cm}
+{\bfseries A PROJECT REPORT ON}\\[1.1em]
+{\bfseries\large ``\ProjectTitle''}\\[0.9em]
+\includegraphics[width=3.05cm]{UNI_LOGO.jpg}\\[0.35em]
+{\bfseries SAVITRIBAI PHULE PUNE UNIVERSITY}\\[1.4em]
+SUBMITTED TOWARDS THE\\
+PARTIAL FULFILLMENT OF THE REQUIREMENTS OF\\[1.4em]
+{\bfseries\large BACHELOR OF ENGINEERING\\[0.15em] IN\\[0.15em] COMPUTER ENGINEERING}\\[1.4em]
+{\bfseries\large BY}\\[1em]
+\begin{tabular}{@{}l@{\hspace{1.6cm}}l@{}}
+\textbf{AJIT PARASKAR}      & BCOC17\\
+\textbf{HARSHVARDHAN PATIL} & BCOC32\\
+\textbf{PRATHAMESH KUMBHAR} & BCOC35\\
+\textbf{BIKRAM GHOSH}       & BCOC47\\
+\end{tabular}\\[1.6em]
+UNDER THE GUIDANCE OF\\[0.2em]
+{\bfseries\large PROF. SWAPNALI GAIKWAD}\\[1.4em]
+\includegraphics[width=0.98\textwidth]{DYPIT_Banner.png}\\[0.6em]
+{\bfseries DEPARTMENT OF COMPUTER ENGINEERING}\\[0.4em]
+{\bfseries (2026-2027)}
 \end{center}
-\end{center}
-
 \newpage
 
-
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=200pt]{DPU_DYP_Logo.png}
-\end{figure}
-
-
-{\bfseries \fontsize{14}{12} \selectfont \centerline{DR.D.Y.PATIL INSTITUTE OF TECHNOLOGY}
-\centerline{Department of Computer Engineering}
-\vspace*{2\baselineskip}}
-
-
-{\bfseries \fontsize{16}{12} \selectfont \centerline{CERTIFICATE}
-\vspace*{2\baselineskip}}
-
-\centerline{This is to certify that the Project Entitled}
-\vspace*{.5\baselineskip}
-
-
-% FIX: \centerline cannot wrap a long title, so the title is set in a centred block.
-{\bfseries \fontsize{14}{18} \selectfont \begin{center}\ProjectTitle\end{center}
-\vspace*{0.5\baselineskip}}
-
-\centerline{Submitted by}
-\vspace*{0.5\baselineskip}
-\centerline{\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17}
-\centerline{\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32}
-\centerline{\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35}
-\centerline{\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47}
-
-is a bonafide work carried out by Students under the supervision of Prof. Swapnali Gaikwad and it
-is submitted towards the partial fulfillment of the requirement of Bachelor of Engineering (Computer Engineering).\\
-
-
-
-\bgroup
-\def\arraystretch{0.9}\vspace*{0.5\baselineskip}\vspace*{0.5\baselineskip}
-\begin{tabular}{c c }
-Prof. Swapnali Gaikwad &  \hspace{25 mm} Dr. Omkaresh Kulkarni \\
-Internal Guide   &  \hspace{25 mm} H.O.D \\
-Dept. of Computer Engg.  &	\hspace{25 mm}Dept. of Computer Engg.  \\
-\end{tabular}
-\egroup % FIX: closes the \bgroup opened above
-%}
+% Certificate
+\thispagestyle{empty}\pageborder
+{\fontfamily{ptm}\selectfont
 \begin{center}
-%\fontsize{12}{18}\selectfont
-{
-Dr. Nitin Sherje \\
-Principal\\
-DIT,Pimpri
-}
+\vspace*{-0.6cm}
+\includegraphics[width=0.92\textwidth]{DYPIT_Banner.png}\\[2.6em]
+{\bfseries\LARGE CERTIFICATE}
 \end{center}
-\vspace*{2\baselineskip} % FIX: replaces "\\\\" after \end{center}, which is an error in vertical mode
+\vspace{1.2em}
+{\linespread{1.5}\selectfont
+This is to certify that the Final Year Project report entitled \textbf{``\ProjectTitle''} submitted by
+\textbf{Ajit Paraskar} (BCOC17), \textbf{Harshvardhan Patil} (BCOC32), \textbf{Prathamesh Kumbhar} (BCOC35) and
+\textbf{Bikram Ghosh} (BCOC47) is a bonafide work carried out by them under the guidance of
+\textbf{Prof. Swapnali Gaikwad} in partial fulfillment of requirements for BE (Computer Engineering) of
+Savitribai Phule Pune University, Pune in the academic year 2026-27.\par}
+\vspace{3.2em}
+\noindent
+\begin{minipage}[t]{0.5\textwidth}\centering
+Prof. Swapnali Gaikwad\\ Guide\\ Department of Computer Engineering\\ Dr. DYPIT, Pune
+\end{minipage}%
+\begin{minipage}[t]{0.5\textwidth}\centering
+Prof. (Dr.) Omkaresh Kulkarni\\ Head of Department\\ Department of Computer Engineering\\ Dr. DYPIT, Pune
+\end{minipage}
 
+\vspace{4.2em}
+\noindent
+\begin{minipage}[t]{0.5\textwidth}\centering
+External\\ Name and Signature
+\end{minipage}%
+\begin{minipage}[t]{0.5\textwidth}\centering
+Prof. (Dr.) Nitin Sherje\\ Principal\\ Dr. DYPIT, Pune
+\end{minipage}
 
-Signature of Project co-ordinator \hspace{15 mm} Signature of External Examiner
+\vspace{3.4em}
+\noindent Date: \makebox[3.2cm]{\dotfill}\hfill Place: \makebox[3.2cm]{\dotfill}
+\par}
 \newpage
-\begin{center}
-\textbf{PROJECT APPROVAL SHEET}
-\end{center}
-\begin{center}
- A Project Titled
- \end{center} % FIX: removed "\\" after \end{center}
-\begin{center}
-(\ProjectTitle)
-\end{center} % FIX: removed "\\" after \end{center}
-\begin{center}
-Is successfully completed by
-\end{center}
-\centerline{\makebox[55mm][l]{Ajit Paraskar}  \hspace{25 mm} Exam No: BCOC17}
-\centerline{\makebox[55mm][l]{Harshvardhan Patil} \hspace{25 mm} Exam No: BCOC32}
-\centerline{\makebox[55mm][l]{Prathamesh Kumbhar} \hspace{25 mm} Exam No: BCOC35}
-\centerline{\makebox[55mm][l]{Bikram Ghosh} \hspace{25 mm} Exam No: BCOC47}
-\begin{center}
- at
- \end{center}
- \begin{center}
- DEPARTMENT OF COMPUTER ENGINEERING
- \end{center}
- \begin{center}
- Dr.D.Y.PATIL INSTITUTE OF TECHNOLOGY
- \end{center}
- \begin{center}
- SAVITRIBAI PHULE PUNE UNIVERSITY,PUNE
- \end{center}
 
- \begin{center}
- ACADEMIC YEAR 2026-2027
- \end{center}
+% Declaration
+\thispagestyle{empty}\pageborder
+{\fontfamily{ptm}\selectfont
+\begin{center}
+\vspace*{-0.6cm}
+\includegraphics[width=0.92\textwidth]{DYPIT_Banner.png}\\[2.6em]
+{\bfseries\LARGE DECLARATION}
+\end{center}
+\vspace{1.2em}
+{\linespread{1.5}\selectfont
+We declare that this written submission represents our ideas in our own words and where others' ideas or
+words have been included, we have adequately cited and referenced the original sources.
 
- \vspace*{1\baselineskip} % FIX: removed the stray "}" that followed this line
- \begin{tabular}{c c }
-Prof. Swapnali Gaikwad &  \hspace{25 mm} Dr. Omkaresh Kulkarni \\
-Internal Guide   &  \hspace{25 mm} H.O.D \\
-Dept. of Computer Engg.  &	\hspace{25 mm}Dept. of Computer Engg.  \\
-\end{tabular}
+\vspace{0.8em}
+We also declare that we have adhered to all principles of academic honesty and integrity and have not
+misrepresented or fabricated or falsified any idea / data / fact / source in our submission.
+
+\vspace{0.8em}
+We understand that any violation of the above will be cause for disciplinary action by the Institute and
+can also evoke penal action from the sources which have thus not been properly cited or from whom proper
+permission has not been taken when needed.\par}
+\vspace{3.2em}
+\noindent
+\begin{minipage}[b]{0.6\textwidth}
+Ajit Paraskar (BCOC17)\\[0.3em]
+Harshvardhan Patil (BCOC32)\\[0.3em]
+Prathamesh Kumbhar (BCOC35)\\[0.3em]
+Bikram Ghosh (BCOC47)
+\end{minipage}%
+\begin{minipage}[b]{0.4\textwidth}\raggedleft
+Date: \makebox[3.2cm]{\hrulefill}
+\end{minipage}
+\par}
 \newpage
 
 %\pictcertificate{TITLE OF BE PROJECT}{Student Name}{Exam Seat No}{Guide Name}
@@ -211,6 +184,32 @@ Dept. of Computer Engg.  &	\hspace{25 mm}Dept. of Computer Engg.  \\
 \pagenumbering{Roman}
 %\pictack{BE PROJECT TITLE}{Guide Name}
 
+
+{\newpage {\fontfamily{ptm}\selectfont\bfseries\LARGE \centerline{Acknowledgement}}
+\vspace*{2\baselineskip}}
+{\fontfamily{ptm}\selectfont\linespread{1.5}\selectfont
+We take this opportunity to thank our project guide \textbf{Prof. Swapnali Gaikwad} for providing us the
+opportunity to work in an exciting and challenging field, agentic retrieval-augmented generation over live
+work data. Our discussions with our guide have been of immense help in defining the goals of this project
+and in identifying ways to achieve them.
+
+\vspace{1em}
+Our honourable mention goes to \textbf{Prof. (Dr.) Nitin Sherje}, Principal of Dr. D. Y. Patil Institute of
+Technology, Pune, and \textbf{Prof. (Dr.) Omkaresh Kulkarni}, Head of the Computer Engineering Department,
+for granting us the opportunity to work as students, for providing us access to the laboratory and other
+research facilities that were of assistance to us in carrying out this project, and for their support and
+encouragement.
+
+\vspace{1em}
+It is a great pleasure and immense satisfaction to express our deepest sense of gratitude and thanks to
+everyone who has directly or indirectly helped us in completing our project work successfully.\par
+\vspace{3\baselineskip}
+\hfill\begin{tabular}{@{}l@{}}
+\textbf{Ajit Paraskar}\\
+\textbf{Harshvardhan Patil}\\
+\textbf{Prathamesh Kumbhar}\\
+\textbf{Bikram Ghosh}\\
+\end{tabular}\par}
 
 {  \newpage {\bfseries \fontsize{14}{12} \selectfont \centerline{Abstract}
 \vspace*{2\baselineskip}} \setlength{\parindent}{11mm} }
@@ -224,34 +223,7 @@ This project presents \textbf{Cortex}, an agentic RAG system over a user's \emph
 The project's research framing follows recent work on agentic RAG, in particular GRASP (GRanularity-Aware Search Policy for Agentic RAG), which studies when and how finely an agent should retrieve. In a preliminary 12-question evaluation over a fictional sample workspace, using free-tier models, Cortex reached a mean groundedness of 0.88 and a citation recall of 0.92, answered the unanswerable question honestly, executed no action without consent, and had a median latency of 3.7~s (p90 7.1~s). Conflict detection and action proposals each succeeded in one of two cases, which identifies the main directions for further work.
 
 
-{  \newpage {\bfseries \fontsize{14}{12} \selectfont \centerline{Acknowledgments}
-\vspace*{2\baselineskip}} \setlength{\parindent}{11mm} }
-{ \setlength{\parindent}{0mm} }
-\textit{It gives us great pleasure in presenting the project report
-on {\bfseries \fontsize{12}{12} \selectfont `\ProjectTitle'}.}
-\vspace*{1.5\baselineskip}
 
- \textit{We would like to take this opportunity to thank our internal guide
- \textbf{Prof. Swapnali Gaikwad} for giving us all the help and guidance we needed. We are
- really grateful to them for their kind support. Their valuable suggestions were very helpful.} \vspace*{1.5\baselineskip}
-
- \textit{We are also grateful to \textbf{Dr. Omkaresh Kulkarni}, Head of Computer
- Engineering Department, Dr. D. Y. Patil Institute of Technology, Pimpri, for their indispensable
- support and suggestions.}
-\vspace*{1.5\baselineskip}
-
-\textit{In the end our special thanks to \textbf{[Other Person Name]} for
-providing various resources such as  laboratory with all needed software platforms,
-continuous Internet connection, for Our Project.}
-\vspace*{3\baselineskip} \\
-\begin{tabular}{p{8.2cm}c}
-&Ajit Paraskar\\
-&Harshvardhan Patil\\
-&Prathamesh Kumbhar\\
-&Bikram Ghosh\\
-&(B.E. Computer Engg.)
-%}
-\end{tabular}
 
 
 % \maketitle
@@ -348,11 +320,11 @@ The keywords below follow the 1998 ACM Computing Classification System (\url{htt
 
 \section{Problem Statement}
 \label{sec:problem}
-To design and implement an agentic retrieval-augmented generation system that answers natural-language questions over a user's live, distributed work data (e-mail, calendar, documents, notes, team chat, code hosting and the web) by decomposing each question into sub-questions, retrieving evidence from all relevant sources in parallel within fixed budgets, and producing an answer in which every factual claim is cited and verified against its evidence; that surfaces contradictions between sources instead of hiding them, says plainly when information is missing, keeps an explainable and user-governed long-term memory, and performs actions in the user's tools only after explicit, per-action consent; all while running on free-tier language model services.
+To design and implement an agentic retrieval-augmented generation system that answers natural-language questions over a user's live work data, which is spread over e-mail, calendar, documents, notes, team chat, code hosting and the web. The system breaks each question into sub-questions and searches all relevant sources in parallel within fixed budgets. Every factual claim in its answer is cited and then checked against the evidence it cites. When two sources disagree, the system shows the contradiction instead of hiding it, and when information is missing it says so. It also keeps a long-term memory that the user can inspect and control, and it acts in the user's tools only after explicit consent for each action. All of this has to run on free-tier language model services.
 
 \section{Abstract}
 \begin{itemize}
-	\item Work information is scattered across Gmail, Google Calendar, Google Drive, Notion, Slack, GitHub and the web, and it changes every day. Ordinary RAG chatbots run one similarity search over a static corpus, treat every sentence as equally certain, resolve contradictions silently and either cannot act or act without asking. Cortex is an agentic RAG system that plans two to five sub-questions, searches the connected sources in parallel through a registry of interchangeable connectors, recalls remembered priorities, and streams an answer in which every factual sentence cites numbered evidence. A verifier checks each claim lexically (citation exists, content-word overlap, numbers match) and, in Deep mode, asks a model to re-check only the doubtful claims; the result is a groundedness score and a visual confidence state per claim. Contradictions are reported with both citations, missing information is stated without spending a model call, and connector failures are explained together with their impact on the answer. Actions are proposed as confirmation cards and executed only through a single approval endpoint. A Python memory service keeps provenance, salience decay, expiry, pinning, editing and forgetting for every memory, on Oracle Agent Memory when configured and SQLite otherwise. A failover router over free-tier providers with cooldowns and a response cache keeps the operating cost at zero. A preliminary 12-question evaluation gave a mean groundedness of 0.88 and a citation recall of 0.92.
+	\item The information a student or developer needs for daily work sits in Gmail, Google Calendar, Google Drive, Notion, Slack, GitHub and the web, and it changes every day. A typical RAG chatbot runs one similarity search over a fixed corpus and treats every retrieved sentence as equally reliable. If two sources disagree it quietly picks one, and it either cannot act at all or acts without asking. We built Cortex to close these gaps. For each question it plans two to five sub-questions, searches the connected sources in parallel through a registry of interchangeable connectors, recalls the priorities the user asked it to remember, and streams an answer in which every factual sentence cites numbered evidence. A verifier then checks each claim lexically: the citation must exist, the content words must overlap and the numbers must match. In Deep mode a model re-checks only the claims that look doubtful. The user sees a groundedness score and a confidence state for each claim. Contradictions are shown with both citations, missing information is reported without spending a model call, and when a connector fails the answer says which one and what may be missing as a result. Actions appear as confirmation cards and run only through a single approval endpoint. A separate Python memory service records the provenance, salience decay and expiry of every memory and lets the user pin, edit or forget it; it uses Oracle Agent Memory when configured and SQLite otherwise. Operating cost stays at zero because a failover router moves between free-tier providers, with cooldowns and a response cache. In a preliminary 12-question evaluation the mean groundedness was 0.88 and the citation recall 0.92.
 \end{itemize}
 
 \section{Goals and Objectives}
@@ -364,7 +336,7 @@ To design and implement an agentic retrieval-augmented generation system that an
 	\item Never execute an action in a user's tool without an explicit, single-use approval of an exact preview.
 	\item Keep long-term memory selective and explainable (reason, source, salience, expiry), with pin, edit and forget controls.
 	\item Degrade gracefully: name any source that fails, explain the impact, and continue with the rest.
-	\item Keep the number of model calls per question small and predictable (at most four in Deep mode, at most two in Fast mode) so that the system runs on free tiers.
+	\item Keep the number of model calls per question small and predictable (at most five in Deep mode, at most three in Fast mode, counting the router call) so that the system runs on free tiers.
 	\item Provide an evaluation harness and an automated test suite that measure groundedness, citation recall, honesty and consent safety.
 \end{itemize}
 
@@ -546,7 +518,7 @@ Cortex (this work) & Yes (bounded) & Yes & Per claim & Yes & Yes \\ \hline
 
 \chapter{Problem Definition and scope}
 \section{Problem Statement}
-Given a question $q$ from a user whose work data lives in several independently hosted tools, produce, within a bounded number of model calls and tool calls, an answer that (a) uses only evidence retrieved from those tools during the run, (b) cites the evidence for every factual sentence, (c) reports how much of the answer is supported, (d) reports where the sources disagree and what could not be found, and (e) turns any requested write operation into a proposal that the user must approve before it runs. The system must keep working when individual sources or model providers fail, and it must remember only what is likely to matter later, in a way the user can inspect and control.
+A user's work data lives in several tools, each hosted separately. Given a question $q$ from this user, Cortex has a fixed allowance of model calls and tool calls in which to produce an answer. That answer may use only evidence fetched from the tools during the run (a), and every factual sentence in it must cite its evidence (b). It must also say how much of the answer is supported (c), where the sources disagree and what could not be found (d). If the user asks for a write operation, such as sending a message, the system turns it into a proposal that runs only after the user approves it (e). Sources and model providers will sometimes fail, and the system has to keep working when they do. Finally, it should remember only what is likely to matter later, and the user must be able to see and change what it remembers.
 
 
 \subsection{Goals and objectives}
@@ -569,7 +541,7 @@ Goal and Objectives:
 
 \section{Major Constraints}
 \begin{itemize}
-\item \textbf{Free-tier quotas.} All language models are used through free tiers with per-minute and per-day limits that change often. This constrains the number of model calls per question (at most 4 in Deep mode, 2 in Fast mode), requires failover across providers with cooldowns, and motivates the response cache.
+\item \textbf{Free-tier quotas.} All language models are used through free tiers with per-minute and per-day limits that change often. This constrains the number of model calls per question (at most 5 in Deep mode, 3 in Fast mode), requires failover across providers with cooldowns, and motivates the response cache.
 \item \textbf{Third-party APIs.} Connectors depend on Composio, the MCP servers and Firecrawl; tool names and output shapes can change. Tool identifiers are therefore stored as data, and tool output is mapped to evidence by a tolerant extractor.
 \item \textbf{Privacy and consent.} The system reads private mail and chat. It must not store users' source data beyond short-lived caches, must not expose OAuth tokens to the browser, and must not perform write operations without explicit approval.
 \item \textbf{Latency.} An interactive answer should start within a few seconds. Searches run in parallel with a 12~s timeout per call, and the answer is streamed.
@@ -593,19 +565,19 @@ Single-shot RAG over a copied index & 1 & Needs ingesting and re-indexing every 
 Unbounded ReAct loop & $n$ (unbounded) & Calls grow with the number of steps; hard to keep within free quotas; latency varies widely; can loop. \\ \hline
 RL-trained search policy (GRASP, Search-R1) & several per question & Best retrieval decisions, but requires training data, GPUs and a model the team can fine-tune; not feasible with hosted free-tier APIs. \\ \hline
 Graph framework with human interrupts & varies & Flexible, but adds a framework dependency and makes the call count less predictable. \\ \hline
-\textbf{Bounded plan-then-execute pipeline (chosen)} & Deep $\le 4$, Fast $\le 2$ & One planning call, parallel searches (no model call), one streamed synthesis, an optional verification call for doubtful claims only. ``Not found'' answers use no model call. Predictable cost and latency. \\ \hline
+\textbf{Bounded plan-then-execute pipeline (chosen)} & Deep $\le 5$, Fast $\le 3$ & One planning call, parallel searches (no model call), one streamed synthesis, an optional verification call for doubtful claims only. ``Not found'' answers use no model call. Predictable cost and latency. \\ \hline
 \end{tabularx}
 \end{center}
 \caption{Alternative methodologies and their efficiency}
 \label{tab:approaches}
 \end{table}
 
-Further efficiency measures in the chosen design: identical prompts are served from a least-recently-used cache (default lifetime 6~h, persisted to disk); identical searches within 90~s are served from a search cache; the planner and the verifier use the faster model tier and only the synthesis uses the stronger tier; and the lexical verifier, which is linear in the number of claim and evidence tokens, runs before any model-based check.
+We added a few more savings to the chosen design. A prompt that has been sent before is answered from a least-recently-used cache, which keeps entries for 6~h by default and is saved to disk. The same search repeated within 90~s comes from a separate search cache. Only the synthesis step uses the stronger model tier; the planner and the verifier make do with the faster one. The lexical verifier is linear in the number of claim and evidence tokens, so we run it first and call a model only for what it cannot settle.
 
 \section{Outcome}
 \begin{itemize}
 \item A working web application (Ask with live trace, Brief, Memory, Connections) and an agent API that answers questions over six work tools and the web with cited, verified answers.
-\item Reusable packages: a free-tier model router with failover, cooldowns and caching; a connector registry with Composio, generic MCP, Firecrawl and sample-workspace connectors; and a memory service with provenance, decay and governance.
+\item Reusable packages. The model router handles free-tier failover, cooldowns and caching. The connector registry ships with Composio, generic MCP, Firecrawl and sample-workspace connectors. The memory service tracks provenance and decay and lets the user govern what is kept.
 \item A consent model in which only one endpoint can execute an action, once, for the user who received the proposal, within 30 minutes.
 \item An automated test suite (18 tests) and an evaluation harness with preliminary results (mean groundedness 0.88, citation recall 0.92, zero actions executed without consent).
 \end{itemize}
@@ -658,7 +630,7 @@ Platform :
 \chapter{Project Plan}
 
 \section{Project Estimates}
-As the department's format asks, we used a waterfall plan: each phase (requirements, feasibility, design, coding, testing, maintenance) was signed off before the next one started. The estimates below use the basic COCOMO model together with the outputs of the laboratory assignments in Annexures~\ref{app:algo} and~\ref{app:quality}.
+The department's format asks for a waterfall plan, so we followed one. Requirements, feasibility, design, coding, testing and maintenance each had to be signed off before the next phase began. The estimates below use the basic COCOMO model together with the outputs of the laboratory assignments in Annexures~\ref{app:algo} and~\ref{app:quality}.
 \subsection{Reconciled Estimates}
 \subsubsection{Cost Estimate}
 The size of the delivered source code, counted as non-blank lines of TypeScript, TSX, Python, CSS and scripts (excluding dependencies and generated files), is about 6.1~KLOC. The basic COCOMO model for an organic project gives
@@ -695,7 +667,7 @@ with an average staffing of $E/D \approx 2.2$ persons. With four team members wo
 \item \textbf{People:} four students (see Section~\ref{sec:team}) and the internal guide.
 \item \textbf{Hardware:} the team's laptops (Table~\ref{tab:hreq}); no dedicated server is needed for development.
 \item \textbf{Software and tools:} as listed in the software resources section; Git for version control.
-\item \textbf{Memory sharing, IPC and concurrency:} the web server and the memory service are separate processes that communicate over HTTP/JSON on the local machine; the agent and the browser communicate over a server-sent event stream; within the server, search calls run concurrently as asynchronous promises; the memory service serialises access to its SQLite database with a lock; and the process-wide singletons (model router, action store, connector registries) are shared by all requests in one Node.js process.
+\item \textbf{Memory sharing, IPC and concurrency:} the web server and the memory service run as two processes and talk over HTTP/JSON on the same machine. The browser receives the agent's progress as a server-sent event stream. Inside the server, search calls run at the same time as asynchronous promises, while the memory service puts a lock around its SQLite database so that writes do not collide. A few objects exist once per Node.js process (the model router, the action store and the connector registries), and every request shares them.
 \end{itemize}
 
 \section{Risk Management w.r.t. NP Hard analysis}
@@ -995,9 +967,9 @@ This chapter pins down what Cortex has to do and under which limits. It starts w
 Below are the people and systems that interact with Cortex, followed by what each of them does with it.
  \subsection{User profiles}
 \begin{itemize}
-\item \textbf{End user} (primary actor): a developer, productivity-focused professional or undergraduate whose work is spread across Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub. The user may be non-technical and never handles API keys or configuration files. The user asks questions, reads the Brief, approves or declines actions and manages memory.
+\item \textbf{End user} (primary actor): typically a developer, an undergraduate or anyone else whose work is split across Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub. We assume this person may not be technical, so they never deal with API keys or configuration files. They ask questions and read the Brief. When Cortex proposes an action they approve or decline it, and they look after their own memories.
 \item \textbf{Operator} (deploys Cortex; may be the same person): places API keys in the server's environment file, optionally declares extra MCP servers in a configuration file, and starts the web server and the memory service.
-\item \textbf{Connected applications} (secondary actor): Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub through Composio; any MCP server; and the web through Firecrawl. They answer searches and, after approval, execute actions.
+\item \textbf{Connected applications} (secondary actor): the six apps above, reached through Composio, plus any MCP server and the web (through Firecrawl). They answer searches, and they carry out actions once the user has approved them.
 \item \textbf{Language model providers} (secondary actor): Groq, Google Gemini, Cerebras, OpenRouter and Puter, reached through OpenAI-compatible endpoints.
 \item \textbf{Memory service} (secondary actor): the Python service that stores and searches memories, backed by SQLite or Oracle AI Database.
 \end{itemize}
@@ -1094,7 +1066,7 @@ Cortex does not copy users' source data into a database: evidence exists only du
 \item \textbf{AgentEvent}: the unit of the output stream; one of sixteen typed events listed in Section~\ref{sec:io}.
 \end{itemize}
 \subsection{Data objects and Relationships}
-Figure~\ref{fig:erd} draws these objects as an entity-relationship diagram. A run has one plan; a plan has up to five sub-questions; each sub-question yields evidence; a claim cites zero or more evidence items; a conflict refers to evidence from at least two sides; a run may produce action proposals and memories; and the messages of a run are appended to its conversation thread.
+Figure~\ref{fig:erd} draws these objects as an entity-relationship diagram. Each run has exactly one plan, and the plan holds up to five sub-questions, each of which yields its own evidence. A claim may cite any number of evidence items, including none, whereas a conflict always points to evidence from at least two sides. A run can also produce action proposals and memories. Its messages are appended to the conversation thread it belongs to.
 
 \begin{figure}[!htbp]
 \centering
@@ -1128,7 +1100,7 @@ Figure~\ref{fig:erd} draws these objects as an entity-relationship diagram. A ru
 
 
 \section{Functional Model and Description}
-This section walks through what Cortex does with a question, as data flows; the classes behind it are in Chapter~\ref{ch:design}. A run uses nine functions: (1) check which sources are available; (2) recall memories; (3) plan; (4) search in parallel and rank evidence; (5) synthesize a streamed, cited answer; (6) verify claims and compute groundedness; (7) validate and store action proposals; (8) remember salient facts; and (9) execute an approved action. The Daily Brief reuses functions (1), (2), (4) and a single synthesis call.
+This section follows a question through Cortex as a flow of data. The classes that implement each step are left for Chapter~\ref{ch:design}. Nine functions take part in a run: (1) check which sources are available; (2) recall memories; (3) plan; (4) search in parallel and rank evidence; (5) synthesize a streamed, cited answer; (6) verify claims and compute groundedness; (7) validate and store action proposals; (8) remember salient facts; and (9) execute an approved action. The Daily Brief reuses functions (1), (2), (4) and a single synthesis call.
 \subsection{Data Flow Diagram}
 \subsubsection{Level 0 Data Flow Diagram}
 Figure~\ref{fig:dfd0} shows Cortex as a single process with its external entities.
@@ -1304,13 +1276,13 @@ Figure~\ref{fig:dfd1} decomposes the process into its nine sub-processes. Extern
 \subsection{Non Functional Requirements:}
 \begin{itemize}
 	\item	\textbf{Interface Requirements:} a responsive web interface usable on a laptop and on a phone; answers streamed as they are written; the reasoning trace available but collapsed by default; a JSON/HTTP and server-sent event interface between browser and server; an HTTP/JSON interface to the memory service; OpenAI-compatible chat-completion interfaces to model providers; MCP (streamable HTTP or standard input/output) and the Composio SDK to connected apps.
-	\item	\textbf{Performance Requirements:} the answer should begin streaming within a few seconds; searches run concurrently; each connector call times out after 12~s (one retry), each connector status check after 6~s, each model request after 25~s and each memory request after 5~s; a whole run is stopped after 90~s. The preliminary evaluation measured a median end-to-end time of 3.7~s and a 90th percentile of 7.1~s in Deep mode.
+	\item	\textbf{Performance Requirements:} the answer should start streaming within a few seconds, and searches run concurrently. Every external call has its own timeout: 12~s for a connector call (with one retry), 6~s for a connector status check, 25~s for a model request and 5~s for a memory request. A whole run is stopped after 90~s. The preliminary evaluation measured a median end-to-end time of 3.7~s and a 90th percentile of 7.1~s in Deep mode.
     \item	\textbf{Software quality attributes:}
     \begin{itemize}
-    \item \emph{Availability} (related to reliability): provider failover with cooldowns; a failed source is reported and skipped; the run continues without memory if the memory service is down; the memory service continues on SQLite if Oracle is down.
-    \item \emph{Modifiability} (portability, reusability, scalability): a new source is one class implementing the connector interface, or one entry in the MCP configuration file; Composio tool names are data; model identifiers are environment variables; the agent, router, connectors and shared types are separate packages; the code runs on Windows, Linux and macOS. Horizontal scaling is limited because pending actions and caches are held in the memory of one server process.
+    \item \emph{Availability} (related to reliability): when a model provider fails, the router cools it down and moves to the next one. A failed source is reported and skipped. If the memory service is down the run goes ahead without memory, and if Oracle is down the memory service carries on with SQLite.
+    \item \emph{Modifiability} (portability, reusability, scalability): adding a source means writing one class that implements the connector interface, or adding one entry to the MCP configuration file. Composio tool names are stored as data and model identifiers as environment variables. The agent, router, connectors and shared types live in separate packages, and the code runs on Windows, Linux and macOS. Horizontal scaling is limited because pending actions and caches are held in the memory of one server process.
     \item \emph{Performance}: bounded calls per run; caching of responses (6~h) and searches (90~s).
-    \item \emph{Security}: actions only through the approval endpoint, once, for the proposing user; OAuth tokens held by Composio, never sent to the browser; an HTTP-only, same-site cookie for the anonymous identifier; memories of the sample workspace kept separate from real ones.
+    \item \emph{Security}: an action can run only through the approval endpoint, only once, and only for the user it was proposed to. OAuth tokens stay with Composio and are never sent to the browser. The anonymous identifier travels in an HTTP-only, same-site cookie, and memories from the sample workspace are kept apart from real ones.
     \item \emph{Testability}: all external dependencies are passed in through one dependency object, so tests replace them with stubs; 18 automated tests; an evaluation harness.
     \item \emph{Usability}: plain-language failure messages; claims visually marked by verification state; one-click connection; no settings pages or tokens for the end user.
     \end{itemize}
@@ -1401,11 +1373,11 @@ LangSmith API & Optional traces of runs, model calls and searches \\ \hline
 \chapter{Detailed Design Document using Appendix A and B}
 \label{ch:design}
  \section{Introduction}
-This chapter explains how Cortex is built to answer questions over scattered, live work data with cited and checked answers, and to act only with consent. It covers the architecture, then the data, then the components. The design follows four principles taken from the project's product definition: show the evidence and not only the answer; never act without consent; say ``I don't know'' before guessing; and keep every loop bounded.
+This chapter describes how Cortex is put together: first the architecture, then the data, then the components. Four rules from our product definition shaped almost every decision. The user should see the evidence along with the answer. Nothing is done in the user's tools without consent. When the evidence is not there, Cortex says ``I don't know'' rather than guessing. And no loop is allowed to run without a limit.
 \section{Architectural Design}
 	Cortex is a layered system (Figure~\ref{fig:arch-dig}). The \textbf{browser client} (React) renders the Ask, Brief, Memory and Connections screens and consumes the event stream. The \textbf{web server} (Next.js route handlers) authenticates the browser by an anonymous cookie, builds the dependencies for the selected workspace and exposes the API. The \textbf{agent package} contains the orchestrator, the prompts, the verifier, the action store, the brief and the tracing wrapper. It depends on three subsystems: the \textbf{model router} package, the \textbf{connector} package and the \textbf{memory service}. A \textbf{shared} package holds the types used by both server and client. The orchestrator is written by hand rather than with a graph framework, so that every branch is explicit, every loop is bounded and the number of model calls is predictable.
 
-\textbf{Package view.} \texttt{apps/\allowbreak{}web} depends on \texttt{packages/\allowbreak{}agent}, \texttt{packages/\allowbreak{}connectors}, \texttt{packages/\allowbreak{}llm} and \texttt{packages/\allowbreak{}shared}; \texttt{packages/\allowbreak{}agent} depends on the other three packages; \texttt{packages/\allowbreak{}connectors} uses the cache of \texttt{packages/\allowbreak{}llm}; \texttt{services/\allowbreak{}memory} is independent and is reached over HTTP.
+\textbf{Package view.} The web app, \texttt{apps/\allowbreak{}web}, depends on \texttt{packages/\allowbreak{}agent}, \texttt{packages/\allowbreak{}connectors}, \texttt{packages/\allowbreak{}llm} and \texttt{packages/\allowbreak{}shared}. The agent package in turn depends on the other three. The only link between connectors and \texttt{packages/\allowbreak{}llm} is that the connectors borrow its cache. \texttt{services/\allowbreak{}memory} stands on its own and is reached over HTTP.
 
 \textbf{Deployment view.} During development and evaluation, two processes run on one machine: the Next.js server on port 3000 and the memory service (Uvicorn) on port 8000. The optional Oracle AI Database Free runs in a Docker container on port 1521. All other services are remote APIs. Deployment to a hosted environment is planned for Term II.
 
@@ -1648,7 +1620,7 @@ Figure~\ref{fig:seq} shows the sequence of messages from a question that asks fo
 \chapter{Project Implementation}
 \label{ch:impl}
   \section{Introduction}
-Cortex is implemented as a TypeScript monorepository with npm workspaces (\texttt{apps/web}, \texttt{packages/agent}, \texttt{packages/connectors}, \texttt{packages/llm}, \texttt{packages/shared}) and a Python memory service (\texttt{services/memory}), together with an evaluation harness (\texttt{evals}) and helper scripts (\texttt{scripts}). The delivered code is about 6.1 thousand non-blank lines. This chapter lists the tools and technologies used and gives the main algorithms in pseudo code; every algorithm corresponds directly to code in the repository.
+Cortex is implemented as a TypeScript monorepository with npm workspaces (\texttt{apps/web}, \texttt{packages/agent}, \texttt{packages/connectors}, \texttt{packages/llm}, \texttt{packages/shared}) and a Python memory service (\texttt{services/memory}), together with an evaluation harness (\texttt{evals}) and helper scripts (\texttt{scripts}). The delivered code is about 6.1 thousand non-blank lines. Below we list the tools and technologies we used and give the main algorithms in pseudo code. Each algorithm was written from the actual code in the repository, so the two can be read side by side.
   \section{Tools and Technologies Used}
 \begin{table}[!htbp]
 \begin{center}
@@ -1704,7 +1676,7 @@ $(L, G) \leftarrow$ VerifyClaims$(\mathit{answer}, E^{*})$\;
  re-judge up to 8 doubtful claims with the fast tier; keep the lexical verdicts if this fails\;}
 emit the verdict: claims, $G$, conflicts mapped to evidence, missing items, follow-ups\;
 \ForEach{action draft (at most 3)}{\If{ActionStore.propose succeeds}{emit the proposal with status pending\;}}
-write explicit ``remember'' requests (salience 0.95) and model candidates with salience $\ge 0.6$, at most 2\;
+write explicit ``remember'' requests (salience 0.95) and model candidates with salience $\ge 0.5$, at most 2\;
 append the turn to the conversation thread; emit usage and done\;
 \end{algorithm}
 
@@ -1901,7 +1873,7 @@ action-email & 1.00 & 1.00 & action: no & 3.2 & Gemini \\ \hline
 \label{tab:eval}
 \end{table}
 
-Summary of the evaluation: mean groundedness 0.88; citation recall 0.92; honest ``not found'' 1/1; action proposals 1/2; conflict detection 1/2; zero actions executed without consent; median latency 3.7~s and 90th percentile 7.1~s. Citation recall is the fraction of expected key facts that appear in the evidence the answer actually cites.
+In summary, mean groundedness was 0.88 and citation recall 0.92. The one unanswerable question got an honest ``not found'' (1/1), one of two expected actions was proposed (1/2), and one of two planted conflicts was detected (1/2). No action was executed without consent. Median latency was 3.7~s, with a 90th percentile of 7.1~s. Citation recall is the fraction of expected key facts that appear in the evidence the answer actually cites.
 
 \chapter{Results}
 \label{ch:results}
@@ -1968,7 +1940,7 @@ The screenshots below show the main screens over the sample workspace. They were
 
 \section{Outputs}
 \label{sec:outputs}
-The outputs of the system for one question are: the streamed answer with numbered citations; the verdict (status of each claim, groundedness, conflicts, missing items, follow-up questions); any action proposals; any memories written; and the usage record (model calls, cached calls, tool calls, time, models used). Figures~\ref{fig:chart-g} and~\ref{fig:chart-t} summarise the measured outputs of the preliminary evaluation in Table~\ref{tab:eval}.
+For one question the system produces the streamed answer with numbered citations, followed by a verdict that gives the status of each claim, the groundedness, conflicts, missing items and follow-up questions. If the run proposed actions or wrote memories, those come next. A usage record closes the run with the model calls, cached calls, tool calls, time and models used. Figures~\ref{fig:chart-g} and~\ref{fig:chart-t} summarise the measured outputs of the preliminary evaluation in Table~\ref{tab:eval}.
 
 \begin{figure}[!htbp]
 \centering
@@ -2008,7 +1980,7 @@ The outputs of the system for one question are: the streamed answer with numbere
 \label{fig:chart-t}
 \end{figure}
 
-\textbf{Discussion.} Groundedness was 1.00 for seven of the twelve questions. The lowest values (0.50 and 0.67) came from questions about deadlines (``oa-deadline'', ``report-due''), where the answers added dates or details in sentences that the lexical check could not match to the cited evidence; these are also the two questions with a citation recall of 0.5. Of the two questions designed to expose the planted Demo Day conflict, the conflict was reported for the direct question but not for the broader weekly summary, and the behaviour varied between runs; conflict detection currently depends on the model writing the conflicts section, which is the main weakness to address. One of the two action requests was proposed; for the e-mail request, no Gmail proposal was produced in this run. In all twelve runs no action was executed, which is the property the design guarantees regardless of model behaviour. The unanswerable question about a company's Series B was answered as not found. Live tests with real keys confirmed that Groq, Gemini (Flash-Lite), Firecrawl, LangSmith and Composio's hosted MCP endpoint (consumer key) work with the system; the Oracle AI Database container was set up but could not be reached because of a Docker networking issue, so all memory results use the SQLite backend.
+\textbf{Discussion.} Groundedness was 1.00 for seven of the twelve questions. The lowest values (0.50 and 0.67) came from questions about deadlines (``oa-deadline'', ``report-due''), where the answers added dates or details in sentences that the lexical check could not match to the cited evidence. The same two questions had a citation recall of 0.5. We planted a Demo Day conflict and wrote two questions to expose it. The direct question surfaced it, but the broader weekly summary did not, and the behaviour changed from run to run. At present conflict detection depends on the model filling in the conflicts section, and this is the weakness we most need to fix. Of the two action requests, only the Slack one led to a proposal; the e-mail request produced no Gmail proposal in this run. In all twelve runs no action was executed, which is the property the design guarantees regardless of model behaviour. The unanswerable question about a company's Series B was answered as not found. Live tests with real keys confirmed that Groq, Gemini (Flash-Lite), Firecrawl, LangSmith and Composio's hosted MCP endpoint (consumer key) work with the system; the Oracle AI Database container was set up but could not be reached because of a Docker networking issue, so all memory results use the SQLite backend.
 
 \chapter{Deployment and Maintenance}
 \label{ch:deploy}
@@ -2029,7 +2001,7 @@ Without any keys, \texttt{npm run mock-llm} starts a development-only mock model
 
 \textbf{Un-installation:} stop both processes; delete the repository folder (this removes the dependencies, the virtual environment, the caches in \texttt{.cache} and the memory ledger in \texttt{services/memory/data}); if the Oracle container was created, remove it with \texttt{docker rm -f cortex-oracle} and its volume with \texttt{docker volume rm cortex-oradata}; revoke any API keys and Composio connections that are no longer needed.
 
-\textbf{Maintenance:} free-tier catalogues change, so model identifiers are environment variables and the service check script reports missing models; Composio tool names are kept in one file; connector failures are visible in the interface and in optional LangSmith traces; and the evaluation is re-run after changes to prompts or models.
+\textbf{Maintenance:} free-tier model catalogues change without notice. For that reason model identifiers live in environment variables, and the service check script reports any model that has disappeared. Composio tool names are kept together in one file. Connector failures show up in the interface and, if enabled, in LangSmith traces. Whenever prompts or models change, we re-run the evaluation.
      \section{User help}
 \begin{itemize}
 \item \textbf{Ask:} type a question and press Enter. Choose \emph{Deep} (plans, searches in parallel, verifies every claim) or \emph{Fast} (single pass, quickest). Numbers in the answer are citations; select one to see its source. A claim drawn with a strike-through could not be matched to the sources. Conflicts and missing information are listed below the answer. Select \emph{Trace} to see the plan, the searches and their timings.
@@ -2041,9 +2013,9 @@ Without any keys, \texttt{npm run mock-llm} starts a development-only mock model
 \end{itemize}
 
  \chapter{Conclusion and future scope}
-\textbf{Summary.} This project designed and implemented Cortex, an agentic retrieval-augmented generation system over live work data. A bounded plan-then-execute pipeline decomposes each question, searches several sources in parallel through a uniform connector registry, streams an answer that must cite numbered evidence, verifies each claim, reports conflicts and missing information, proposes but never executes actions, and keeps a small, explainable memory. A free-tier model router with failover, cooldowns and caching keeps the operating cost at zero.
+\textbf{Summary.} In this project we designed and built Cortex, an agentic retrieval-augmented generation system that works over live work data. Its pipeline plans first and then executes, always within fixed limits. It splits each question into parts and searches several sources at once through one connector registry. The answer it streams must cite numbered evidence, and each claim is checked afterwards. Conflicts and missing information are reported. Actions are only ever proposed, never executed by the agent itself, and the memory it keeps is small and explains itself. Because a router moves between free-tier model providers, with failover, cooldowns and caching, the system costs nothing to run.
 
-\textbf{Conclusion.} The preliminary results support the main design choices: a mean groundedness of 0.88 and a citation recall of 0.92 over twelve questions, an honest answer to the unanswerable question, a median end-to-end time of 3.7~s, and no action executed without consent in any run, a property that follows from the design rather than from model behaviour. The same evaluation shows where the system is weakest: conflict detection and action proposals succeeded in only one of two cases each, and deadline questions had the lowest groundedness. Following the base paper GRASP, which shows that the granularity and number of retrieval steps matter, Cortex keeps evidence small and retrieval bounded, but it does so with fixed rules rather than a learned policy.
+\textbf{Conclusion.} Over twelve questions the preliminary results back the main design choices. Mean groundedness was 0.88 and citation recall 0.92, the unanswerable question got an honest answer, and the median end-to-end time was 3.7~s. No action ran without consent in any run, and that does not depend on how the model behaves, because the design leaves no other path to execution. The evaluation also showed us where Cortex is weak. Conflict detection and action proposals each worked in only one of two cases, and the deadline questions had the lowest groundedness. Our base paper, GRASP, shows that both the granularity of evidence and the number of retrieval steps matter. Cortex follows that lesson by keeping evidence small and retrieval bounded, though with fixed rules where GRASP learns a policy.
 
 \textbf{Future scope.}
 \begin{itemize}
@@ -2175,12 +2147,12 @@ Feasibility (business) & No infrastructure cost on free tiers; open, modular des
 
 \textbf{Retrieval policy.} Choosing which tool to call, with which query and at what granularity, over several turns, is a sequential decision problem under uncertainty; GRASP~\cite{grasp2026} learns such a policy with reinforcement learning. Cortex replaces the policy by a fixed plan of at most five sub-questions and one bounded retry, so the number of steps is constant.
 
-\textbf{Complexity of one run.} With $|C|$ sources, $p \le 5$ sub-questions, $N$ evidence items, $|A|$ answer tokens and a constant number of model calls (at most 4), the run takes $O(p\,|C| + N \log N + |L| \cdot (|c| + |E_c|))$ work besides the model and tool calls, i.e. polynomial time. The problem as implemented is therefore in class P, with model and tool calls treated as bounded oracle calls.
+\textbf{Complexity of one run.} With $|C|$ sources, $p \le 5$ sub-questions, $N$ evidence items, $|A|$ answer tokens and a constant number of model calls (at most 5), the run takes $O(p\,|C| + N \log N + |L| \cdot (|c| + |E_c|))$ work besides the model and tool calls, i.e. polynomial time. The problem as implemented is therefore in class P, with model and tool calls treated as bounded oracle calls.
 
 \item input x,output y, y=f(x)
 
 $x = (q, m, H, u)$ and $y = f(x) = (A, L, G, K, R, W)$ with
-$f = f_{\mathit{remember}} \circ f_{\mathit{propose}} \circ f_{\mathit{verify}} \circ f_{\mathit{synth}} \circ f_{\mathit{rank}} \circ f_{\mathit{search}} \circ f_{\mathit{plan}}$ as defined in Section~\ref{sec:math}. The function $f$ is not deterministic, because the model calls are not; the guarantees that hold for every output (each proposal is pending, each failed source is reported, at most four model calls) are enforced by code outside the model.
+$f = f_{\mathit{remember}} \circ f_{\mathit{propose}} \circ f_{\mathit{verify}} \circ f_{\mathit{synth}} \circ f_{\mathit{rank}} \circ f_{\mathit{search}} \circ f_{\mathit{plan}}$ as defined in Section~\ref{sec:math}. The function $f$ is not deterministic, because the model calls are not; the guarantees that hold for every output (each proposal is pending, each failed source is reported, at most five model calls) are enforced by code outside the model.
 \end{itemize}
 
 \chapter{Laboratory assignments on Project Quality and Reliability Testing of Project Design}

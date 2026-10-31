@@ -283,9 +283,8 @@ function Apps({ data, onSave }: { data: Overview; onSave: (s: Overview["settings
       {data.composio !== "project" && (
         <p className="mt-2 rounded-md border border-line bg-accent-wash px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
           {data.composio === "personal"
-            ? "Your Composio key is a personal one (ck_), so every connection belongs to your Composio account. Only admins can connect apps, and they all share those connections; members use the sample workspace."
-            : "No Composio key is set, so nobody can connect apps yet."}{" "}
-          To let every member connect their own apps, create a project API key at platform.composio.dev (it starts with ak_), put it in COMPOSIO_API_KEY in the root .env and restart Cortex.
+            ? "Everyone connects their own apps through your Composio Connect key (ck_), and each person only sees their own. That key holds at most 10 accounts per app, your own included; a project key (ak_, platform.composio.dev) in COMPOSIO_API_KEY lifts the limit."
+            : "No Composio key is set, so nobody can connect apps yet. Put one in COMPOSIO_API_KEY in the root .env and restart Cortex."}
         </p>
       )}
       <ul className="mt-2">

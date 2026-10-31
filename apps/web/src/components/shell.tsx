@@ -57,7 +57,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-sm transition-colors",
-                active ? "bg-pressed font-[550] text-ink" : "text-muted hover:bg-hover hover:text-ink",
+                active ? "nav-active font-[550] text-ink" : "text-muted hover:bg-hover hover:text-ink",
               )}
             >
               <Icon className="size-4" strokeWidth={1.75} aria-hidden />
@@ -176,7 +176,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         }}
         className="group relative z-10 -mr-1.5 hidden w-1.5 shrink-0 cursor-col-resize touch-none outline-none md:block"
       >
-        <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-line transition-colors group-hover:bg-accent group-focus-visible:bg-accent group-active:bg-accent" />
+        <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--divider)] transition-colors group-hover:bg-accent group-focus-visible:bg-accent group-active:bg-accent" />
       </div>
 
       <div className="relative flex min-w-0 flex-1 flex-col">
@@ -220,7 +220,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         )}
-        <main className="min-h-0 flex-1 bg-surface shadow-[var(--raise)]">
+        <main className="app-panel min-h-0 flex-1 bg-surface shadow-[var(--raise)]">
           {/* Each page eases in when you move between them; MotionConfig makes springs follow reduced motion too. */}
           <MotionConfig reducedMotion="user">
             <div key={path} className="page-enter h-full">
@@ -590,7 +590,7 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "block truncate rounded-md py-1.5 pr-7 pl-2.5 text-[13px]",
-                        active ? "bg-pressed text-ink" : "text-muted hover:bg-hover hover:text-ink",
+                        active ? "nav-active text-ink" : "text-muted hover:bg-hover hover:text-ink",
                       )}
                     >
                       {t.title}

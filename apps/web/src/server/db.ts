@@ -73,6 +73,8 @@ export function touchUser(id: string) {
 export function dataIdFor(userId: string, anonymousId?: string): string {
   const row = db.prepare("SELECT data_id FROM cortex_links WHERE user_id = ?").get(userId) as { data_id: string } | undefined;
   if (row) return row.data_id;
+  // Only the proxy's random UUIDs are accepted, so a hand-set cookie can't pick a guessable id such as another user's.
+  if (anonymousId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(anonymousId)) anonymousId = undefined;
   const claimed = anonymousId ? db.prepare("SELECT 1 FROM cortex_links WHERE data_id = ?").get(anonymousId) : true;
   const dataId = anonymousId && !claimed ? anonymousId : userId;
   const link = db.prepare("INSERT OR IGNORE INTO cortex_links (user_id, data_id) VALUES (?, ?)");
@@ -93,18 +95,17 @@ export function isOwner(email: string, verified: boolean): boolean {
   return owners.includes(email.toLowerCase());
 }
 
-/** Which Composio key is configured: a project key keeps each user's connections apart; a personal (ck_) key has one set. */
+/** Which Composio key is configured: a project key (ak_) or a Connect consumer key (ck_). Either keeps users apart. */
 export function composioKeyKind(): "project" | "personal" | "none" {
   const key = process.env.COMPOSIO_API_KEY;
   return !key ? "none" : key.startsWith("ck_") ? "personal" : "project";
 }
 
 /**
- * Who may connect their own apps. With a project key, everyone: connections are kept apart by Cortex user id. A personal
- * key (ck_) ignores the user id, so every connection is the key owner's; only admins (the owners, and whoever an admin
- * promotes in the admin panel) may use it, never ordinary members.
+ * Whether anyone may connect their own apps: yes whenever a Composio key is set, for members and admins alike. Each
+ * user only ever sees and acts through their own connections (a project key by Composio user id, a ck_ key by the
+ * per-user alias in ComposioMcpConnector); nobody is given anybody else's.
  */
-export function mayUseLive(admin: boolean): boolean {
-  const kind = composioKeyKind();
-  return kind === "project" || (kind === "personal" && admin);
+export function mayUseLive(): boolean {
+  return composioKeyKind() !== "none";
 }

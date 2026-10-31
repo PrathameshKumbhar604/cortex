@@ -69,7 +69,7 @@ We build the review around GRASP (GRanularity-Aware Search Policy)~\cite{gandhi2
 
 Our second subject is Cortex, an assistant we built over a small team's apps. It is not an implementation of GRASP. It plans once, searches in parallel and treats each source item as a fixed unit of evidence. Because we built it on free-tier models, rate limits shaped most of its design, and setting it beside GRASP helps show which research ideas survive in that kind of setting.
 
-\textbf{Contributions.} (i) An eight-dimension taxonomy with a close reading of GRASP (Section~\ref{sec:taxonomy}); (ii) a comparison of representative methods (Section~\ref{sec:compare}); (iii) the design and early measurements of Cortex (Section~\ref{sec:cortex}); (iv) open problems (Section~\ref{sec:challenges}).
+\textbf{Contributions.} Section~\ref{sec:taxonomy} sets out an eight-dimension taxonomy and reads GRASP closely. Section~\ref{sec:compare} compares representative methods, Section~\ref{sec:cortex} gives the design of Cortex with early measurements, and Section~\ref{sec:challenges} lists open problems.
 
 %=====================================================================
 \section{Background}
@@ -122,17 +122,17 @@ Fig.~\ref{fig:taxonomy} groups the work into eight dimensions. A single system u
 \end{figure*}
 
 \subsection{Query Planning and Decomposition}
-Self-Ask writes explicit follow-up questions for a search engine~\cite{press2023selfask}. Rewrite-Retrieve-Read trains a small query rewriter with RL, using the reader's output as feedback~\cite{ma2023rewrite}. ReAct instead picks each action after seeing the last observation~\cite{yao2023react}. Planning up front is predictable and easy to run in parallel. Planning step by step adapts to what comes back, but it costs more calls.
+Self-Ask writes out follow-up questions and sends each to a search engine~\cite{press2023selfask}. In Rewrite-Retrieve-Read a small rewriter is trained with RL, with the reader's output as feedback~\cite{ma2023rewrite}, while ReAct chooses every action only after seeing the previous observation~\cite{yao2023react}. A plan made up front is predictable and parallelises easily. A step-by-step plan adapts to results but costs extra calls.
 
 \subsection{Iterative and Adaptive Retrieval}
-IRCoT uses each chain-of-thought sentence as the next query~\cite{trivedi2023ircot}. FLARE retrieves when a drafted sentence contains low-confidence tokens~\cite{jiang2023flare}, and Iter-RetGen queries with a whole draft answer~\cite{shao2023iterretgen}. Adaptive-RAG trains a classifier that picks no, single-step or multi-step retrieval by question complexity~\cite{jeong2024adaptiverag}. All of them change when retrieval happens. The retriever and the chunk size stay the same.
+IRCoT uses each chain-of-thought sentence as the next query~\cite{trivedi2023ircot}. FLARE retrieves when a drafted sentence contains low-confidence tokens~\cite{jiang2023flare}, and Iter-RetGen queries with a whole draft answer~\cite{shao2023iterretgen}. Adaptive-RAG trains a classifier that picks no, single-step or multi-step retrieval by question complexity~\cite{jeong2024adaptiverag}. These methods vary when retrieval happens; the retriever and chunk size stay put.
 
 \subsection{Search Granularity and Search Policies}
 \label{sec:grasp}
 Search-R1 trains an LLM with RL to search in the middle of its reasoning, rewarding only the final answer~\cite{jin2025searchr1}, and Search-o1 adds search to large reasoning models~\cite{li2025searcho1}. MARAG-R1 trains an agent with semantic, keyword, filter and aggregate tools~\cite{luo2025maragr1}. A-RAG exposes keyword search, semantic search and chunk reading as separate interfaces~\cite{du2026arag}. GRASP needs a closer look.
 
 \subsubsection{Problem}
-Gandhi \textit{et al.} note that RL retrieval agents are usually tied to one retriever and to fixed, fairly large chunks~\cite{gandhi2026grasp}, so neither the kind nor the amount of evidence can change between steps. GRASP learns, in one policy, how to mix lexical and dense search, how much to read and when to stop.
+Gandhi \textit{et al.} observe that RL-trained retrieval agents are normally bound to one retriever and to fixed chunks of fair size~\cite{gandhi2026grasp}. The kind and amount of evidence then cannot change between steps. GRASP folds three decisions into one learned policy: how to mix lexical with dense search, how much to read, and when to stop.
 
 \subsubsection{Formulation and actions}
 GRASP casts agentic RAG as a finite-horizon Markov decision process. Its state holds the question, the history, the evidence and tools used so far, and the remaining turn budget. Each paragraph is split into sentences that point back to it. At each step the policy reasons and then takes one action: \emph{semantic search} (Qwen3-0.6B embeddings), \emph{keyword search} (BM25), \emph{read paragraph} (the parent of a retrieved sentence) or \emph{answer}. Searches return the top $K=5$ sentences, so the agent spends context on a full paragraph only by choice.
@@ -146,7 +146,7 @@ R = R_A + \alpha R_R + \beta R_S + \gamma R_E, \quad (\alpha,\beta,\gamma) = (0.
 $R_A$ is answer token F1. $R_R$ is the F1 between paragraphs read and gold supporting paragraphs, which penalises reading distractors. $R_S$ is 1 only if semantic and keyword search \emph{each} find a gold paragraph. $R_E = (T - T_{\text{cur}})/T$, where $T$ is the turn budget, rewards finishing early. It is paid only when $R_A > 0.5$, so a fast wrong answer earns nothing. The auxiliary weights sum to 1, which keeps answer F1 dominant and limits reward hacking.
 
 \subsubsection{Training and evaluation}
-Qwen2.5-3B-Instruct is fine-tuned with GRPO~\cite{shao2024deepseekmath} on the HotpotQA distractor split~\cite{yang2018hotpotqa} for 270 steps (about 19\% of an epoch), with at most 10 turns and retrieved tokens masked from the loss. Testing uses 500 validation questions each from HotpotQA, 2WikiMultiHopQA and MuSiQue~\cite{yang2018hotpotqa,ho2020twowiki,trivedi2022musique}, and the last two are unseen in training. Baselines are single-step lexical, semantic and hybrid retrieval, IRCoT driven by a proprietary model, the public Search-R1 PPO and GRPO checkpoints, and an untrained ``Base'' agent given GRASP's prompt and tools.
+Qwen2.5-3B-Instruct is fine-tuned with GRPO~\cite{shao2024deepseekmath} on the HotpotQA distractor split~\cite{yang2018hotpotqa} for 270 steps, only about 19\% of an epoch. Episodes stop after 10 turns, and retrieved tokens are masked out of the loss. Testing uses 500 validation questions from each of HotpotQA, 2WikiMultiHopQA and MuSiQue~\cite{yang2018hotpotqa,ho2020twowiki,trivedi2022musique}. The last two are never seen in training. Baselines are single-step lexical, semantic and hybrid retrieval, IRCoT driven by a proprietary model, the public Search-R1 PPO and GRPO checkpoints, and an untrained ``Base'' agent given GRASP's prompt and tools.
 
 \begin{table}[t]
 \centering
@@ -171,22 +171,22 @@ GRASP                & 0.90 & \textbf{0.66} & \textbf{0.90} & \textbf{0.60} & \t
 \end{table}
 
 \subsubsection{Findings}
-GRASP has the best F1 on all three datasets and the best recall on 2WikiMultiHopQA and MuSiQue (Table~\ref{tab:grasp}). The authors attribute IRCoT's slightly higher HotpotQA recall to the strong proprietary model writing its reasoning. The untrained Base agent trails even single-step retrieval, so tools alone do not help a model that has not learned to use them. In a HotpotQA ablation, removing keyword search cut F1 only from 0.631 to 0.621 and removing semantic search cut it to 0.567. Removing the read action, so that searches return whole paragraphs, dropped it to 0.484. Their explanation is that a paragraph shows many entities at once, and the agent's next queries drift back toward the original question instead of chasing one clue.
+On all three datasets GRASP has the best F1, and it has the best recall on 2WikiMultiHopQA and MuSiQue (Table~\ref{tab:grasp}). The authors put IRCoT's slightly higher HotpotQA recall down to the strong proprietary model writing its reasoning. Even single-step retrieval beats the untrained Base agent, so tools do little for a model that has not learned to use them. In a HotpotQA ablation, F1 falls only from 0.631 to 0.621 without keyword search and to 0.567 without semantic search, but removing the read action (searches then return whole paragraphs) brings it down to 0.484. The authors' reading is that a paragraph puts many entities in view at once, and the agent's next queries drift back toward the original question instead of following one clue.
 
 \subsubsection{Learned behaviour}
-The trained agent usually opens with semantic search, reads a paragraph to find a bridge entity, then keyword-searches that entity, and falls back to a broader semantic query when that fails. The authors liken this to the way people skim a page and then scan it for a name.
+A typical trajectory starts with semantic search. The agent reads one paragraph to pick up a bridge entity and runs a keyword search on it; if that fails, it widens to a broader semantic query. The authors liken this to skimming a page and then scanning it for a name.
 
 \subsubsection{Limitations stated by the authors}
-$R_R$ and $R_S$ need gold supporting facts, which few corpora have. The policy still sometimes answers too early, only one 3B backbone was tested, and tool use levels off near eight calls. As future work the authors propose larger tool sets, rewards built from weaker or model-based grounding signals, and granularity that ranges from spans to whole document regions. Their ethics statement recommends provenance, citations, audit logs and human approval for consequential actions, all of which return in Section~\ref{sec:cortex}.
+$R_R$ and $R_S$ need gold supporting facts, which few corpora have. The policy also sometimes answers too early, tool use plateaus near eight calls, and only one 3B backbone was tried. For future work they propose larger tool sets, rewards built from weaker or model-based grounding signals, and granularity that ranges from spans to whole document regions. Their ethics statement recommends provenance, citations, audit logs and human approval for consequential actions, all of which return in Section~\ref{sec:cortex}.
 
 \subsection{Self-Reflection and Corrective Retrieval}
-Self-RAG trains reflection tokens that decide when to retrieve and grade relevance and support~\cite{asai2024selfrag}. CRAG scores the retrieved documents and falls back to web search when they look poor~\cite{yan2024crag}. Reflexion keeps notes on past failures for the next attempt~\cite{shinn2023reflexion}. GRASP has no critic at inference time. Its grounded-reading reward plays that role, though only during training.
+Self-RAG learns reflection tokens that decide when to retrieve and grade relevance and support~\cite{asai2024selfrag}. CRAG scores what was retrieved and switches to web search if the documents look poor~\cite{yan2024crag}, and Reflexion writes notes on past failures for the next attempt~\cite{shinn2023reflexion}. GRASP has no critic at inference time. The grounded-reading reward does that job, but only while the policy is trained.
 
 \subsection{Tool Use and Connector Protocols}
 Toolformer learns from a few examples where API calls help~\cite{schick2023toolformer}, and ReAct made interleaved reasoning and tool calls common~\cite{yao2023react}. Anthropic's Model Context Protocol (MCP), released in November 2024, standardises how clients discover and call external tools~\cite{anthropic2024mcp}, but every server adds attack surface~\cite{hou2025mcp}. Indirect prompt injection becomes a concrete risk once retrieved text can trigger tool calls~\cite{greshake2023injection}.
 
 \subsection{Long-Term Memory}
-MemGPT pages data between the context window and external storage~\cite{packer2023memgpt}. Generative Agents retrieve memories by recency, importance and relevance and write reflections back~\cite{park2023generative}. Mem0 extracts and consolidates facts from conversations, optionally as a graph~\cite{chhikara2025mem0}. Over personal data, provenance, expiry and deletion need deliberate design.
+MemGPT swaps data between the context window and external storage, much like OS paging~\cite{packer2023memgpt}. Generative Agents score memories on recency, importance and relevance, then write reflections back~\cite{park2023generative}. Mem0 pulls facts out of conversations and consolidates them, optionally as a graph~\cite{chhikara2025mem0}. Once the data is personal, provenance, expiry and deletion cannot be afterthoughts.
 
 \subsection{Attribution and Citation Verification}
 ALCE tests whether cited passages support an LLM's statements and finds many that do not~\cite{gao2023alce}. AIS defines attribution to identified sources for human raters~\cite{rashkin2023ais}, and FActScore scores atomic facts against a knowledge source~\cite{min2023factscore}. Like Cortex, all three judge individual claims.
@@ -239,7 +239,7 @@ The learned search policies (Search-R1, MARAG-R1, GRASP) were all trained on sta
 \label{sec:cortex}
 %=====================================================================
 
-Cortex answers questions such as ``what changed on this project this week, and what is at risk?'' over a user's connected apps. Every factual sentence cites numbered evidence, unsupported claims are struck through, conflicts between sources are listed, and requested actions wait for approval. We describe the code, not the roadmap.
+Cortex answers questions such as ``what changed on this project this week, and what is at risk?'' over a user's connected apps. Every factual sentence cites numbered evidence, unsupported claims are struck through, conflicts between sources are listed, and requested actions wait for approval. We describe only what is implemented.
 
 \subsection{Architecture}
 Cortex has two modes. Deep mode plans sub-questions and asks an LLM to re-check doubtful claims. Fast mode skips both steps and saves those calls. Fig.~\ref{fig:cortex} shows one Deep-mode run. The orchestrator is a hand-written loop rather than a graph framework, so every branch is visible in the code and every run has a fixed ceiling: at most 5 sub-questions, 18 tool calls, 16 evidence items (8 in Fast mode), 90\,s, and 5 LLM calls in Deep mode or 3 in Fast mode.
@@ -375,7 +375,7 @@ These numbers are limited. We wrote the questions, the workspace is synthetic, a
 
 \textbf{Supervision without gold evidence.} RL search policies need gold supporting facts~\cite{gandhi2026grasp,luo2025maragr1}. Verifier labels, agreement between trajectories, or AIS- and FActScore-style scores~\cite{rashkin2023ais,min2023factscore} could substitute, with human checks against gaming.
 
-\textbf{Granularity over heterogeneous data.} It is unclear what the ``sentence'' and the ``parent'' are in an email thread, a pull request or a calendar event. Hierarchical units~\cite{sarthi2024raptor,du2026arag} and propositions~\cite{chen2024densex} are starting points.
+\textbf{Granularity over heterogeneous data.} What the ``sentence'' and its ``parent'' should be in an email thread, a pull request or a calendar event is still open. Hierarchical units~\cite{sarthi2024raptor,du2026arag} and propositions~\cite{chen2024densex} give two places to start.
 
 \textbf{Freshness and conflict.} Time-sensitive questions remain hard~\cite{vu2024freshllms}, and few methods ever show a conflict to the user. Most treat it as noise to filter out.
 

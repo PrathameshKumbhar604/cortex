@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConnectorRegistry, DemoConnector, TOOLKITS, buildRegistry, extractEvidence } from "./index";
+import { ComposioMcpConnector, ConnectorRegistry, DemoConnector, TOOLKITS, aliasFor, buildRegistry, extractEvidence } from "./index";
 import type { Connector } from "./types";
 import { driveQuery, gmailBody, gmailQuery } from "./composio/toolkits";
 import { htmlToText, rankByQuery } from "./extract";
@@ -139,5 +139,56 @@ describe("large mailbox retrieval", () => {
       { title: "new match", quote: "budget", timestamp: "2026-03-01" },
     ];
     expect(rankByQuery(items, "budget review").map((e) => e.title)).toEqual(["new match", "old match", "unrelated"]);
+  });
+});
+
+describe("Composio Connect (ck_) keeps each user's connections apart", () => {
+  const accounts = [
+    { id: "gmail_owner", status: "active" }, // the key owner's, connected in Composio itself (no alias)
+    { id: "gmail_alice", alias: "cortex-alice", status: "active" },
+    { id: "gmail_bob_old", alias: "cortex-bob", status: "expired" },
+  ];
+  function setup() {
+    const gmail = TOOLKITS.find((t) => t.toolkit === "gmail")!;
+    const conn = new ComposioMcpConnector(gmail, `ck_test_${Math.random()}`);
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    (conn as unknown as { session: { call: unknown } }).session.call = async (name: string, args: Record<string, unknown>) => {
+      calls.push({ name, args });
+      if (name === "COMPOSIO_MULTI_EXECUTE_TOOL") return { results: [{ response: { successful: true, data: { messages: [] } } }] };
+      const t = (args.toolkits as { action: string }[])[0]!;
+      if (t.action === "add") return { results: { gmail: { status: "initiated", redirect_url: "Link: https://connect.composio.dev/link/x" } } };
+      return { results: { gmail: { accounts } } };
+    };
+    return { conn, calls };
+  }
+
+  it("shows each user only their own account", async () => {
+    const { conn } = setup();
+    expect((await conn.status({ userId: "alice" })).connected).toBe(true);
+    expect((await conn.status({ userId: "bob" })).connected).toBe(false);
+    expect((await conn.status({ userId: "bob" })).detail).toMatch(/expired/);
+    expect((await conn.status({ userId: "carol" })).connected).toBe(false); // never the owner's untagged account
+  });
+
+  it("pins every call to the user's own account and refuses users without one", async () => {
+    const { conn, calls } = setup();
+    await conn.search({ query: "x" }, { userId: "alice" });
+    const exec = calls.filter((c) => c.name === "COMPOSIO_MULTI_EXECUTE_TOOL");
+    expect(exec).toHaveLength(1);
+    expect((exec[0]!.args.tools as { account: string }[])[0]!.account).toBe("gmail_alice");
+    await expect(conn.search({ query: "x" }, { userId: "carol" })).rejects.toThrow(/isn't connected/);
+    await expect(conn.execute("send_email", { to: "a@b.c", subject: "s", body: "b" }, { userId: "bob" })).rejects.toThrow(/isn't connected/);
+    expect(calls.filter((c) => c.name === "COMPOSIO_MULTI_EXECUTE_TOOL")).toHaveLength(1);
+  });
+
+  it("connects with the user's alias, replacing only their own earlier account", async () => {
+    const { conn, calls } = setup();
+    const { redirectUrl } = await conn.connect({ userId: "bob", callbackUrl: "" });
+    expect(redirectUrl).toBe("https://connect.composio.dev/link/x");
+    const ops = calls.map((c) => (c.args.toolkits as Record<string, unknown>[] | undefined)?.[0]).filter((t) => t && t.action !== "list");
+    expect(ops).toEqual([
+      { name: "gmail", action: "remove", account_id: "gmail_bob_old" },
+      { name: "gmail", action: "add", alias: aliasFor("bob") },
+    ]);
   });
 });

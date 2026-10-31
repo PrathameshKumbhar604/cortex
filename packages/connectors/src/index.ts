@@ -10,7 +10,7 @@ import { ConnectorRegistry } from "./registry";
 export * from "./types";
 export { ConnectorRegistry, describeError, type SafeSearchResult } from "./registry";
 export { ComposioConnector } from "./composio/connector";
-export { ComposioMcpConnector } from "./composio/mcp-connector";
+export { ComposioMcpConnector, aliasFor, claimUntaggedAccounts, ownAccount } from "./composio/mcp-connector";
 export { TOOLKITS, type ComposioToolkitSpec } from "./composio/toolkits";
 export { DemoConnector, demoOutbox } from "./demo/connector";
 export { DEMO_ITEMS } from "./demo/data";
@@ -40,7 +40,7 @@ export function buildRegistry(workspace: Workspace, env: Record<string, string |
   if (workspace === "demo") {
     for (const spec of TOOLKITS) reg.register(new DemoConnector(spec));
   } else {
-    // ck_ = consumer key for Composio's hosted MCP (personal use); otherwise a project SDK key.
+    // ck_ = consumer key for Composio Connect (one account, connections tagged per user); otherwise a project SDK key.
     const key = env.COMPOSIO_API_KEY;
     if (key) for (const spec of TOOLKITS) reg.register(key.startsWith("ck_") ? new ComposioMcpConnector(spec, key) : new ComposioConnector(spec, key));
     for (const cfg of loadMcpConfig(env.CORTEX_MCP_CONFIG)) reg.register(new McpConnector(cfg));
