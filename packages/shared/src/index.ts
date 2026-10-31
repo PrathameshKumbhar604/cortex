@@ -114,6 +114,8 @@ export interface RouteDecision {
   tier: "strong" | "fast";
   reason: string;
   by: "rules" | "model" | "fallback";
+  /** A follow-up ("search on web") rewritten to stand alone; what was routed and searched. */
+  question?: string;
 }
 
 export type StepId = "understand" | "recall" | "plan" | "search" | "synthesize" | "verify" | "remember";

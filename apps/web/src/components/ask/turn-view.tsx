@@ -9,7 +9,7 @@ import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
 import { ActionCard } from "./action-card";
-import { AnswerActions } from "./answer-actions";
+import { AnswerActions, VersionSwitch } from "./answer-actions";
 import { Answer, Cite } from "./answer";
 import { Readout } from "./readout";
 import { Sources } from "./sources";
@@ -31,14 +31,17 @@ export function TurnView({
   onDecide,
   onFollowup,
   onRetry,
+  onVersion,
   latest,
   chatId,
 }: {
   turn: Turn;
   onDecide: (proposalId: string, d: "approve" | "reject", edits?: Record<string, unknown>) => Promise<void>;
   onFollowup: (q: string) => void;
-  /** Asks the same question again (offered when part or all of the answer failed). */
+  /** Answers the question again in place, as a new version of this turn. */
   onRetry?: () => void;
+  /** Shows another version (attempt) of this turn. */
+  onVersion?: (version: number) => void;
   latest: boolean;
   /** The saved chat this turn belongs to; sharing needs it. */
   chatId?: string;
@@ -100,11 +103,13 @@ export function TurnView({
         !turn.done && !turn.error && <AnswerSkeleton />
       )}
 
-      {turn.done && !turn.error && turn.answer && <AnswerActions turn={turn} chatId={chatId} answerRef={answerRef} />}
+      {turn.done && !turn.error && turn.answer && <AnswerActions turn={turn} chatId={chatId} answerRef={answerRef} onRetry={onRetry} onVersion={onVersion} />}
 
       {turn.error && (
         <div className="mb-5">
           <Problem problem={explainError(turn.error)} onRetry={onRetry} variant="card" />
+          {/* A failed attempt can still step back to the answers before it. */}
+          {turn.done && onVersion && <VersionSwitch turn={turn} onVersion={onVersion} className="-ml-1 mt-1.5" />}
         </div>
       )}
 

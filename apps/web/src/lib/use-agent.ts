@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { readUseOtherChats } from "./settings";
+import { addVersion, selectVersion } from "./versions";
 import type {
   ActionProposal,
   AgentEvent,
@@ -61,6 +62,10 @@ export interface Turn {
   usage?: { llmCalls: number; cachedCalls: number; toolCalls: number; ms: number; models: string[] };
   error?: string;
   done: boolean;
+  /** Every attempt at this question when it was regenerated; `null` marks the one shown (this turn). See versions.ts. */
+  versions?: (Omit<Turn, "versions" | "version"> | null)[];
+  /** Which attempt is shown, 0-based. */
+  version?: number;
 }
 
 const STEPS: StepId[] = ["understand", "recall", "plan", "search", "synthesize", "verify", "remember"];
@@ -143,18 +148,18 @@ export function useAgent() {
     setTurns((all) => all.map((t) => (t.id === id ? fn(t) : t)));
   }, []);
 
-  const ask = useCallback(
-    async (question: string, mode: RunMode, attachments: Attachment[] = []) => {
-      if (!question.trim() || abort.current) return;
-      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined };
-      const history: ChatTurn[] = turns
+  /** Streams one run into `turn`, which the caller has already put on screen. `before` is the chat up to it. */
+  const run = useCallback(
+    async (turn: Turn, before: Turn[], regenerate = false) => {
+      const { mode } = turn;
+      const attachments = turn.attachments ?? [];
+      const history: ChatTurn[] = before
         .filter((t) => t.done && t.answer)
         .slice(-40) // the whole chat; the agent fits it into its context budget
         .flatMap((t) => [
           { role: "user" as const, content: t.question },
           { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails },
         ]);
-      setTurns((all) => [...all, turn]);
       setBusy(true);
       const ctrl = new AbortController();
       abort.current = ctrl;
@@ -162,7 +167,7 @@ export function useAgent() {
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats(), attachments: attachments.map((a) => a.id) }),
+          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats(), attachments: attachments.map((a) => a.id), regenerate }),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {
@@ -201,8 +206,39 @@ export function useAgent() {
         patch(turn.id, (t) => (t.done ? t : { ...t, done: true }));
       }
     },
-    [turns, patch],
+    [patch],
   );
+
+  const ask = useCallback(
+    async (question: string, mode: RunMode, attachments: Attachment[] = []) => {
+      if (!question.trim() || abort.current) return;
+      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined };
+      setTurns((all) => [...all, turn]);
+      await run(turn, turns);
+    },
+    [turns, run],
+  );
+
+  /**
+   * Answers a turn's question again in place, keeping the earlier answer as a version to switch back to. Only the turns
+   * before it are sent as history. Later turns stay as they are (they were asked after the attempt they followed).
+   */
+  const regenerate = useCallback(
+    async (turnId: string) => {
+      const i = turns.findIndex((t) => t.id === turnId);
+      const old = turns[i];
+      if (!old || abort.current) return;
+      const next = addVersion(old, { ...newTurn(old.question, old.mode), attachments: old.attachments });
+      setTurns((all) => all.map((t) => (t.id === turnId ? next : t)));
+      await run(next, turns.slice(0, i), true);
+    },
+    [turns, run],
+  );
+
+  /** Shows another attempt of a finished turn. */
+  const pickVersion = useCallback((turnId: string, version: number) => {
+    setTurns((all) => all.map((t) => (t.id === turnId && t.done ? selectVersion(t, version) : t)));
+  }, []);
 
   const stop = useCallback(() => abort.current?.abort(), []);
 
@@ -233,5 +269,5 @@ export function useAgent() {
     setTurns(saved);
   }, []);
 
-  return { turns, busy, ask, stop, decide, load, threadId };
+  return { turns, busy, ask, regenerate, pickVersion, stop, decide, load, threadId };
 }

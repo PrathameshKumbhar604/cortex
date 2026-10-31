@@ -33,7 +33,7 @@ function loadMcpConfig(path: string | undefined): McpServerConfig[] {
 /**
  * Builds the registry for a workspace. Demo uses sample data; live uses
  * Composio for the six apps plus any MCP servers from mcp.config.json.
- * Firecrawl (web) is shared by both when a key is present.
+ * The web connector is shared by both (live always, demo when a Firecrawl key is set).
  */
 export function buildRegistry(workspace: Workspace, env: Record<string, string | undefined> = process.env): ConnectorRegistry {
   const reg = new ConnectorRegistry();
@@ -45,6 +45,7 @@ export function buildRegistry(workspace: Workspace, env: Record<string, string |
     if (key) for (const spec of TOOLKITS) reg.register(key.startsWith("ck_") ? new ComposioMcpConnector(spec, key) : new ComposioConnector(spec, key));
     for (const cfg of loadMcpConfig(env.CORTEX_MCP_CONFIG)) reg.register(new McpConnector(cfg));
   }
-  if (env.FIRECRAWL_API_KEY) reg.register(new FirecrawlConnector(env.FIRECRAWL_API_KEY));
+  // Live always has the web (keyless fallbacks); demo only with a key, so tests and evals stay offline.
+  if (env.FIRECRAWL_API_KEY || workspace === "live") reg.register(new FirecrawlConnector(env.FIRECRAWL_API_KEY));
   return reg;
 }

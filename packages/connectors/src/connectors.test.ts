@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ComposioMcpConnector, ConnectorRegistry, DemoConnector, TOOLKITS, aliasFor, buildRegistry, extractEvidence } from "./index";
+import { ComposioMcpConnector, ConnectorRegistry, DemoConnector, FirecrawlConnector, TOOLKITS, aliasFor, buildRegistry, extractEvidence } from "./index";
 import type { Connector } from "./types";
 import { driveQuery, gmailBody, gmailQuery } from "./composio/toolkits";
 import { htmlToText, rankByQuery } from "./extract";
@@ -198,5 +198,78 @@ describe("Composio Connect (ck_) keeps each user's connections apart", () => {
     await conn.disconnect({ userId: "carol" }); // has none: removes nothing, least of all the owner's
     const ops = calls.map((c) => (c.args.toolkits as Record<string, unknown>[] | undefined)?.[0]).filter((t) => t && t.action !== "list");
     expect(ops).toEqual([{ name: "gmail", action: "remove", account_id: "gmail_alice" }]);
+  });
+
+  it("connects again after a disconnect, under the same alias, and uses the new account", async () => {
+    const gmail = TOOLKITS.find((t) => t.toolkit === "gmail")!;
+    const conn = new ComposioMcpConnector(gmail, `ck_test_${Math.random()}`);
+    // A stateful Composio: add creates a pending account (same alias may be reused once removed), remove deletes it.
+    let live = [{ id: "gmail_carol", alias: "cortex-carol", status: "active" }];
+    let n = 0;
+    const used: string[] = [];
+    (conn as unknown as { session: { call: unknown } }).session.call = async (name: string, args: Record<string, unknown>) => {
+      if (name === "COMPOSIO_MULTI_EXECUTE_TOOL") {
+        used.push((args.tools as { account: string }[])[0]!.account);
+        return { results: [{ response: { successful: true, data: { messages: [] } } }] };
+      }
+      const t = (args.toolkits as { action: string; alias?: string; account_id?: string }[])[0]!;
+      if (t.action === "add") {
+        live = [...live, { id: `gmail_new${++n}`, alias: t.alias!, status: "initiated" }];
+        return { results: { gmail: { status: "initiated", redirect_url: `https://connect.composio.dev/link/${n}` } } };
+      }
+      if (t.action === "remove") live = live.filter((a) => a.id !== t.account_id);
+      return { results: { gmail: { accounts: live.map((a) => ({ ...a })) } } };
+    };
+    const carol = { userId: "carol" };
+    const signInFinishes = () => (live = live.map((a) => (a.alias === aliasFor("carol") ? { ...a, status: "active" } : a)));
+
+    await conn.search({ query: "x" }, carol);
+    await conn.disconnect(carol);
+    expect(live).toEqual([]);
+    expect((await conn.status(carol)).connected).toBe(false);
+    await expect(conn.search({ query: "x" }, carol)).rejects.toThrow(/isn't connected/);
+
+    expect((await conn.connect({ ...carol, callbackUrl: "" })).redirectUrl).toBe("https://connect.composio.dev/link/1");
+    expect((await conn.status(carol)).connected).toBe(false); // pending until sign-in finishes
+    signInFinishes();
+    (conn as unknown as { session: { invalidate(): void } }).session.invalidate(); // the 2 s status cache lapses
+    expect((await conn.status(carol)).connected).toBe(true);
+    await conn.search({ query: "x" }, carol);
+    expect(used).toEqual(["gmail_carol", "gmail_new1"]);
+    expect(live.map((a) => a.alias)).toEqual([aliasFor("carol")]);
+  });
+});
+
+describe("web search fallbacks", () => {
+  const ddg = `<a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fjev&amp;rut=x">Jev &#x27;guide&#x27;</a>
+    <a class="result__snippet" href="//duckduckgo.com/l/?uddg=x">What <b>Jev</b> is.</a>`;
+  async function withFetch(fake: (url: string) => Response | Promise<Response>, run: () => Promise<void>) {
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (u: string | URL | Request) => fake(String(u))) as typeof fetch;
+    try {
+      await run();
+    } finally {
+      globalThis.fetch = real;
+    }
+  }
+
+  it("searches DuckDuckGo without a key and unwraps its redirect links", async () => {
+    await withFetch(() => new Response(ddg), async () => {
+      const items = await new FirecrawlConnector().search({ query: "what is jev" }, ctx);
+      expect(items).toEqual([{ source: "web", title: "Jev 'guide'", quote: "What Jev is.", url: "https://example.com/jev" }]);
+    });
+  });
+
+  it("falls back to Wikipedia when DuckDuckGo fails", async () => {
+    const wiki = { query: { search: [{ title: "Jev (AI model)", snippet: "Jev is a <span>model</span>" }] } };
+    await withFetch((u) => (u.includes("duckduckgo") ? new Response("blocked", { status: 403 }) : Response.json(wiki)), async () => {
+      const items = await new FirecrawlConnector().search({ query: "jev" }, ctx);
+      expect(items[0]).toMatchObject({ title: "Jev (AI model) - Wikipedia", url: "https://en.wikipedia.org/wiki/Jev_(AI_model)" });
+    });
+  });
+
+  it("is available in the live workspace without a Firecrawl key, and not in demo", () => {
+    expect(buildRegistry("live", {}).get("web")).toBeDefined();
+    expect(buildRegistry("demo", {}).get("web")).toBeUndefined();
   });
 });

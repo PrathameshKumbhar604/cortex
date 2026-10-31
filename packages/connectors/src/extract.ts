@@ -121,7 +121,7 @@ export function textEvidence(source: SourceId, title: string, text: string, url?
 
 /** Email bodies often arrive as full HTML documents: keep only the readable text. */
 export function htmlToText(s: string): string {
-  if (!/<[a-z!/]/i.test(s)) return s;
+  if (!/<[a-z!/]|&#?\w+;/i.test(s)) return s; // tags or entities
   return s
     .replace(/<!DOCTYPE[^>]*>|-\/\/W3C\/\/DTD[^"]*"[^>]*>?/gi, " ")
     .replace(/<(head|style|script|title)[\s\S]*?<\/\1>/gi, " ")
@@ -132,6 +132,6 @@ export function htmlToText(s: string): string {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/&#39;|&#x27;|&rsquo;/g, "'")
     .replace(/&[a-z]+;|&#\d+;/gi, " ");
 }

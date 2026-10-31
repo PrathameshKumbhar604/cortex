@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildRegistry, ConnectorRegistry, DemoConnector, TOOLKITS } from "@cortex/connectors";
+import { buildRegistry, ConnectorRegistry, DemoConnector, TOOLKITS, type Connector } from "@cortex/connectors";
 import type { LlmRouter } from "@cortex/llm";
-import type { AgentEvent, MemoryItem } from "@cortex/shared";
+import type { AgentEvent, ChatTurn, MemoryItem } from "@cortex/shared";
 import { ActionStore } from "./actions";
 import type { MemoryBackend, MemoryWrite, PastChat } from "./memory";
 import { historyBlock } from "./prompts";
 import { runAgent } from "./run";
 import { cleanTitle } from "./title";
 import { mightHoldMemory, remember } from "./remember";
-import { routeByRules } from "./route";
+import { carryOver, isFollowUp, routeByRules } from "./route";
 import { parseWindow } from "./time";
 import { splitSections, streamCutoff, verifyClaims } from "./verify";
 
@@ -497,5 +497,112 @@ describe("attached files", () => {
     expect(events.filter((e) => e.type === "tool_call").every((e) => e.type === "tool_call" && e.source === "files")).toBe(true);
     const ev = events.find((e) => e.type === "evidence");
     expect(ev?.type === "evidence" && ev.items[0]).toMatchObject({ id: "e1", title: "orbit-plan.pdf" });
+  });
+});
+
+describe("regenerate", () => {
+  it("does not store or remember the same question twice", async () => {
+    const mem = memStub();
+    let stored = 0;
+    mem.appendThread = async () => { stored++; };
+    const ask = (regenerate: boolean) =>
+      collect(runAgent({ question: "remember that I prefer short answers", mode: "fast", userId: "u1", regenerate }, { llm: stubLlm("Noted.").llm, registry: buildRegistry("demo", {}), memory: mem, actions: new ActionStore() }));
+    await ask(false);
+    const [first, added] = [stored, mem.added.length];
+    expect(first).toBe(1);
+    await ask(true);
+    expect(stored).toBe(first);
+    expect(mem.added.length).toBe(added);
+  });
+});
+
+describe("follow-ups", () => {
+  const jev: ChatTurn[] = [
+    { role: "user", content: "what is jev?" },
+    { role: "assistant", content: "I'm not sure what \"jev\" refers to. Could you give me more context?" },
+  ];
+  const webSearches: string[] = [];
+  const registry = () => {
+    const reg = buildRegistry("demo", {});
+    reg.register({
+      id: "web", name: "Web", kind: "web", describes: "the public internet", impact: "", actions: [],
+      status: async () => ({ id: "web", name: "Web", kind: "web", connected: true, available: true, canAct: false }),
+      search: async (i: { query: string }) => {
+        webSearches.push(i.query);
+        return [{ source: "web", title: "JEV", quote: "JEV is short for Japanese encephalitis virus.", url: "https://example.org/jev", timestamp: "2026-10-01" }];
+      },
+      execute: async () => ({ ok: false, message: "" }),
+    } as unknown as Connector);
+    return reg;
+  };
+  const run = (question: string, llm: LlmRouter, history = jev, mode: "fast" | "deep" = "deep") =>
+    collect(runAgent({ question, mode, userId: "u1", history }, { llm, registry: registry(), memory: memStub(), actions: new ActionStore() }));
+  const routeOf = (events: AgentEvent[]) => events.find((e) => e.type === "route") as Extract<AgentEvent, { type: "route" }>;
+  const queries = (events: AgentEvent[]) => events.flatMap((e) => (e.type === "tool_call" ? [`${e.source}:${e.query}`] : []));
+
+  it("spots messages that only make sense with the chat before them", () => {
+    for (const q of ["search on web", "more", "what about last week", "and in slack?", "explain that", "check my gmail", "who sent it?"]) {
+      expect(isFollowUp(q, jev), q).toBe(true);
+    }
+    for (const q of ["what's on my calendar today", "explain how transformers work", "what did my advisor say about the thesis deadline?"]) {
+      expect(isFollowUp(q, jev), q).toBe(false);
+    }
+    expect(isFollowUp("search on web", [])).toBe(false); // nothing to follow up on
+  });
+
+  it("carries the earlier question over when the new message has no topic of its own", () => {
+    expect(carryOver("search on web", jev)).toBe("what is jev");
+    expect(carryOver("and in slack?", jev)).toBe("what is jev");
+    expect(carryOver("what about last week", jev)).toBe("what is jev last week");
+    // a chain of follow-ups still goes back to the last message with a topic
+    expect(carryOver("more", [...jev, { role: "user", content: "search on web" }, { role: "assistant", content: "JEV is a virus." }])).toBe("what is jev");
+    expect(carryOver("what's on my calendar today", jev)).toBe("what's on my calendar today");
+  });
+
+  it("'search on web' after 'what is jev?' searches the web for jev, with no extra model call", async () => {
+    webSearches.length = 0;
+    const { llm, calls } = stubLlm("JEV is Japanese encephalitis virus [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]");
+    const events = await run("search on web", llm);
+    expect(routeOf(events).decision).toMatchObject({ route: "web", sources: ["web"], question: "what is jev" });
+    expect(queries(events)).toEqual(["web:jev"]);
+    expect(webSearches).toEqual(["jev"]);
+    expect(calls.route).toBe(0); // rules + carry-over: the planner is skipped for a plain web lookup too
+    expect(calls.prompt).toContain("search on web"); // the answer still sees what the user typed…
+    expect(calls.prompt).toContain("what is jev"); // …and what it means
+    expect(JSON.stringify(events)).not.toMatch(/Not in your sources|couldn't find/);
+  });
+
+  it("lets the router model rewrite a follow-up in the same call that routes it", async () => {
+    const { llm, calls } = stubLlm("ok [1]", undefined, { standalone: "what does JEV stand for", route: "web", sources: ["web"], complex: false });
+    const events = await run("what does it stand for?", llm, jev, "fast");
+    expect(routeOf(events).decision).toMatchObject({ route: "web", question: "what does JEV stand for" });
+    expect(queries(events)).toEqual(["web:jev stand"]);
+    expect(calls.route).toBe(1);
+    expect(calls.route + calls.complete + calls.stream).toBeLessThanOrEqual(3); // Fast budget, router included
+  });
+
+  it("falls back to carrying keywords over when the router model fails", async () => {
+    const { llm } = stubLlm("ok [1]");
+    const broken = { ...llm, json: async () => { throw new Error("rate limited"); }, stream: llm.stream.bind(llm) } as unknown as LlmRouter;
+    const events = await run("what does it stand for?", broken, jev, "fast");
+    expect(routeOf(events).decision.question).toBe("what is jev what does stand for");
+    expect(queries(events).every((q) => q.includes("jev"))).toBe(true);
+  });
+
+  it("keeps the source the message names: 'and in slack?' searches slack for the earlier topic", async () => {
+    const { llm, calls } = stubLlm("unused");
+    const events = await run("and in slack?", llm, [{ role: "user", content: "what's the latest on the orbit login bug?" }, { role: "assistant", content: "Issue #42 is open [1]." }], "fast");
+    expect(routeOf(events).decision).toMatchObject({ route: "personal", sources: ["slack"] });
+    expect(queries(events)).toEqual(["slack:latest orbit login bug"]);
+    expect(calls.route).toBe(0);
+  });
+
+  it("looks on the web instead of a dead end when the user's apps have nothing", async () => {
+    webSearches.length = 0;
+    const { llm } = stubLlm("JEV is a virus [1].\n<<<CONFLICTS>>>\nnone\n<<<MISSING>>>\nnone\n<<<ACTIONS>>>\n[]", undefined, { route: "personal", sources: [], complex: false });
+    const events = await run("what is jev?", llm, [], "fast");
+    expect(queries(events).at(-1)).toBe("web:jev");
+    expect(events.find((e) => e.type === "evidence" && e.items.length)).toBeTruthy();
+    expect(JSON.stringify(events)).not.toMatch(/couldn't find/);
   });
 });

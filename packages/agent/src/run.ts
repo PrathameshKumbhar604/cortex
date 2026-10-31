@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { ConnectorRegistry, Connector } from "@cortex/connectors";
+import type { ConnectorRegistry, Connector, SafeSearchResult } from "@cortex/connectors";
 import { LlmUnavailableError, type LlmRouter } from "@cortex/llm";
 import type {
   ActionProposal,
@@ -20,7 +20,7 @@ import type { ActionStore } from "./actions";
 import { memoryNotRunning, type MemoryBackend, type PastChat } from "./memory";
 import { remember } from "./remember";
 import { actionPrompt, chatPrompt, generalPrompt, planPrompt, shortDate, synthPrompt, verifyPrompt, type ActionBrief } from "./prompts";
-import { ABOUT_PAST_CHATS, decideRoute } from "./route";
+import { ABOUT_PAST_CHATS, carryOver, decideRoute } from "./route";
 import { keywords, parseWindow } from "./time";
 import { traced, withTracing } from "./tracing";
 import { groundedness, splitSections, streamCutoff, toConflicts, verifyClaims } from "./verify";
@@ -50,6 +50,8 @@ export interface RunInput {
   attachments?: Omit<Evidence, "id" | "subQuestionId">[];
   /** Opt-in: may read the user's other chats. When false, they are never searched. */
   useOtherChats?: boolean;
+  /** The same question answered again: already in the stored thread and already remembered from, so neither repeats. */
+  regenerate?: boolean;
   signal?: AbortSignal;
 }
 
@@ -180,9 +182,23 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
   yield { type: "run", runId, mode: input.mode, threadId };
 
   try {
+    // Source checks, memory recall and routing don't depend on each other's results: start them together.
+    // Recall uses the follow-up's deterministic standalone form ("search on web" alone recalls nothing useful).
+    const statusesP = deps.registry.statuses(ctx);
+    const askedAboutPast = ABOUT_PAST_CHATS.test(input.question);
+    const recallP = recall(input, deps, carryOver(input.question, history), askedAboutPast).then(
+      (r) => ({ ok: true as const, ...r }),
+      (err: unknown) => ({ ok: false as const, err }),
+    );
+    const routeP = statusesP.then((statuses) => {
+      const connected = deps.registry.list().filter((c) => statuses.find((s) => s.id === c.id)?.connected);
+      return decideRoute(input.question, history, connected.map((c) => ({ id: c.id, describes: c.describes })), deps.llm, signal);
+    });
+    routeP.catch(() => {}); // awaited below; never an unhandled rejection if the run stops first
+
     // 1. Understand: which sources can we use right now?
     yield { type: "step", step: "understand", status: "active" };
-    const statuses = await deps.registry.statuses(ctx);
+    const statuses = await statusesP;
     const connected = deps.registry.list().filter((c) => statuses.find((s) => s.id === c.id)?.connected);
     // Only a connection the user made and that lapsed is worth a note; an app they never set up (or uploads they never
     // made) isn't a failure. Status errors are logged by the registry.
@@ -194,50 +210,41 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     }
     yield { type: "step", step: "understand", status: "done", detail: `${connected.length} sources available` };
 
-    // 2. Recall memory (pinned memories always come along).
-    yield { type: "step", step: "recall", status: "active" };
+    // 2. Recall memory (pinned memories always come along). Yielded where it's needed: see deferRecall.
     let memories: MemoryItem[] = [];
     let pastChats: PastChat[] = [];
-    const askedAboutPast = ABOUT_PAST_CHATS.test(input.question);
-    try {
-      memories = await deps.memory.recall(input.userId, input.question, 5);
-      if (memories.length) yield { type: "memory_used", items: memories };
-      // Opted in: every question checks the other chats (a cheap keyword match, no model call), so the user never has
-      // to ask for it; only related ones come back. A question about past chats with no topic gets the latest ones.
-      if (input.useOtherChats) {
-        try {
-          pastChats = await deps.memory.searchChats(input.userId, input.question, input.threadId, askedAboutPast);
-        } catch {
-          // other chats are extra context; the answer doesn't need them
-        }
+    const recallStep = async function* (): AsyncGenerator<AgentEvent> {
+      yield { type: "step", step: "recall", status: "active" };
+      const recalled = await recallP;
+      try {
+        if (!recalled.ok) throw recalled.err;
+        ({ memories, pastChats } = recalled);
+        if (memories.length) yield { type: "memory_used", items: memories };
+        const found = [
+          memories.length && `${memories.length} memories`,
+          input.useOtherChats && (pastChats.length ? `${pastChats.length} from other chats` : "no related chats"),
+        ].filter(Boolean).join(", ");
+        yield { type: "step", step: "recall", status: "done", detail: found || "nothing relevant" };
+      } catch (err) {
+        const failure: SourceFailure = {
+          source: "memory",
+          name: "Memory",
+          reason: err instanceof Error ? err.message : "unreachable",
+          impact: "Your saved priorities and preferences won't be used for this answer.",
+        };
+        failures.push(failure);
+        console.warn("[memory] recall failed:", failure.reason);
+        // No memory service running here (not deployed, or not started) is how this Cortex is set up, not a failure to report.
+        if (!memoryNotRunning(err)) yield { type: "source_error", failure };
+        yield { type: "step", step: "recall", status: "skipped", detail: "memory offline" };
       }
-      const found = [
-        memories.length && `${memories.length} memories`,
-        input.useOtherChats && (pastChats.length ? `${pastChats.length} from other chats` : "no related chats"),
-      ].filter(Boolean).join(", ");
-      yield { type: "step", step: "recall", status: "done", detail: found || "nothing relevant" };
-    } catch (err) {
-      const failure: SourceFailure = {
-        source: "memory",
-        name: "Memory",
-        reason: err instanceof Error ? err.message : "unreachable",
-        impact: "Your saved priorities and preferences won't be used for this answer.",
-      };
-      failures.push(failure);
-      console.warn("[memory] recall failed:", failure.reason);
-      // No memory service running here (not deployed, or not started) is how this Cortex is set up, not a failure to report.
-      if (!memoryNotRunning(err)) yield { type: "source_error", failure };
-      yield { type: "step", step: "recall", status: "skipped", detail: "memory offline" };
-    }
+    };
 
     // 2b. Route: does this need the user's sources at all, which ones, and which model?
-    const routed = await decideRoute(
-      input.question,
-      history,
-      connected.map((c) => ({ id: c.id, describes: c.describes })),
-      deps.llm,
-      signal,
-    );
+    const routed = await routeP;
+    // A follow-up ("search on web") is planned, searched and answered as its standalone form; the chat still goes along.
+    const question = routed.decision.question ?? input.question;
+    const asked = question === input.question ? question : `${input.question}\n(With the conversation, this asks: ${question})`;
     const attached = input.attachments ?? [];
     // A question with a file attached is about that file (plus any app it names), whatever its wording.
     const route: RouteDecision = attached.length
@@ -254,6 +261,9 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       budget.models.add(`${routed.llm.provider}/${routed.llm.model}`);
     }
     yield { type: "route", decision: route };
+    // Fast Mode needs memories only for the answer: let the recall (a remote embedding search) overlap the search.
+    const deferRecall = fast && route.route !== "general";
+    if (!deferRecall) yield* recallStep();
 
     if (route.route === "general") {
       yield* skip(["plan", "search", "verify"]);
@@ -262,7 +272,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       let text = "";
       for await (const part of deps.llm.stream({
         tier: fast ? "fast" : route.tier,
-        messages: generalPrompt(input.question, history, memories, pastChats, { on: !!input.useOtherChats, asked: askedAboutPast }),
+        messages: generalPrompt(asked, history, memories, pastChats, { on: !!input.useOtherChats, asked: askedAboutPast }),
         maxTokens: 900,
         signal,
       })) {
@@ -292,11 +302,23 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
           ? connected.filter((c) => route.sources.includes(c.id))
           : connected;
 
+    // Deep mode searches the whole question over every in-scope source anyway: start that now, so it overlaps planning.
+    const baseline = keywords(question);
+    const prefetched = new Map<string, Promise<SafeSearchResult>>();
+    if (!fast) {
+      const w = parseWindow(question);
+      for (const c of scoped) {
+        if (c.id === "web" && route.route !== "web") continue;
+        prefetched.set(searchKey(c.id, baseline, w), deps.registry.safeSearch(c.id, { query: baseline, since: w?.since, until: w?.until, limit: 6 }, ctx));
+      }
+    }
+
     // 3. Plan.
     yield { type: "step", step: "plan", status: "active" };
     let plan: Plan;
-    if (fast || scoped.length === 0 || route.route === "action") {
-      plan = heuristicPlan(input.question, scoped);
+    // A plain web lookup has nothing to split into sub-questions; the planner would only add a model call.
+    if (fast || scoped.length === 0 || route.route === "action" || (route.route === "web" && route.tier === "fast")) {
+      plan = heuristicPlan(question, scoped);
     } else {
       try {
         budget.llmCalls++;
@@ -304,7 +326,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
           {
             tier: "fast", // planning is short structured output; keep the strong model's quota for the answer
             messages: planPrompt(
-              input.question,
+              question,
               scoped.map((c) => ({ id: c.id, describes: c.describes })),
               memories,
               history,
@@ -316,13 +338,13 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         );
         if (res.cached) budget.cachedCalls++;
         budget.models.add(`${res.provider}/${res.model}`);
-        plan = sanitizePlan(res.data, input.question, scoped);
+        plan = sanitizePlan(res.data, question, scoped);
         // The router already decided this needs sources; the planner may not overrule it into small talk.
         if (plan.intent === "chat") plan = { ...plan, intent: "research" };
-        if (plan.intent !== "chat" && plan.subQuestions.length === 0) plan = heuristicPlan(input.question, scoped);
+        if (plan.intent !== "chat" && plan.subQuestions.length === 0) plan = heuristicPlan(question, scoped);
       } catch (err) {
         if (err instanceof LlmUnavailableError) throw err;
-        plan = heuristicPlan(input.question, scoped); // planner output unusable → degrade, don't fail
+        plan = heuristicPlan(question, scoped); // planner output unusable → degrade, don't fail
       }
     }
     yield { type: "plan", plan };
@@ -339,7 +361,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "step", step: "synthesize", status: "active" };
       budget.llmCalls++;
       let text = "";
-      for await (const part of deps.llm.stream({ tier: "fast", messages: chatPrompt(input.question, history), maxTokens: 300, signal })) {
+      for await (const part of deps.llm.stream({ tier: "fast", messages: chatPrompt(asked, history), maxTokens: 300, signal })) {
         if ("token" in part) {
           text += part.token;
           yield { type: "token", text: part.token };
@@ -357,8 +379,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     const evidence: Evidence[] = [];
     const calls = new Map<string, { source: string; query: string; subQuestionId: string }>();
     // Deep mode: the whole question over every in-scope source first, so a narrow plan can't miss the obvious hit.
-    if (!fast && plan.subQuestions.length > 1) {
-      const baseline = keywords(input.question);
+    if (!fast) {
       for (const c of scoped) {
         if (c.id === "web" && route.route !== "web") continue;
         calls.set(`${c.id}|${baseline}`, { source: c.id, query: baseline, subQuestionId: plan.subQuestions[0]!.id });
@@ -374,7 +395,10 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     const searchRound = async function* (batch: { source: string; query: string; subQuestionId: string }[], window = plan.window) {
       const pending = batch.map((c, i) => {
         const id = `t${budget.toolCalls + i + 1}`;
-        return { id, c, p: deps.registry.safeSearch(c.source, { query: c.query, since: window?.since, until: window?.until, limit: fast ? 4 : 6 }, ctx) };
+        const key = searchKey(c.source, c.query, window);
+        const early = prefetched.get(key);
+        prefetched.delete(key);
+        return { id, c, p: early ?? deps.registry.safeSearch(c.source, { query: c.query, since: window?.since, until: window?.until, limit: fast ? 4 : 6 }, ctx) };
       });
       budget.toolCalls += pending.length;
       for (const { id, c } of pending) yield { type: "tool_call", id, source: c.source, query: c.query, subQuestionId: c.subQuestionId } as AgentEvent;
@@ -405,6 +429,17 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       if (retry.length) yield* searchRound(retry, undefined);
     }
 
+    if (deferRecall) yield* recallStep();
+
+    // Nothing in the user's apps: rather than a dead end, look it up on the web once (unless they named where to look).
+    const namedApps = route.by === "rules" && route.sources.length > 0;
+    const searchedWeb = [...calls.values()].some((c) => c.source === "web");
+    if (!evidence.length && !attached.length && !namedApps && !searchedWeb && route.route !== "action" && connected.some((c) => c.id === "web") && budget.canCallTool()) {
+      const call = { source: "web", query: keywords(question), subQuestionId: plan.subQuestions[0]?.id ?? "q1" };
+      calls.set(`web|${call.query}`, call);
+      yield* searchRound([call], undefined);
+    }
+
     // Opted-in past chats compete with the sources for a place in the evidence, and are cited like them.
     evidence.push(
       ...pastChats.map((c) => ({
@@ -418,7 +453,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     );
     // Attached passages always make the cut; searched evidence fills the remaining places.
     const searched = evidence.filter((e) => !attached.some((a) => a.ref === e.ref && a.quote === e.quote)); // already attached
-    const kept = rankEvidence(searched, `${input.question} ${plan.rewritten}`, Math.max(2, LIMITS.maxEvidence[input.mode] - attached.length));
+    const kept = rankEvidence(searched, `${question} ${plan.rewritten}`, Math.max(2, LIMITS.maxEvidence[input.mode] - attached.length));
     const ranked = [...attached.map((a) => ({ ...a, id: "" })), ...kept].map((e, i) => ({
       ...e,
       id: `e${i + 1}`,
@@ -456,7 +491,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "token", text: md };
       yield { type: "answer", markdown: md };
       yield* skip(["synthesize", "verify", "remember"]);
-      yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [input.question], followups: [] };
+      yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [question], followups: [] };
       yield usage(budget, started);
       yield { type: "done" };
       return;
@@ -470,7 +505,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     for await (const part of deps.llm.stream({
       tier: fast ? "fast" : "strong",
       messages: synthPrompt({
-        question: input.question,
+        question: asked,
         plan,
         evidence: ranked,
         memories,
@@ -570,6 +605,22 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
   }
 }
 
+/** Pinned and related memories, plus related other chats when the user opted in. */
+async function recall(input: RunInput, deps: AgentDeps, question: string, askedAboutPast: boolean) {
+  const memories = await deps.memory.recall(input.userId, question, 5);
+  let pastChats: PastChat[] = [];
+  // Opted in: every question checks the other chats (a cheap keyword match, no model call), so the user never has
+  // to ask for it; only related ones come back. A question about past chats with no topic gets the latest ones.
+  if (input.useOtherChats) {
+    try {
+      pastChats = await deps.memory.searchChats(input.userId, question, input.threadId, askedAboutPast);
+    } catch {
+      // other chats are extra context; the answer doesn't need them
+    }
+  }
+  return { memories, pastChats };
+}
+
 /**
  * Drafts the requested action for the approval card, or the plain-words question to ask when a detail
  * is missing. Returns null when the message turns out not to be an action.
@@ -609,6 +660,10 @@ async function* rememberStep(
   o: { runId: string; memories: MemoryItem[]; budget: Budget; signal: AbortSignal; memoryDown: boolean },
 ): AsyncGenerator<AgentEvent> {
   yield { type: "step", step: "remember", status: "active" };
+  if (input.regenerate) {
+    yield { type: "step", step: "remember", status: "skipped", detail: "already remembered from this question" };
+    return;
+  }
   if (o.memoryDown) {
     yield { type: "step", step: "remember", status: "skipped", detail: "memory offline" };
     return;
@@ -639,6 +694,7 @@ async function* rememberStep(
 
 /** Keeps the turn server-side, so later chats can refer back to it (only if the user opts in). */
 function saveTurn(deps: AgentDeps, threadId: string, input: RunInput, answer: string) {
+  if (input.regenerate) return; // shortcut: the stored thread keeps the first answer, not the regenerated one; replace it if past-chat search needs the latest
   deps.memory
     .appendThread(threadId, input.userId, [
       { role: "user", content: input.question },
@@ -646,6 +702,8 @@ function saveTurn(deps: AgentDeps, threadId: string, input: RunInput, answer: st
     ])
     .catch(() => {});
 }
+
+const searchKey = (source: string, query: string, w?: { since?: string; until?: string }) => `${source}|${query}|${w?.since ?? ""}|${w?.until ?? ""}`;
 
 function* skip(steps: StepId[]): Generator<AgentEvent> {
   for (const step of steps) yield { type: "step", step, status: "skipped" };

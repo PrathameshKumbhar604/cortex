@@ -11,6 +11,8 @@ interface AskBody {
   history?: ChatTurn[];
   useOtherChats?: boolean;
   attachments?: string[];
+  /** Answering an earlier question again: it is already stored, so it must not be stored (or remembered) twice. */
+  regenerate?: boolean;
 }
 
 /** Streams AgentEvents as server-sent events. */
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
             threadId: body.threadId,
             history,
             useOtherChats: body.useOtherChats === true,
+            regenerate: body.regenerate === true,
             attachments: await attachmentEvidence(sess.userId, (body.attachments ?? []).filter((x) => typeof x === "string"), question),
             signal: req.signal,
           },

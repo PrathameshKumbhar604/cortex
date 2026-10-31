@@ -135,7 +135,7 @@ Search-R1 trains an LLM with RL to search in the middle of its reasoning, reward
 Gandhi \textit{et al.} observe that RL-trained retrieval agents are normally bound to one retriever and to fixed chunks of fair size~\cite{gandhi2026grasp}. The kind and amount of evidence then cannot change between steps. GRASP folds three decisions into one learned policy: how to mix lexical with dense search, how much to read, and when to stop.
 
 \subsubsection{Formulation and actions}
-GRASP casts agentic RAG as a finite-horizon Markov decision process. Its state holds the question, the history, the evidence and tools used so far, and the remaining turn budget. Each paragraph is split into sentences that point back to it. At each step the policy reasons and then takes one action: \emph{semantic search} (Qwen3-0.6B embeddings), \emph{keyword search} (BM25), \emph{read paragraph} (the parent of a retrieved sentence) or \emph{answer}. Searches return the top $K=5$ sentences, so the agent spends context on a full paragraph only by choice.
+GRASP models the search loop as an MDP with a fixed turn limit. Its state holds the question, the history, the evidence and tools used so far, and the remaining turn budget. Each paragraph is split into sentences that point back to it. At each step the policy reasons and then takes one action: \emph{semantic search} (Qwen3-0.6B embeddings), \emph{keyword search} (BM25), \emph{read paragraph} (the parent of a retrieved sentence) or \emph{answer}. Searches return the top $K=5$ sentences, so the agent spends context on a full paragraph only by choice.
 
 \subsubsection{Reward}
 The trajectory reward is

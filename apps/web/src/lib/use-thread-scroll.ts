@@ -81,6 +81,17 @@ export function useThreadScroll() {
     [turnTops, scrollTo, toLatest],
   );
 
+  /** Moves to question `i` (0-based), for the question navigator. */
+  const jumpTo = useCallback(
+    (i: number) => {
+      const target = turnTops()[i];
+      if (target === undefined) return;
+      following.current = false;
+      scrollTo(Math.max(0, target - 24));
+    },
+    [turnTops, scrollTo],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
@@ -99,5 +110,5 @@ export function useThreadScroll() {
     following.current = true;
   }, []);
 
-  return { scroller, content, ...pos, step, toLatest, follow };
+  return { scroller, content, ...pos, step, jumpTo, toLatest, follow };
 }

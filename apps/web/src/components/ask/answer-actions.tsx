@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
-import { Check, Copy, Share } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, RotateCw, Share } from "lucide-react";
 import { sourceName } from "@cortex/shared";
 import { snapshot, toMarkdown, type SharedSource } from "@/lib/share";
 import { saveNow } from "@/lib/recent";
 import { toast } from "@/lib/toast";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
+import { versionInfo } from "@/lib/versions";
 
 const QUIET =
   "press inline-flex h-7 items-center gap-1.5 rounded-[7px] px-2 text-[12.5px] text-muted hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent";
@@ -30,8 +31,47 @@ function richHtml(el: HTMLElement | null, sources: SharedSource[]) {
   return copy.innerHTML + (list ? `<p><strong>Sources</strong></p><ul>${list}</ul>` : "");
 }
 
-/** Quiet actions under a finished answer: copy it, or share a read-only link to it. */
-export function AnswerActions({ turn, chatId, answerRef }: { turn: Turn; chatId?: string; answerRef: RefObject<HTMLDivElement | null> }) {
+/** "‹ 2/3 ›": steps between the attempts at a regenerated turn. Renders nothing for a turn answered once. */
+export function VersionSwitch({ turn, onVersion, className }: { turn: Turn; onVersion: (version: number) => void; className?: string }) {
+  const { count, index } = versionInfo(turn);
+  if (count < 2) return null;
+  const btn =
+    "press grid size-7 place-items-center rounded-[7px] text-muted hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent disabled:pointer-events-none disabled:text-line-strong";
+  return (
+    <div role="group" aria-label="Answer versions" className={cn("flex items-center", className)}>
+      <button type="button" onClick={() => onVersion(index - 1)} disabled={index === 0} aria-label="Previous version" className={btn}>
+        <ChevronLeft className="size-3.5" aria-hidden />
+      </button>
+      <span aria-live="polite" className="min-w-[3ch] text-center font-mono text-[12px] tabular-nums text-muted">
+        <span aria-hidden>
+          {index + 1}/{count}
+        </span>
+        <span className="sr-only">
+          Version {index + 1} of {count}
+        </span>
+      </span>
+      <button type="button" onClick={() => onVersion(index + 1)} disabled={index === count - 1} aria-label="Next version" className={btn}>
+        <ChevronRight className="size-3.5" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+/** Quiet actions under a finished answer: switch versions, copy it, share a read-only link to it, or answer again. */
+export function AnswerActions({
+  turn,
+  chatId,
+  answerRef,
+  onRetry,
+  onVersion,
+}: {
+  turn: Turn;
+  chatId?: string;
+  answerRef: RefObject<HTMLDivElement | null>;
+  /** Answers again as a new version; absent while another answer is running. */
+  onRetry?: () => void;
+  onVersion?: (version: number) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -55,11 +95,16 @@ export function AnswerActions({ turn, chatId, answerRef }: { turn: Turn; chatId?
 
   return (
     <div className="-ml-2 mt-1 mb-4 flex items-center gap-0.5">
+      {onVersion && <VersionSwitch turn={turn} onVersion={onVersion} className="mr-1" />}
       <button type="button" onClick={copy} aria-label={copied ? "Copied" : "Copy answer"} className={QUIET}>
         {copied ? <Check className="size-3.5 text-accent" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
         Copy
       </button>
       {chatId && <ShareButton chatId={chatId} turn={turn} />}
+      <button type="button" onClick={onRetry} disabled={!onRetry} aria-label="Answer again" title="Answer again (keeps this answer as a version)" className={cn(QUIET, "disabled:opacity-40")}>
+        <RotateCw className="size-3.5" aria-hidden />
+        Retry
+      </button>
     </div>
   );
 }

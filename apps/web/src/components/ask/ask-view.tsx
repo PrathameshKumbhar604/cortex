@@ -2,10 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ChevronDown, ChevronRight, ChevronUp, CornerDownRight, Plus } from "lucide-react";
+import { ArrowDown, ChevronRight, CornerDownRight, Plus } from "lucide-react";
 import type { RunMode } from "@cortex/shared";
 import { useAgent } from "@/lib/use-agent";
 import { readThread, saveThread, setAutoTitle } from "@/lib/recent";
+import { normalizeTurn } from "@/lib/versions";
 import { useThreadScroll } from "@/lib/use-thread-scroll";
 import { play } from "@/lib/sound";
 import { cn } from "@/lib/ui";
@@ -13,6 +14,7 @@ import { Composer, type PendingFile } from "./composer";
 import { uploadFile } from "@/lib/files";
 import { toast } from "@/lib/toast";
 import { TurnView } from "./turn-view";
+import { QuestionRail } from "./question-rail";
 import { useUser } from "@clerk/nextjs";
 import { Mark } from "../shell";
 
@@ -47,7 +49,7 @@ function readMode(): RunMode {
 }
 
 export function AskView({ workspace }: { workspace: "demo" | "live" }) {
-  const { turns, busy, ask, stop, decide, load, threadId } = useAgent();
+  const { turns, busy, ask, regenerate, pickVersion, stop, decide, load, threadId } = useAgent();
   const [localId, setLocalId] = useState(() => crypto.randomUUID());
   const asked = useRef(false);
   const [saveTick, setSaveTick] = useState(0);
@@ -71,7 +73,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
   const [mode, setMode] = useState<RunMode>("deep");
   const params = useSearchParams();
   const router = useRouter();
-  const { scroller, content, away, canPrev, canNext, step, toLatest, follow } = useThreadScroll();
+  const { scroller, content, away, jumpTo, toLatest, follow } = useThreadScroll();
 
   useEffect(() => setMode(readMode()), []);
   const changeMode = (m: RunMode) => {
@@ -112,7 +114,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       const saved = readThread(t);
       asked.current = false;
       // A turn saved mid-run never finishes; show it as stopped.
-      load(saved?.turns.map((x) => (x.done ? x : { ...x, done: true, error: x.error ?? "Stopped before it finished." })), saved?.serverThreadId);
+      load(saved?.turns.map(normalizeTurn).map((x) => (x.done ? x : { ...x, done: true, error: x.error ?? "Stopped before it finished." })), saved?.serverThreadId);
       setLocalId(t);
       follow();
     } else if (!t && !q && turns.length) {
@@ -132,6 +134,20 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
   const onDecide = (turnId: string) => async (id: string, d: "approve" | "reject", e?: Record<string, unknown>) => {
     await decide(turnId, id, d, e);
+    asked.current = true;
+    setSaveTick((n) => n + 1);
+  };
+
+  const retry = (turnId: string) => {
+    if (busy) return;
+    follow();
+    asked.current = true;
+    play("send");
+    void regenerate(turnId);
+  };
+
+  const switchVersion = (turnId: string, v: number) => {
+    pickVersion(turnId, v);
     asked.current = true;
     setSaveTick((n) => n + 1);
   };
@@ -179,8 +195,18 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
           )}
 
           {turns.map((t, i) => (
-            <section key={t.id} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
-              <TurnView turn={t} chatId={localId} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} onRetry={busy ? undefined : () => submit(t.question)} />
+            // Keyed by position: a regenerated turn keeps its place (and the navigator its marker) while its attempt id changes.
+            <section key={i} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
+              <TurnView
+                key={t.id}
+                turn={t}
+                chatId={localId}
+                latest={t === latest}
+                onDecide={onDecide(t.id)}
+                onFollowup={submit}
+                onRetry={busy ? undefined : () => retry(t.id)}
+                onVersion={(v) => switchVersion(t.id, v)}
+              />
             </section>
           ))}
         </div>
@@ -200,26 +226,8 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
           <ArrowDown className="size-3.5" aria-hidden /> {busy ? "Follow the answer" : "Jump to latest"}
         </button>
 
-        {turns.length > 1 && (
-          <div className="absolute right-3 bottom-4 hidden flex-col overflow-hidden sm:flex rounded-[10px] border border-line bg-surface shadow-[0_4px_16px_-8px_rgb(14_17_22/0.16)] sm:right-5">
-            {([
-              [-1, ChevronUp, "Previous question", canPrev],
-              [1, ChevronDown, "Next question", canNext],
-            ] as const).map(([dir, Icon, label, enabled]) => (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => step(dir)}
-                disabled={!enabled}
-                aria-label={`${label} (Alt+${dir < 0 ? "↑" : "↓"})`}
-                title={`${label} (Alt+${dir < 0 ? "↑" : "↓"})`}
-                className="press grid size-8 place-items-center text-muted hover:bg-shell hover:text-ink disabled:pointer-events-none disabled:text-line-strong [&+&]:border-t [&+&]:border-line"
-              >
-                <Icon className="size-4" aria-hidden />
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Long threads: one tick per question on the right edge; Alt+↑ / Alt+↓ step between them. */}
+        <QuestionRail questions={turns.map((t) => t.question)} scroller={scroller} content={content} onJump={jumpTo} />
       </div>
 
       <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
