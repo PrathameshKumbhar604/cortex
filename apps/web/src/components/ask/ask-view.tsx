@@ -180,7 +180,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
           {turns.map((t, i) => (
             <section key={t.id} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
-              <TurnView turn={t} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} onRetry={busy ? undefined : () => submit(t.question)} />
+              <TurnView turn={t} chatId={localId} latest={t === latest} onDecide={onDecide(t.id)} onFollowup={submit} onRetry={busy ? undefined : () => submit(t.question)} />
             </section>
           ))}
         </div>
@@ -254,8 +254,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
             onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
             placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
           />
-          <div className="text-[12.5px] text-muted mt-2 flex items-center justify-between">
-            <span className="hidden sm:inline">{mode === "fast" ? "Fast: one pass, quickest answer" : "Deep: plans, searches in parallel, verifies every claim"}</span>
+          <div className="text-[12.5px] text-muted mt-2 flex items-center justify-end">
             {turns.length > 0 && (
               <button type="button" onClick={newThread} disabled={busy} className={cn("ml-auto flex items-center gap-1 whitespace-nowrap hover:text-ink", busy && "opacity-40")}>
                 <Plus className="size-3" aria-hidden /> New thread

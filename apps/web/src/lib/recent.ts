@@ -155,3 +155,12 @@ export function onRecent(fn: () => void) {
     window.removeEventListener("storage", fn);
   };
 }
+
+/** Sends one chat to the server right away (a shared link is made from the server's copy); true once it's saved. */
+export async function saveNow(id: string) {
+  const t = readThread(id);
+  if (!t) return false;
+  dirty.delete(id);
+  const res = await fetch("/api/chats", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(t) });
+  return res.ok;
+}

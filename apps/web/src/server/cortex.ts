@@ -8,6 +8,7 @@ import { filesConnector } from "./files";
 import { ActionStore, MemoryClient, type AgentDeps } from "@cortex/agent";
 import { buildRegistry, claimUntaggedAccounts, ConnectorRegistry, type Workspace } from "@cortex/connectors";
 import { getSettings } from "./admin";
+import { chooseWorkspace } from "@/lib/workspace";
 import { LlmRouter } from "@cortex/llm";
 
 const root = process.env.CORTEX_ROOT ?? path.resolve(process.cwd(), "../..");
@@ -16,6 +17,8 @@ interface Singletons {
   llm: LlmRouter;
   actions: ActionStore;
   registries: Partial<Record<Workspace, ConnectorRegistry>>;
+  /** The buildRegistry the cached registries came from; a hot reload of the connectors brings a new one. */
+  builtWith?: typeof buildRegistry;
 }
 
 // Survive dev hot reloads: module state would otherwise reset on every edit.
@@ -79,10 +82,8 @@ export async function session(): Promise<Session | null> {
     admin = true;
   }
   const jar = await cookies();
-  const ws = jar.get("cortex_ws")?.value;
   const liveAllowed = mayUseLive();
-  const wanted: Workspace = ws === "demo" || ws === "live" ? ws : defaultWorkspace();
-  const workspace: Workspace = wanted === "live" && !liveAllowed ? "demo" : wanted;
+  const workspace = chooseWorkspace(jar.get("cortex_ws")?.value, liveAllowed, defaultWorkspace());
   const dataId = dataIdFor(userId, jar.get("cortex_uid")?.value);
   if (isOwner(local.email, local.verified)) claimOwnerAccounts(dataId);
   return { userId: dataId, workspace, email: local.email, name: local.name, liveAllowed, authId: userId, admin };
@@ -135,6 +136,11 @@ export async function setWorkspace(workspace: Workspace) {
 
 export function deps(workspace: Workspace): AgentDeps {
   const s = singletons();
+  // Old connector instances keep their old class (e.g. without disconnect()), so rebuild after the connectors change.
+  if (s.builtWith !== buildRegistry) {
+    s.registries = {};
+    s.builtWith = buildRegistry;
+  }
   s.registries[workspace] ??= buildRegistry(workspace);
   if (!s.registries[workspace].get("files")) s.registries[workspace].register(filesConnector); // uploads are a source in both workspaces
   // The memory client is stateless; not cached, so a dev hot reload never leaves an old copy behind.

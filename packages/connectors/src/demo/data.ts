@@ -78,6 +78,13 @@ export const DEMO_ITEMS: DemoItem[] = [
   },
   {
     source: "slack",
+    title: "#orbit-dev: You",
+    author: "You",
+    offset: -6,
+    body: "On it: I'll review Jordan's push notification PR #57 tomorrow morning so it's ready once the credentials land.",
+  },
+  {
+    source: "slack",
     title: "#orbit-dev: Maya",
     author: "Maya",
     offset: -4,

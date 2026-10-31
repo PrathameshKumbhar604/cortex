@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Brain, FileText } from "lucide-react";
 import { explainError, explainFailure } from "@cortex/shared";
 import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
 import { ActionCard } from "./action-card";
+import { AnswerActions } from "./answer-actions";
 import { Answer, Cite } from "./answer";
 import { Readout } from "./readout";
 import { Sources } from "./sources";
@@ -31,6 +32,7 @@ export function TurnView({
   onFollowup,
   onRetry,
   latest,
+  chatId,
 }: {
   turn: Turn;
   onDecide: (proposalId: string, d: "approve" | "reject", edits?: Record<string, unknown>) => Promise<void>;
@@ -38,7 +40,10 @@ export function TurnView({
   /** Asks the same question again (offered when part or all of the answer failed). */
   onRetry?: () => void;
   latest: boolean;
+  /** The saved chat this turn belongs to; sharing needs it. */
+  chatId?: string;
 }) {
+  const answerRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const verified = turn.groundedness != null || (turn.done && !turn.claims.length);
   const citedIds = useMemo(() => {
@@ -80,6 +85,7 @@ export function TurnView({
       )}
 
       {turn.answer ? (
+        <div ref={answerRef}>
         <Answer
           text={turn.answer}
           claims={turn.claims}
@@ -89,9 +95,12 @@ export function TurnView({
           onCite={setHovered}
           onJump={jump}
         />
+        </div>
       ) : (
         !turn.done && !turn.error && <AnswerSkeleton />
       )}
+
+      {turn.done && !turn.error && turn.answer && <AnswerActions turn={turn} chatId={chatId} answerRef={answerRef} />}
 
       {turn.error && (
         <div className="mb-5">

@@ -6,7 +6,7 @@ import { Check, Loader2 } from "lucide-react";
 import type { ConnectorStatus } from "@cortex/shared";
 import { cn } from "@/lib/ui";
 import { explainError } from "@cortex/shared";
-import { Problem } from "./problem";
+import { toast } from "@/lib/toast";
 import { SourceMark } from "./ask/sources";
 
 interface Info {
@@ -14,8 +14,12 @@ interface Info {
   liveAvailable: boolean;
   admin: boolean;
   connectors: ConnectorStatus[];
-  memory: { ok: boolean; backend: string };
-  llm: { id: string; label: string }[];
+}
+
+/** Problems are passing notices, in the same calm words used everywhere (see explainError). */
+function fail(message: string) {
+  const p = explainError(message);
+  toast(p.title, { body: p.body, tone: "warn", ms: 8000 });
 }
 
 const WHAT: Record<string, string> = {
@@ -44,7 +48,6 @@ function openSignInWindow(name: string): Window | null {
 export function ConnectionsView() {
   const [info, setInfo] = useState<Info | null>(null);
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<string | null>(null);
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
   const [confirmOff, setConfirmOff] = useState<string | null>(null);
@@ -68,6 +71,10 @@ export function ConnectionsView() {
   }, [load]);
 
   const connected = params.get("connected") ?? justConnected;
+  const connectedName = info?.connectors.find((c) => c.id === connected)?.name;
+  useEffect(() => {
+    if (connected && connectedName && !waiting && !window.opener) toast(`${connectedName} is connected`, { body: "Cortex can search it now." });
+  }, [connected, connectedName, waiting]);
 
   // Project-key OAuth returns to /connections?connected=… inside the popup: close it.
   useEffect(() => {
@@ -94,9 +101,8 @@ export function ConnectionsView() {
   }, [waiting, load, blockedUrl]);
 
   const switchTo = async (workspace: "demo" | "live") => {
-    setError(null);
     const res = await fetch("/api/connections", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ workspace }) });
-    if (!res.ok) setError(((await res.json()) as { error: string }).error);
+    if (!res.ok) fail(((await res.json()) as { error: string }).error);
     await load();
   };
 
@@ -104,7 +110,6 @@ export function ConnectionsView() {
   // happens in a window opened on the click itself; this page polls and closes it once the app shows up connected.
   const connect = async (id: string, name: string) => {
     setPending(id);
-    setError(null);
     setBlockedUrl(null);
     setJustConnected(null);
     popup.current = openSignInWindow(name);
@@ -117,7 +122,7 @@ export function ConnectionsView() {
       setWaiting(id);
     } catch (e) {
       popup.current?.close();
-      setError(e instanceof Error ? e.message : "Couldn't start sign-in.");
+      fail(e instanceof Error ? e.message : "Couldn't start sign-in.");
     } finally {
       setPending(null);
     }
@@ -129,16 +134,16 @@ export function ConnectionsView() {
     setBlockedUrl(null);
   };
 
-  const disconnect = async (id: string) => {
+  const disconnect = async (id: string, name: string) => {
     setDisconnecting(id);
-    setError(null);
     try {
       const res = await fetch(`/api/connections/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Couldn't disconnect.");
       if (justConnected === id) setJustConnected(null);
       await load();
+      toast(`${name} is disconnected`, { body: "Cortex no longer reads it. You can connect it again any time." });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't disconnect.");
+      fail(e instanceof Error ? e.message : "Couldn't disconnect.");
     } finally {
       setDisconnecting(null);
       setConfirmOff(null);
@@ -181,17 +186,6 @@ export function ConnectionsView() {
             </button>
           ))}
         </div>
-
-        {connected && !waiting && (
-          <p role="status" className="mt-6 rounded-md bg-accent-soft px-3 py-2 text-[14px] text-accent-ink">
-            {info?.connectors.find((c) => c.id === connected)?.name ?? "It"} is connected. Cortex can search it now.
-          </p>
-        )}
-        {error && (
-          <div className="mt-6">
-            <Problem problem={explainError(error)} variant="card" />
-          </div>
-        )}
 
         <ul className="mt-10 border-t border-ink">
           {/* Uploads live on the Files page; they aren't an app to connect. */}
@@ -238,7 +232,7 @@ export function ConnectionsView() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => disconnect(c.id)}
+                        onClick={() => disconnect(c.id, c.name)}
                         disabled={disconnecting === c.id}
                         autoFocus
                         className="inline-flex items-center gap-1.5 rounded-md bg-risk px-2.5 py-1 text-[12.5px] font-[550] text-on-ink disabled:opacity-60"
@@ -279,23 +273,6 @@ export function ConnectionsView() {
           )}
         </ul>
 
-        {info && (
-          <dl className="mt-12 grid grid-cols-1 gap-6 border-t border-line pt-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-[12.5px] text-muted">Language models</dt>
-              <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.llm.length ? info.llm.map((p) => p.label).join(" → ") : <span className="text-risk">Answers are unavailable right now.</span>}
-              </dd>
-              <dd className="text-[12.5px] text-muted mt-1">Free AI models, with automatic backup when one is busy.</dd>
-            </div>
-            <div>
-              <dt className="text-[12.5px] text-muted">Memory</dt>
-              <dd className="mt-1.5 text-[14px] text-ink-2">
-                {info.memory.ok ? (info.memory.backend === "oracle" ? "Saved securely in the cloud" : "Saved on this device") : <span className="text-risk">Offline. Answers still work, but nothing is remembered.</span>}
-              </dd>
-            </div>
-          </dl>
-        )}
       </div>
     </div>
   );

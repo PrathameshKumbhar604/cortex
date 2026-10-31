@@ -20,6 +20,13 @@ CLERK_SECRET_KEY=sk_test_…</pre>
 
 const withClerk = clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
+  // Shared answers are public and read-only: no sign-in, no anonymous cookie, never indexed, never leaked as a referrer.
+  if (pathname.startsWith("/s/")) {
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Referrer-Policy", "no-referrer");
+    return res;
+  }
   if (!isPublic(request) && !(await auth()).userId) {
     if (pathname.startsWith("/api/")) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
     const to = new URL("/sign-in", request.url);

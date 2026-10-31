@@ -7,6 +7,7 @@ import { onSettings, readUseOtherChats, writeUseOtherChats } from "@/lib/setting
 import { cn, relativeDays } from "@/lib/ui";
 import { explainError } from "@cortex/shared";
 import { Problem } from "./problem";
+import { toast } from "@/lib/toast";
 
 const KIND_LABEL: Record<MemoryKind, string> = {
   priority: "Priorities",
@@ -46,7 +47,10 @@ export function MemoryView() {
 
   const mutate = async (url: string, init: RequestInit) => {
     const res = await fetch(url, { ...init, headers: { "content-type": "application/json" } });
-    if (!res.ok && res.status !== 204) setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "That didn't work.");
+    if (!res.ok && res.status !== 204) {
+      const p = explainError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "That change didn't go through.");
+      toast(p.title, { body: p.body, tone: "warn" });
+    }
     await load();
   };
 

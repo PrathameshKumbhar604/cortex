@@ -1,5 +1,6 @@
 import { db } from "@/server/db";
 import { jsonError, session, unauthorized } from "@/server/cortex";
+import { shares } from "@/server/shares";
 
 // Chats per account, so they follow the person to another browser. The browser keeps a copy (localStorage) and syncs.
 db.exec(`CREATE TABLE IF NOT EXISTS chats (
@@ -40,5 +41,6 @@ export async function DELETE(req: Request) {
   if (!sess) return unauthorized();
   const id = new URL(req.url).searchParams.get("id") ?? "";
   db.prepare("DELETE FROM chats WHERE user_id = ? AND id = ?").run(sess.authId, id);
+  shares.revokeChat(sess.authId, id); // a deleted chat takes its public links with it
   return new Response(null, { status: 204 });
 }

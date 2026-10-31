@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { formatSize, uploadFile, type FileInfo } from "@/lib/files";
 import { cn, relativeDays } from "@/lib/ui";
+import { toast } from "@/lib/toast";
 
 export function FilesView() {
   const [files, setFiles] = useState<FileInfo[] | null>(null);
   const [uploading, setUploading] = useState<string[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -17,7 +17,7 @@ export function FilesView() {
   const load = useCallback(async () => {
     const res = await fetch("/api/files");
     const body = (await res.json().catch(() => ({}))) as { files?: FileInfo[]; error?: string };
-    if (!res.ok) setErrors([body.error ?? "Couldn't load your files."]);
+    if (!res.ok) toast("Couldn't load your files", { body: body.error, tone: "warn" });
     setFiles(body.files ?? []);
   }, []);
 
@@ -26,11 +26,12 @@ export function FilesView() {
   }, [load]);
 
   const add = async (picked: File[]) => {
-    setErrors([]);
     setUploading((u) => [...u, ...picked.map((f) => f.name)]);
     const results = await Promise.allSettled(picked.map(uploadFile));
     setUploading((u) => u.filter((n) => !picked.some((f) => f.name === n)));
-    setErrors(results.flatMap((r) => (r.status === "rejected" ? [(r.reason as Error).message] : [])));
+    results.forEach((r, i) =>
+      r.status === "rejected" ? toast(`Couldn't upload ${picked[i].name}`, { body: (r.reason as Error).message, tone: "warn", ms: 8000 }) : toast(`${picked[i].name} uploaded`),
+    );
     await load();
   };
 
@@ -39,7 +40,7 @@ export function FilesView() {
     setFiles((all) => all?.filter((f) => f.id !== id) ?? null);
     const res = await fetch(`/api/files/${id}`, { method: "DELETE" });
     if (!res.ok && res.status !== 404) {
-      setErrors(["Couldn't delete that file. Try again."]);
+      toast("Couldn't delete that file", { body: "Try again in a moment.", tone: "warn" });
       await load();
     }
   };
@@ -93,14 +94,6 @@ export function FilesView() {
             }}
           />
         </div>
-
-        {errors.length > 0 && (
-          <ul role="alert" className="mt-4 flex flex-col gap-1 rounded-md bg-warn-soft px-3 py-2 text-[14px] text-warn-ink">
-            {errors.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
-        )}
 
         <ul className="mt-10 border-t border-ink">
           {uploading.map((name) => (

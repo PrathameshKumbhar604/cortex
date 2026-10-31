@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { Brain, Cable, ChevronsUpDown, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
-import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
+import { Brain, Cable, ChevronsUpDown, FlaskConical, Radar, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { onSettings, readLabs, readSound, readTheme, writeLabs, writeSound, writeTheme, type Theme } from "@/lib/settings";
 import { play } from "@/lib/sound";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { Interstitial } from "./interstitial";
 import { endTourOffer, openTour, Tour, tourInSidebar } from "./tour";
 import { Toaster } from "./toaster";
+import { dismiss, toast } from "@/lib/toast";
 import { claimThreads, deleteThread, syncThreads, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 
@@ -19,6 +20,7 @@ const NAV = [
   { href: "/brief", label: "Brief", icon: Newspaper },
   { href: "/memory", label: "Memory", icon: Brain },
   { href: "/connections", label: "Connections", icon: Cable },
+  { href: "/commitments", label: "Commitments", icon: Radar, labs: true },
 ];
 
 const SIDEBAR = { initial: 208, min: 180, max: 360, key: "cortex.sidebarWidth", closedKey: "cortex.sidebarClosed" };
@@ -45,9 +47,10 @@ export function Wordmark() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePathname();
+  const labs = useSyncExternalStore(onSettings, readLabs, () => false);
   return (
     <ul className="flex flex-col gap-0.5">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {NAV.filter((n) => labs || !n.labs).map(({ href, label, icon: Icon, labs: exp }) => {
         const active = href === "/" ? path === "/" : path.startsWith(href);
         return (
           <li key={href}>
@@ -62,6 +65,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             >
               <Icon className="size-4" strokeWidth={1.75} aria-hidden />
               {label}
+              {exp && <span className="ml-auto rounded-full border border-line px-1.5 text-[10.5px] font-[500] leading-[16px] text-muted">Beta</span>}
             </Link>
           </li>
         );
@@ -112,7 +116,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       localStorage.setItem(SIDEBAR.key, String(next));
     } catch {}
   };
-  if (path === "/sign-in" || path === "/sso-callback")
+  if (path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/"))
     return (
       <MotionConfig reducedMotion="user">
         {children}
@@ -258,7 +262,7 @@ function useWorkspace() {
   const [info, setInfo] = useState<WorkspaceInfo | null>(null);
   const path = usePathname();
   useEffect(() => {
-    if (path === "/sign-in" || path === "/sso-callback") return;
+    if (path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/")) return;
     let live = true;
     fetch("/api/connections")
       .then((r) => (r.ok ? r.json() : null))
@@ -429,6 +433,9 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
             <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
               Sounds <SoundSwitch />
             </div>
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
+              Experimental <LabsSwitch />
+            </div>
             <div className="my-1 h-px bg-line" />
             <button type="button" onClick={leave} className={cn(ITEM, "hover:bg-risk-soft hover:text-risk")}>
               <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
@@ -509,11 +516,27 @@ function SoundSwitch() {
   );
 }
 
+function LabsSwitch() {
+  const on = useSyncExternalStore(onSettings, readLabs, () => true);
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Experimental features"
+      title={on ? "Experimental features shown" : "Experimental features hidden"}
+      onClick={() => writeLabs(!on)}
+      className={cn("grid size-7 place-items-center rounded-[8px] border border-line transition-colors", on ? "text-ink-2 hover:text-ink" : "text-hair hover:text-ink")}
+    >
+      <FlaskConical className="size-3.5" strokeWidth={1.75} aria-hidden />
+    </button>
+  );
+}
+
 function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
   const [items, setItems] = useState<SavedThread[]>([]);
   const [menu, setMenu] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [removed, setRemoved] = useState<SavedThread | null>(null);
   const path = usePathname();
   const current = useSearchParams().get("t");
   const router = useRouter();
@@ -523,19 +546,12 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
   }, []);
   // The undo offer lasts a few seconds; after that (or on leaving the page) the server copy is deleted too.
   const pending = useRef<SavedThread | null>(null);
+  const undoToast = useRef<number | null>(null);
   const purge = () => {
     const id = pending.current?.serverThreadId;
     pending.current = null;
     if (id) void fetch(`/api/threads/${encodeURIComponent(id)}`, { method: "DELETE", keepalive: true }).catch(() => {});
   };
-  useEffect(() => {
-    if (!removed) return;
-    const t = setTimeout(() => {
-      purge();
-      setRemoved(null);
-    }, 6000);
-    return () => clearTimeout(t);
-  }, [removed]);
   useEffect(() => {
     window.addEventListener("pagehide", purge);
     return () => window.removeEventListener("pagehide", purge);
@@ -562,7 +578,21 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
     const gone = deleteThread(id);
     purge(); // a newer delete replaces the undo offer for the previous one
     pending.current = gone ?? null;
-    if (gone) setRemoved(gone);
+    if (gone) {
+      if (undoToast.current) dismiss(undoToast.current);
+      undoToast.current = toast("Chat deleted", {
+        ms: 6000,
+        action: {
+          label: "Undo",
+          run: () => {
+            if (pending.current !== gone) return;
+            pending.current = null;
+            restoreThread(gone);
+          },
+        },
+      });
+      setTimeout(() => pending.current === gone && purge(), 6000);
+    }
     if (current === id) router.push("/");
   };
 
@@ -666,31 +696,6 @@ function RecentThreads({ onNavigate }: { onNavigate?: () => void }) {
           </ul>
         </section>
       ))}
-      <AnimatePresence>
-      {removed && (
-        <motion.p
-          role="status"
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, transition: { duration: 0.12 } }}
-          transition={{ type: "spring", duration: 0.25, bounce: 0 }}
-          className="mx-1 flex items-center justify-between gap-2 rounded-md bg-hover px-2.5 py-2 text-[13px] text-ink-2"
-        >
-          <span className="truncate">Chat deleted</span>
-          <button
-            type="button"
-            onClick={() => {
-              pending.current = null;
-              restoreThread(removed);
-              setRemoved(null);
-            }}
-            className="font-[550] text-accent-ink hover:underline"
-          >
-            Undo
-          </button>
-        </motion.p>
-      )}
-      </AnimatePresence>
     </div>
   );
 }

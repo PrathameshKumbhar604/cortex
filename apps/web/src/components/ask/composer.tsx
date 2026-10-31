@@ -6,7 +6,10 @@ import type { RunMode } from "@cortex/shared";
 import { motion } from "motion/react";
 import { formatSize } from "@/lib/files";
 import { cn } from "@/lib/ui";
+import { toast } from "@/lib/toast";
 import { useMic } from "./mic";
+
+const MAX = 2000; // /api/ask's limit
 
 export interface PendingFile {
   key: string;
@@ -51,12 +54,17 @@ export function Composer({
   const sendNext = useRef(false);
   const mic = useMic(
     (text) => {
-      onChange(value.trim() ? `${value.trim()} ${text}` : text);
+      const next = value.trim() ? `${value.trim()} ${text}` : text;
+      if (next.length > MAX) toast("Transcript trimmed to fit", { body: "Messages hold up to 2,000 characters." });
+      onChange(next.slice(0, MAX));
       ref.current?.focus();
     },
     (transcript) => {
       sendNext.current = true;
-      onChange(`Turn this voice note into clean notes: a short summary, key points, and action items.\n\n${transcript}`.slice(0, 2000));
+      const ask = "Turn this voice note into clean notes: a short summary, key points, and action items.";
+      const cut = "\n\n(The recording ran longer; this is the first part.)";
+      const room = MAX - ask.length - 2;
+      onChange(`${ask}\n\n${transcript.length > room ? transcript.slice(0, room - cut.length) + cut : transcript}`);
     },
   );
   // Send once the parent has re-rendered with the notes prompt, so onSubmit sees the new value.
@@ -125,7 +133,7 @@ export function Composer({
         rows={1}
         value={value}
         autoFocus={autoFocus}
-        maxLength={2000}
+        maxLength={MAX}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -162,28 +170,7 @@ export function Composer({
           </>
         )}
         {mic.button}
-        <div role="radiogroup" aria-label="Depth" className="flex gap-0.5 rounded-lg bg-shell p-0.5">
-          {(["fast", "deep"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              onClick={() => onMode(m)}
-              title={m === "fast" ? "Fast Mode: one pass, quickest answer" : "Deep: plans sub-questions and verifies every claim"}
-              className={cn("relative rounded-md px-2.5 py-1 text-[12.5px] transition-colors", mode === m ? "font-medium text-ink" : "text-muted hover:text-ink")}
-            >
-              {mode === m && (
-                <motion.span
-                  layoutId="depth-pill"
-                  className="absolute inset-0 rounded-md bg-surface shadow-[0_1px_2px_rgba(14,17,22,0.08)]"
-                  transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
-                />
-              )}
-              <span className="relative">{m === "fast" ? "Fast" : "Deep"}</span>
-            </button>
-          ))}
-        </div>
+        <DepthSwitch mode={mode} onMode={onMode} />
         </div>
         {busy ? (
           <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-ink text-on-ink hover:bg-ink-2">
@@ -201,5 +188,76 @@ export function Composer({
         )}
       </div>
     </form>
+  );
+}
+
+const DEPTH = {
+  fast: { label: "Fast", tip: "One pass for the quickest answer." },
+  deep: { label: "Deep", tip: "Plans sub-questions, searches your apps in parallel and verifies every claim. Slower." },
+} as const;
+
+/** Fast/Deep switch. Its description shows on hover, keyboard focus, or a long press on touch. */
+function DepthSwitch({ mode, onMode }: { mode: RunMode; onMode: (m: RunMode) => void }) {
+  const [tip, setTip] = useState<RunMode | null>(null);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endPress = () => {
+    if (press.current) clearTimeout(press.current);
+    press.current = null;
+  };
+  useEffect(() => {
+    if (!tip) return;
+    const hide = (e: KeyboardEvent) => e.key === "Escape" && setTip(null);
+    document.addEventListener("keydown", hide);
+    return () => document.removeEventListener("keydown", hide);
+  }, [tip]);
+
+  return (
+    <div className="relative">
+      <div role="radiogroup" aria-label="Depth" className="flex gap-0.5 rounded-lg bg-shell p-0.5">
+        {(["fast", "deep"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={mode === m}
+            aria-describedby={`depth-tip-${m}`}
+            onClick={() => onMode(m)}
+            onPointerEnter={(e) => e.pointerType === "mouse" && setTip(m)}
+            onPointerLeave={() => setTip(null)}
+            onFocus={(e) => e.currentTarget.matches(":focus-visible") && setTip(m)}
+            onBlur={() => setTip(null)}
+            onPointerDown={(e) => {
+              if (e.pointerType !== "touch") return;
+              endPress();
+              press.current = setTimeout(() => setTip(m), 400);
+            }}
+            onPointerUp={endPress}
+            onPointerCancel={endPress}
+            onContextMenu={(e) => e.preventDefault()} // a long press shows the tip, not the browser menu
+            className={cn("relative rounded-md px-2.5 py-1 text-[12.5px] transition-colors select-none [-webkit-touch-callout:none]", mode === m ? "font-medium text-ink" : "text-muted hover:text-ink")}
+          >
+            {mode === m && (
+              <motion.span
+                layoutId="depth-pill"
+                className="absolute inset-0 rounded-md bg-surface shadow-[0_1px_2px_rgba(14,17,22,0.08)]"
+                transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
+              />
+            )}
+            <span className="relative">{DEPTH[m].label}</span>
+            <span id={`depth-tip-${m}`} hidden>
+              {DEPTH[m].tip}
+            </span>
+          </button>
+        ))}
+      </div>
+      {tip && (
+        <div
+          role="tooltip"
+          className="enter pointer-events-none absolute left-0 bottom-full z-20 mb-2 w-[min(240px,calc(100vw-48px))] rounded-[10px] border border-line bg-surface px-3 py-2 text-[12.5px] leading-snug text-ink-2 shadow-[0_12px_32px_-16px_rgb(14_17_22/0.3)]"
+        >
+          <span className="font-[550] text-ink">{DEPTH[tip].label}.</span> {DEPTH[tip].tip}
+        </div>
+      )}
+    </div>
   );
 }
