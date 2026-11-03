@@ -18,11 +18,16 @@ import { QuestionRail } from "./question-rail";
 import { useUser } from "@clerk/nextjs";
 import { Mark } from "../shell";
 
+// The built-in library, used when no questions can be written from the person's own brief (no brief yet, models busy).
 const DEMO_SUGGESTIONS = [
   "What changed in Orbit this week, and what's at risk?",
   "What's due in the next 7 days?",
   "Is anything blocking the beta?",
   "Draft a Slack update about the new Demo Day date",
+  "Who is waiting on me for a reply?",
+  "What did my advisor say about the thesis outline?",
+  "Which pull requests need my review?",
+  "Summarize this week's team discussions",
 ];
 
 const LIVE_SUGGESTIONS = [
@@ -30,7 +35,37 @@ const LIVE_SUGGESTIONS = [
   "What's due in the next 7 days?",
   "Summarize unread emails that need a reply",
   "What's blocking my open pull requests?",
+  "What meetings do I have tomorrow?",
+  "Who is waiting on me for a reply?",
+  "What did my team discuss in Slack today?",
+  "Which deadlines moved recently?",
 ];
+
+const pick = (list: string[]) => [...list].sort(() => Math.random() - 0.5).slice(0, 4);
+const lastStarters = new Map<string, string[]>(); // per workspace, so returning to a new thread shows them at once
+
+/** Starter questions written from the person's own brief, or four from the built-in library when that isn't possible. */
+function useStarters(workspace: "demo" | "live") {
+  const [starters, setStarters] = useState<string[] | null>(null);
+  useEffect(() => {
+    const library = workspace === "demo" ? DEMO_SUGGESTIONS : LIVE_SUGGESTIONS;
+    setStarters(lastStarters.get(workspace) ?? null);
+    let live = true;
+    fetch("/api/suggestions", { signal: AbortSignal.timeout(8000) })
+      .then((r) => (r.ok ? (r.json() as Promise<{ questions: string[] | null }>) : null))
+      .catch(() => null)
+      .then((d) => {
+        if (!live) return;
+        const next = d?.questions?.length ? d.questions : (lastStarters.get(workspace) ?? pick(library));
+        lastStarters.set(workspace, next);
+        setStarters(next);
+      });
+    return () => {
+      live = false;
+    };
+  }, [workspace]);
+  return starters;
+}
 
 /** Names a new chat from its first message, alongside the answer; the message itself stays the title if this fails. */
 function nameThread(id: string, question: string) {
@@ -152,6 +187,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     setSaveTick((n) => n + 1);
   };
 
+  const starters = useStarters(workspace);
   const latest = turns.at(-1);
 
   // A run just ended: a soft chime for an answer, a low one for an error; nothing when the user pressed Stop.
@@ -163,7 +199,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     }
     wasBusy.current = busy;
   }, [busy, latest]);
-  const suggestions = workspace === "demo" ? DEMO_SUGGESTIONS : LIVE_SUGGESTIONS;
 
   return (
     <div className="flex h-full flex-col">
@@ -178,7 +213,13 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
                 checks each one before you rely on it.
               </p>
               <ul className="mt-10 flex flex-col border-t border-line">
-                {suggestions.map((s, i) => (
+                {!starters &&
+                  [11, 8, 13, 9].map((w) => (
+                    <li key={w} aria-hidden className="border-b border-line py-[19px]">
+                      <span className="block h-3.5 rounded bg-hover" style={{ width: `${w * 1.5}rem` }} />
+                    </li>
+                  ))}
+                {starters?.map((s, i) => (
                   <li key={s} className="rise border-b border-line" style={{ "--i": i + 1 } as React.CSSProperties}>
                     <button
                       type="button"
