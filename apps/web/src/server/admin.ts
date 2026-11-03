@@ -38,7 +38,7 @@ export async function questionsToday(userId: string): Promise<number> {
   return (db.prepare("SELECT questions FROM usage WHERE user_id = ? AND day = ?").get(userId, today()) as { questions: number } | undefined)?.questions ?? 0;
 }
 
-export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.settings" | "action.executed" | "action.failed" | "error";
+export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.settings" | "admin.voice" | "voice.off" | "action.executed" | "action.failed" | "error";
 
 export async function logEvent(actor: string, kind: AuditKind, target = "", detail = "") {
   await ready;
@@ -66,6 +66,19 @@ export async function saveSettings(s: Settings) {
   const put = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
   put.run("dailyQuestionLimit", JSON.stringify(s.dailyQuestionLimit));
   put.run("allowedConnectors", JSON.stringify(s.allowedConnectors));
+}
+
+/** One JSON value in the settings table (voice mode keeps its on/off state here), or null. */
+export async function readSetting<T>(key: string): Promise<T | null> {
+  await ready;
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return row ? (JSON.parse(row.value) as T) : null;
+}
+
+export async function writeSetting(key: string, value: unknown) {
+  await ready;
+  if (value === null) db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+  else db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, JSON.stringify(value));
 }
 
 export interface AdminUser {

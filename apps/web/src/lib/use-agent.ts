@@ -42,6 +42,8 @@ export interface Turn {
   /** Files attached to this question. */
   attachments?: Attachment[];
   mode: RunMode;
+  /** Asked in voice mode in this language: the answer is written in it too (and a regenerate keeps it). */
+  language?: "en" | "hi" | "mr";
   startedAt: number;
   steps: Record<StepId, StepState>;
   plan?: Plan;
@@ -167,7 +169,7 @@ export function useAgent() {
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats(), attachments: attachments.map((a) => a.id), regenerate }),
+          body: JSON.stringify({ question: turn.question, mode, threadId: threadId.current, history, useOtherChats: readUseOtherChats(), attachments: attachments.map((a) => a.id), regenerate, language: turn.language }),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {
@@ -210,9 +212,9 @@ export function useAgent() {
   );
 
   const ask = useCallback(
-    async (question: string, mode: RunMode, attachments: Attachment[] = []) => {
+    async (question: string, mode: RunMode, attachments: Attachment[] = [], language?: Turn["language"]) => {
       if (!question.trim() || abort.current) return;
-      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined };
+      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined, language };
       setTurns((all) => [...all, turn]);
       await run(turn, turns);
     },
@@ -230,7 +232,7 @@ export function useAgent() {
       const old = turns[i];
       const q = question?.trim() || old?.question;
       if (!old || !q || abort.current) return;
-      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments });
+      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments, language: old.language });
       setTurns((all) => all.map((t) => (t.id === turnId ? next : t)));
       await run(next, turns.slice(0, i), true);
     },

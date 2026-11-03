@@ -687,3 +687,20 @@ describe("follow-ups", () => {
     expect(JSON.stringify(events)).not.toMatch(/couldn't find/);
   });
 });
+
+describe("voice mode's reply language", () => {
+  const ask = (replyLanguage?: "en" | "hi" | "mr") => {
+    const { llm, calls } = stubLlm("ok", undefined, { route: "general", sources: [], complex: false });
+    return collect(runAgent({ question: "what is the capital of France?", mode: "fast", userId: "u1", replyLanguage }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() })).then(() => calls.prompt);
+  };
+
+  it("asks for Hindi or Marathi in Devanagari, keeping citations", async () => {
+    expect(await ask("hi")).toContain("Write your reply in Hindi, in Devanagari script");
+    expect(await ask("mr")).toContain("Keep citation markers like [2] exactly as they are");
+  });
+
+  it("leaves English prompts unchanged", async () => {
+    expect(await ask("en")).not.toContain("Write your reply in");
+    expect(await ask()).not.toContain("Write your reply in");
+  });
+});

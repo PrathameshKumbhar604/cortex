@@ -1,5 +1,7 @@
 "use client";
 
+import { isGender, isLang, type VoiceGender, type VoiceLang } from "./voice";
+
 // shortcut: kept in this browser only; move to the user's account with auth (#7).
 const OTHER_CHATS = "cortex.useOtherChats";
 const EVENT = "cortex:settings";
@@ -73,6 +75,36 @@ export function writeSound(on: boolean) {
   try {
     if (on) localStorage.removeItem(SOUND);
     else localStorage.setItem(SOUND, "off");
+  } catch {
+    // storage blocked: the choice lasts for this page only
+  }
+  window.dispatchEvent(new Event(EVENT));
+}
+
+const VOICE = "cortex.voice";
+
+/** Voice mode's default language and voice ("hi:female"); English with a female voice until the user picks. */
+export function readVoice(): { lang: VoiceLang; gender: VoiceGender } {
+  try {
+    const [lang, gender] = (localStorage.getItem(VOICE) ?? "").split(":");
+    return { lang: isLang(lang) ? lang : "en", gender: isGender(gender) ? gender : "female" };
+  } catch {
+    return { lang: "en", gender: "female" };
+  }
+}
+
+/** The same object while the setting is unchanged, for useSyncExternalStore. */
+let voiceSnap: { key: string; value: ReturnType<typeof readVoice> } | null = null;
+export function readVoiceSnapshot() {
+  const value = readVoice();
+  const key = `${value.lang}:${value.gender}`;
+  if (voiceSnap?.key !== key) voiceSnap = { key, value };
+  return voiceSnap.value;
+}
+
+export function writeVoice(lang: VoiceLang, gender: VoiceGender) {
+  try {
+    localStorage.setItem(VOICE, `${lang}:${gender}`);
   } catch {
     // storage blocked: the choice lasts for this page only
   }

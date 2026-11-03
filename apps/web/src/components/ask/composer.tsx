@@ -33,6 +33,7 @@ export function Composer({
   attachments = [],
   onAttach,
   onRemove,
+  extra,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -46,6 +47,8 @@ export function Composer({
   attachments?: PendingFile[];
   onAttach?: (files: File[]) => void;
   onRemove?: (key: string) => void;
+  /** More controls after Fast/Deep (the Voice mode button on a new thread). */
+  extra?: React.ReactNode;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -171,6 +174,7 @@ export function Composer({
         )}
         {mic.button}
         <DepthSwitch mode={mode} onMode={onMode} />
+        {extra}
         </div>
         {busy ? (
           <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-ink text-on-ink hover:bg-ink-2">

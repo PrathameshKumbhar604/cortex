@@ -13,6 +13,8 @@ interface AskBody {
   attachments?: string[];
   /** Answering an earlier question again: it is already stored, so it must not be stored (or remembered) twice. */
   regenerate?: boolean;
+  /** Voice mode: answer in the language the user is speaking. */
+  language?: string;
 }
 
 /** Streams AgentEvents as server-sent events. */
@@ -46,6 +48,7 @@ export async function POST(req: Request) {
             history,
             useOtherChats: body.useOtherChats === true,
             regenerate: body.regenerate === true,
+            replyLanguage: body.language === "hi" || body.language === "mr" ? body.language : undefined,
             attachments: await attachmentEvidence(sess.userId, (body.attachments ?? []).filter((x) => typeof x === "string"), question),
             signal: req.signal,
           },

@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   experimental: { proxyClientMaxBodySize: "11mb" },
   partialPrefetching: true,
   transpilePackages: ["@cortex/shared", "@cortex/llm", "@cortex/connectors", "@cortex/agent"],
-  serverExternalPackages: ["@composio/core", "@modelcontextprotocol/sdk", "@mendable/firecrawl-js", "langsmith", "openai"],
+  serverExternalPackages: ["onnxruntime-node", "@composio/core", "@modelcontextprotocol/sdk", "@mendable/firecrawl-js", "langsmith", "openai"],
   env: { CORTEX_ROOT: repoRoot },
   turbopack: {
     root: repoRoot,

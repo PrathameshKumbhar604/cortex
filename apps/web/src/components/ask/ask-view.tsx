@@ -18,6 +18,10 @@ import { QuestionRail } from "./question-rail";
 import { useUser } from "@clerk/nextjs";
 import { Logo } from "./sources";
 import { fetchConnections } from "@/lib/connections";
+import { readVoice } from "@/lib/settings";
+import type { VoiceLang } from "@/lib/voice";
+import { VoiceEngine } from "../voice/engine";
+import { VoiceButton, VoiceMode } from "../voice/voice-mode";
 
 // The built-in library, used when no questions can be written from the person's own brief (no brief yet, models busy).
 const DEMO_SUGGESTIONS = [
@@ -117,7 +121,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     } catch {}
   };
 
-  const submit = (q: string) => {
+  const submit = (q: string, opts: { mode?: RunMode; language?: VoiceLang } = {}) => {
     const question = q.trim();
     if (!question || busy) return;
     setDraft("");
@@ -130,7 +134,23 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     play("send");
     const ready = files.filter((f) => f.status === "ready" && f.id).map((f) => ({ id: f.id!, name: f.name, size: f.size }));
     setFiles([]);
-    void ask(question, mode, ready);
+    void ask(question, opts.mode ?? mode, ready, opts.language);
+  };
+
+  // Voice mode: offered on a new thread only. Its turns are this chat's turns, so ending it leaves a normal chat.
+  const [voiceOn, setVoiceOn] = useState<boolean | null>(null);
+  const [voice, setVoice] = useState<{ engine: VoiceEngine; ready: Promise<void> } | null>(null);
+  const refreshVoice = () =>
+    void fetch("/api/voice/status")
+      .then((r) => (r.ok ? (r.json() as Promise<{ enabled: boolean }>) : null))
+      .then((b) => b && setVoiceOn(b.enabled))
+      .catch(() => {});
+  const startVoice = () => {
+    const engine = new VoiceEngine();
+    const ready = engine.start(); // inside the click: what lets audio play on iOS
+    ready.catch(() => {}); // the voice interface reports a refused mic
+    void fetch(`/api/voice/status?warm=${readVoice().lang}`).catch(() => {}); // gets the speech model ready
+    setVoice({ engine, ready });
   };
 
   const newThread = () => {
@@ -188,6 +208,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
   const starters = useStarters(workspace);
   const latest = turns.at(-1);
+  useEffect(() => {
+    if (!latest) refreshVoice();
+  }, [!latest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A run just ended: a soft chime for an answer, a low one for an error; nothing when the user pressed Stop.
   const wasBusy = useRef(false);
@@ -213,11 +236,27 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       onAttach={attach}
       onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
       placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
+      extra={!latest && voiceOn !== null && <VoiceButton enabled={voiceOn} onStart={startVoice} />}
     />
   );
 
   return (
     <div className="flex h-full flex-col">
+      {voice && (
+        <VoiceMode
+          engine={voice.engine}
+          ready={voice.ready}
+          turns={turns}
+          busy={busy}
+          onAsk={(q, language) => submit(q, { mode: "fast", language })}
+          onDecide={onDecide}
+          files={files}
+          onAttach={attach}
+          onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
+          onUnavailable={refreshVoice}
+          onEnd={() => setVoice(null)}
+        />
+      )}
       <div className="relative min-h-0 flex-1">
       <div ref={scroller} className="h-full overflow-y-auto">
         <div

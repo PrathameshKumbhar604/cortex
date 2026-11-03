@@ -1,18 +1,20 @@
 import { getSettings, listUsers, recentActivity } from "@/server/admin";
 import { deps, requireAdmin } from "@/server/cortex";
 import { composioKeyKind } from "@/server/db";
+import { voiceStatus } from "@/server/voice";
 
 /** Everything the admin page shows, in one call: accounts with usage, app health, settings and recent activity. */
 export async function GET() {
   const sess = await requireAdmin();
   if (sess instanceof Response) return sess;
   const d = deps(sess.workspace);
-  const [users, settings, activity, connectors, memory] = await Promise.all([
+  const [users, settings, activity, connectors, memory, voice] = await Promise.all([
     listUsers(),
     getSettings(),
     recentActivity(),
     d.registry.statuses({ userId: sess.userId }),
     d.memory.health().catch(() => ({ ok: false, backend: "offline" })),
+    voiceStatus(),
   ]);
   // Memory counts come from the memory service; a slow or offline service leaves them blank rather than failing the page.
   const counts = await Promise.all(
@@ -25,6 +27,7 @@ export async function GET() {
     activity,
     connectors: connectors.filter((c) => c.id !== "files").map((c) => ({ id: c.id, name: c.name, connected: c.connected, available: c.available, detail: c.detail })),
     memory,
+    voice,
     composio: composioKeyKind(), // operator setup notes are shown in the admin panel only, never to members
   });
 }

@@ -52,7 +52,19 @@ export interface RunInput {
   useOtherChats?: boolean;
   /** The same question answered again: already in the stored thread and already remembered from, so neither repeats. */
   regenerate?: boolean;
+  /** Voice mode: the reply is written (and spoken) in this language. Unset or "en": English. */
+  replyLanguage?: "en" | "hi" | "mr";
   signal?: AbortSignal;
+}
+
+const REPLY_LANGUAGE = { hi: "Hindi, in Devanagari script", mr: "Marathi, in Devanagari script" } as const;
+
+/** Asks for the reply in the user's spoken language; citations, section markers and JSON stay machine-readable. */
+function inLanguage<T extends { role: "system" | "user"; content: string }[]>(messages: T, lang: RunInput["replyLanguage"], sections = false): T {
+  if (!lang || lang === "en") return messages;
+  const note = `
+Write your reply in ${REPLY_LANGUAGE[lang]}${sections ? " (the answer and the follow-up questions; keep the <<<SECTION>>> markers, JSON keys, connector and action names exactly as specified)" : ""}. Keep citation markers like [2] exactly as they are, and keep names, product names and technical terms as written.`;
+  return messages.map((m, i) => (i === 0 && m.role === "system" ? { ...m, content: m.content + note } : m)) as T;
 }
 
 const PlanSchema = z.object({
@@ -289,7 +301,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       let text = "";
       for await (const part of deps.llm.stream({
         tier: fast ? "fast" : route.tier,
-        messages: generalPrompt(asked, history, memories, pastChats, { on: !!input.useOtherChats, asked: askedAboutPast }),
+        messages: inLanguage(generalPrompt(asked, history, memories, pastChats, { on: !!input.useOtherChats, asked: askedAboutPast }), input.replyLanguage),
         maxTokens: 900,
         signal,
       })) {
@@ -378,7 +390,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "step", step: "synthesize", status: "active" };
       budget.llmCalls++;
       let text = "";
-      for await (const part of deps.llm.stream({ tier: "fast", messages: chatPrompt(asked, history), maxTokens: 300, signal })) {
+      for await (const part of deps.llm.stream({ tier: "fast", messages: inLanguage(chatPrompt(asked, history), input.replyLanguage), maxTokens: 300, signal })) {
         if ("token" in part) {
           text += part.token;
           yield { type: "token", text: part.token };
@@ -526,16 +538,20 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     let forwarded = 0;
     for await (const part of deps.llm.stream({
       tier: fast ? "fast" : "strong",
-      messages: synthPrompt({
-        question: asked,
-        plan,
-        evidence: ranked,
-        memories,
-        history,
-        failures: failures.map((f) => `${f.name}: ${f.reason}`),
-        actions: actionBriefs(connected),
-        fast,
-      }),
+      messages: inLanguage(
+        synthPrompt({
+          question: asked,
+          plan,
+          evidence: ranked,
+          memories,
+          history,
+          failures: failures.map((f) => `${f.name}: ${f.reason}`),
+          actions: actionBriefs(connected),
+          fast,
+        }),
+        input.replyLanguage,
+        true,
+      ),
       maxTokens: fast ? 700 : 1400,
       signal,
     })) {

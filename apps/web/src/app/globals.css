@@ -462,3 +462,21 @@ button:not(:disabled):active {
     scale: none;
   }
 }
+
+/* Voice mode: the Cortex mark drawn as rings that move (voice/fold.tsx writes their transforms each frame). */
+.fold-ring {
+  /* Each ring's own box: its centre is the mark's centre whatever size the drawing is shown at. */
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+/* The status dot breathes while something is happening. */
+.voice-dot-live {
+  animation: voice-dot 1.4s var(--ease-in-out) infinite alternate;
+}
+@keyframes voice-dot {
+  to {
+    opacity: 0.35;
+    scale: 0.8;
+  }
+}

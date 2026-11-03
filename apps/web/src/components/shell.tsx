@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { Brain, Cable, ChevronsUpDown, Shield, Sparkles, Menu, MessageSquareText, Monitor, Moon, MoreHorizontal, Newspaper, LogOut, Search, SquarePen, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Sun, Trash2, Volume2, VolumeX, X } from "lucide-react";
-import { onSettings, readSound, readTheme, writeSound, writeTheme, type Theme } from "@/lib/settings";
+import { onSettings, readSound, readTheme, readVoiceSnapshot, writeSound, writeTheme, writeVoice, type Theme } from "@/lib/settings";
+import { LANGS, PERSONAS } from "@/lib/voice";
 import { play } from "@/lib/sound";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { ChatSearch, openChatSearch } from "./chat-search";
@@ -392,6 +393,7 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const menuId = useId(); // mounted in the sidebar and the phone menu: each picker keeps its own label link
   const root = useRef<HTMLDivElement>(null);
   const path = usePathname();
   useEffect(() => setOpen(false), [path]);
@@ -488,6 +490,9 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
             <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
               Sounds <SoundSwitch />
             </div>
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] text-ink-2">
+              <label htmlFor={`voice-${menuId}`}>Voice</label> <VoicePicker id={`voice-${menuId}`} />
+            </div>
             <div className="my-1 h-px bg-line" />
             <button type="button" onClick={leave} className={cn(ITEM, "hover:bg-risk-soft hover:text-risk")}>
               <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
@@ -544,6 +549,33 @@ function ThemeSwitch() {
         </button>
       ))}
     </div>
+  );
+}
+
+/** Voice mode's default voice; the voice interface can switch on the fly. Grouped by language, named by personality. */
+function VoicePicker({ id }: { id: string }) {
+  const voice = useSyncExternalStore(onSettings, readVoiceSnapshot, () => null);
+  return (
+    <select
+      id={id}
+      value={voice ? `${voice.lang}:${voice.gender}` : "en:female"}
+      onChange={(e) => {
+        const [lang, gender] = e.target.value.split(":") as [never, never];
+        writeVoice(lang, gender);
+      }}
+      title="Voice mode's default language and voice"
+      className="min-w-0 max-w-[132px] truncate rounded-[8px] border border-line bg-transparent py-1 pr-1 pl-1.5 text-[12.5px] text-ink-2 hover:text-ink"
+    >
+      {LANGS.map((l) => (
+        <optgroup key={l.id} label={l.label}>
+          {PERSONAS.filter((p) => p.lang === l.id).map((p) => (
+            <option key={p.speaker} value={`${p.lang}:${p.gender}`}>
+              {p.name} · {l.native}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
   );
 }
 

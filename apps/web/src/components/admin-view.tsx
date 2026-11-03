@@ -29,6 +29,7 @@ interface Overview {
   activity: { at: string; actor: string; kind: string; target: string; detail: string }[];
   connectors: { id: string; name: string; connected: boolean; available: boolean; detail?: string }[];
   memory: { ok: boolean; backend: string };
+  voice: { enabled: boolean; reason?: string; retryAt?: number };
   composio: "project" | "personal" | "none";
 }
 
@@ -37,6 +38,8 @@ const KIND: Record<string, { label: string; tone: string }> = {
   "admin.disable": { label: "Account turned off", tone: "text-risk" },
   "admin.enable": { label: "Account turned on", tone: "text-ok" },
   "admin.settings": { label: "Settings changed", tone: "text-accent-ink" },
+  "admin.voice": { label: "Voice mode turned on", tone: "text-ok" },
+  "voice.off": { label: "Voice mode paused", tone: "text-warn" },
   "action.executed": { label: "Action done", tone: "text-ok" },
   "action.failed": { label: "Action failed", tone: "text-warn" },
   error: { label: "Error shown", tone: "text-warn" },
@@ -222,6 +225,7 @@ export function AdminView() {
             <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
               <Apps data={data} onSave={saveSettings} />
               <Limits data={data} onSave={saveSettings} />
+              <Voice data={data} onChange={load} />
             </div>
 
             <section className="mt-12" aria-labelledby="h-activity">
@@ -355,6 +359,43 @@ function Limits({ data, onSave }: { data: Overview; onSave: (s: Overview["settin
           Leave empty for no limit. People who reach it see a calm note that it resets at midnight (UTC). Each question also has a short burst limit of 20 a minute.
         </p>
       </form>
+    </section>
+  );
+}
+
+/** Voice mode pauses for everyone when Sarvam credits run out; it re-checks hourly, or an admin turns it back on here. */
+function Voice({ data, onChange }: { data: Overview; onChange: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const { enabled, reason, retryAt } = data.voice;
+  const enable = async () => {
+    setBusy(true);
+    const res = await fetch("/api/admin/voice", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+    setBusy(false);
+    if (!res.ok) return void toast("Voice mode didn't turn on", { body: ((await res.json().catch(() => ({}))) as { error?: string }).error, tone: "warn" });
+    toast("Voice mode is on again");
+    await onChange();
+  };
+  return (
+    <section aria-labelledby="h-voice">
+      <h2 id="h-voice" className="border-b border-ink pb-2 text-[15px] font-[600] text-ink">
+        Voice mode <span className="ml-1 text-[12.5px] font-[450] text-muted">Experimental</span>
+      </h2>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-[13.5px] text-ink-2">
+          <span className={cn("size-2 rounded-full", enabled ? "bg-ok" : "bg-warn")} aria-hidden />
+          {enabled ? "Available to everyone" : (reason ?? "Unavailable")}
+        </p>
+        {!enabled && reason !== "Voice mode isn't set up on this server." && (
+          <button type="button" onClick={() => void enable()} disabled={busy} className="rounded-[8px] bg-ink px-3 py-1.5 text-[13px] font-[550] text-on-ink hover:bg-ink-2 disabled:opacity-40">
+            Turn back on
+          </button>
+        )}
+      </div>
+      <p className="mt-2 text-[12.5px] text-muted">
+        {enabled
+          ? "Voices come from Sarvam AI, which runs on prepaid credits. If they run out, voice mode pauses for everyone and conversations in progress switch to a backup voice."
+          : `Paused because the Sarvam AI credits ran out. ${retryAt ? `It checks again by itself at ${new Date(retryAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. ` : ""}Top up the credits, then turn it back on.`}
+      </p>
     </section>
   );
 }
