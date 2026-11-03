@@ -162,10 +162,6 @@ export function memoryUser(sess: Session) {
   return sess.workspace === "demo" ? `${sess.userId}:demo` : sess.userId;
 }
 
-export function llmProviders() {
-  return singletons().llm.configured;
-}
-
 export function jsonError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
 }

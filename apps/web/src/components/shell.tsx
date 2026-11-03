@@ -15,6 +15,7 @@ import { Toaster } from "./toaster";
 import { dismiss, toast } from "@/lib/toast";
 import { claimThreads, deleteThread, syncThreads, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
+import { fetchConnections } from "@/lib/connections";
 
 const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
@@ -317,9 +318,8 @@ function useWorkspace() {
   useEffect(() => {
     if (path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/")) return;
     let live = true;
-    fetch("/api/connections")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { workspace: WorkspaceInfo["workspace"]; admin?: boolean; connectors: { connected: boolean }[] } | null) => {
+    fetchConnections<{ workspace: WorkspaceInfo["workspace"]; admin?: boolean; connectors: { connected: boolean }[] }>()
+      .then((d) => {
         if (live && d) setInfo({ workspace: d.workspace, count: d.connectors.filter((c) => c.connected).length, admin: d.admin === true });
       })
       .catch(() => {});

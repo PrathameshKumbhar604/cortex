@@ -8,6 +8,7 @@ import { cn } from "@/lib/ui";
 import { explainError } from "@cortex/shared";
 import { toast } from "@/lib/toast";
 import { Logo } from "./ask/sources";
+import { cachedConnections, fetchConnections } from "@/lib/connections";
 
 interface Info {
   workspace: "demo" | "live";
@@ -46,7 +47,7 @@ function openSignInWindow(name: string): Window | null {
 }
 
 export function ConnectionsView() {
-  const [info, setInfo] = useState<Info | null>(null);
+  const [info, setInfo] = useState<Info | null>(() => cachedConnections<Info>());
   const [pending, setPending] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<string | null>(null);
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
@@ -57,9 +58,8 @@ export function ConnectionsView() {
   const params = useSearchParams();
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/connections");
-    const next = (await res.json()) as Info;
-    setInfo(next);
+    const next = await fetchConnections<Info>();
+    if (next) setInfo(next);
     return next;
   }, []);
 
@@ -189,8 +189,18 @@ export function ConnectionsView() {
 
         <ul className="mt-10 border-t border-ink">
           {/* Uploads live on the Files page; they aren't an app to connect. */}
-          {(info?.connectors ?? []).filter((c) => c.kind !== "upload").map((c) => (
-            <li key={c.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-4">
+          {!info &&
+            Array.from({ length: 6 }, (_, i) => (
+              <li key={i} aria-hidden className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="size-5 rounded-[5px] bg-hover" />
+                  <span className="h-3.5 rounded bg-hover" style={{ width: `${7 + ((i * 3) % 5)}rem` }} />
+                </div>
+                <span className="h-8 w-20 rounded-[8px] bg-hover" />
+              </li>
+            ))}
+          {(info?.connectors ?? []).filter((c) => c.kind !== "upload").map((c, i) => (
+            <li key={c.id} style={{ "--i": i } as React.CSSProperties} className="rise grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-4">
               <div className="min-w-0">
                 <p className="flex items-center gap-2.5 text-[15.5px] font-[500] text-ink">
                   <Logo source={c.id} className="size-5" />
