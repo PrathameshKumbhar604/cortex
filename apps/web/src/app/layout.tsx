@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="h-full">
+      <body className="h-full" suppressHydrationWarning>
         <ClerkProvider>
           <Shell>{children}</Shell>
         </ClerkProvider>
