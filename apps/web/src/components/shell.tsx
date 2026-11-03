@@ -20,7 +20,6 @@ import { fetchConnections } from "@/lib/connections";
 const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
   { href: "/brief", label: "Brief", icon: Newspaper },
-  { href: "/memory", label: "Memory", icon: Brain },
 ];
 
 const SIDEBAR = { initial: 208, min: 180, max: 360, key: "cortex.sidebarWidth", closedKey: "cortex.sidebarClosed" };
@@ -460,6 +459,10 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
                   {info.count}
                 </span>
               )}
+            </Link>
+            <Link href="/memory" className={ITEM}>
+              <Brain className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              Memory
             </Link>
             {info?.admin && (
               <Link href="/admin" className={ITEM}>
