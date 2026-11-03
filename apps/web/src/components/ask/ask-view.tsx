@@ -206,10 +206,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
           {!latest && (
             <div className="pt-[8vh]">
               <Greeting />
-              <p className="mt-4 max-w-[52ch] text-[15px] leading-relaxed text-muted">
-                What do you need to know about your work? Cortex searches your {workspace === "demo" ? "sample " : ""}Gmail, Calendar, Drive, Notion, Slack and GitHub, cites every claim, and
-                checks each one before you rely on it.
-              </p>
               <ul className="mt-10 flex flex-col border-t border-line">
                 {starters?.map((s, i) => (
                   <li key={s} className="rise border-b border-line" style={{ "--i": i + 1 } as React.CSSProperties}>
