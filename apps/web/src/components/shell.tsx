@@ -21,7 +21,6 @@ const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
   { href: "/brief", label: "Brief", icon: Newspaper },
   { href: "/memory", label: "Memory", icon: Brain },
-  { href: "/connections", label: "Connections", icon: Cable },
 ];
 
 const SIDEBAR = { initial: 208, min: 180, max: 360, key: "cortex.sidebarWidth", closedKey: "cortex.sidebarClosed" };

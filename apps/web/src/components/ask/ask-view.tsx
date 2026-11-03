@@ -42,27 +42,25 @@ const LIVE_SUGGESTIONS = [
 ];
 
 const pick = (list: string[]) => [...list].sort(() => Math.random() - 0.5).slice(0, 4);
-const lastStarters = new Map<string, string[]>(); // per workspace, so returning to a new thread shows them at once
+const STARTERS_KEY = (workspace: string) => `cortex.starters.${workspace}`;
 
-/** Starter questions written from the person's own brief, or four from the built-in library when that isn't possible. */
+/**
+ * Starter questions show at once, never a loading state: the ones written from the person's brief last time (kept in
+ * this browser), else four from the built-in library. Fresh ones are fetched quietly for next time, so the list on
+ * screen never jumps while someone reads it.
+ */
 function useStarters(workspace: "demo" | "live") {
-  const [starters, setStarters] = useState<string[] | null>(null);
+  const [starters, setStarters] = useState<string[] | null>(null); // null for the first paint only (server and client agree)
   useEffect(() => {
-    const library = workspace === "demo" ? DEMO_SUGGESTIONS : LIVE_SUGGESTIONS;
-    setStarters(lastStarters.get(workspace) ?? null);
-    let live = true;
-    fetch("/api/suggestions", { signal: AbortSignal.timeout(8000) })
+    let saved: string[] | null = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(STARTERS_KEY(workspace)) ?? "null");
+    } catch {}
+    setStarters(Array.isArray(saved) && saved.length ? saved : pick(workspace === "demo" ? DEMO_SUGGESTIONS : LIVE_SUGGESTIONS));
+    fetch("/api/suggestions")
       .then((r) => (r.ok ? (r.json() as Promise<{ questions: string[] | null }>) : null))
-      .catch(() => null)
-      .then((d) => {
-        if (!live) return;
-        const next = d?.questions?.length ? d.questions : (lastStarters.get(workspace) ?? pick(library));
-        lastStarters.set(workspace, next);
-        setStarters(next);
-      });
-    return () => {
-      live = false;
-    };
+      .then((d) => d?.questions?.length && localStorage.setItem(STARTERS_KEY(workspace), JSON.stringify(d.questions)))
+      .catch(() => {});
   }, [workspace]);
   return starters;
 }
@@ -213,12 +211,6 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
                 checks each one before you rely on it.
               </p>
               <ul className="mt-10 flex flex-col border-t border-line">
-                {!starters &&
-                  [11, 8, 13, 9].map((w) => (
-                    <li key={w} aria-hidden className="border-b border-line py-[19px]">
-                      <span className="block h-3.5 rounded bg-hover" style={{ width: `${w * 1.5}rem` }} />
-                    </li>
-                  ))}
                 {starters?.map((s, i) => (
                   <li key={s} className="rise border-b border-line" style={{ "--i": i + 1 } as React.CSSProperties}>
                     <button
