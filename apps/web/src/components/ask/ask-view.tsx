@@ -16,7 +16,8 @@ import { toast } from "@/lib/toast";
 import { TurnView } from "./turn-view";
 import { QuestionRail } from "./question-rail";
 import { useUser } from "@clerk/nextjs";
-import { Mark } from "../shell";
+import { Logo } from "./sources";
+import { fetchConnections } from "@/lib/connections";
 
 // The built-in library, used when no questions can be written from the person's own brief (no brief yet, models busy).
 const DEMO_SUGGESTIONS = [
@@ -198,15 +199,36 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     wasBusy.current = busy;
   }, [busy, latest]);
 
+  const composer = (
+    <Composer
+      value={draft}
+      onChange={setDraft}
+      onSubmit={() => submit(draft)}
+      onStop={stop}
+      busy={busy}
+      mode={mode}
+      onMode={changeMode}
+      autoFocus
+      attachments={files}
+      onAttach={attach}
+      onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
+      placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
+    />
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="relative min-h-0 flex-1">
       <div ref={scroller} className="h-full overflow-y-auto">
-        <div ref={content} className="mx-auto w-full max-w-[720px] px-4 pt-10 pb-10 sm:px-6 md:pt-16">
+        <div
+          ref={content}
+          className={cn("mx-auto w-full max-w-[720px] px-4 pt-10 pb-10 sm:px-6 md:pt-16", !latest && "flex min-h-full flex-col justify-center pb-[14vh] md:pt-10")}
+        >
           {!latest && (
-            <div className="pt-[8vh]">
-              <Greeting />
-              <ul className="mt-10 flex flex-col border-t border-line">
+            <div>
+              <Greeting workspace={workspace} />
+              <div className="mt-8">{composer}</div>
+              <ul className="mt-6 flex flex-col">
                 {starters?.map((s, i) => (
                   <li key={s} className="rise border-b border-line" style={{ "--i": i + 1 } as React.CSSProperties}>
                     <button
@@ -260,61 +282,96 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
         <QuestionRail questions={turns.map((t) => t.question)} scroller={scroller} content={content} onJump={jumpTo} />
       </div>
 
-      <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
-        <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
-          {latest?.done && latest.followups.length > 0 && !busy && (
-            // Wrapping, never scrolling: every suggestion is fully readable, even at phone width.
-            <div className="mb-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Suggested next questions">
-              {latest.followups.slice(0, 3).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => submit(f)}
-                  className="press group flex max-w-full items-start gap-1.5 rounded-[14px] border border-line bg-surface py-1 pr-3 pl-2 text-left text-[13px] leading-[1.4] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
-                >
-                  <CornerDownRight className="mt-[2px] size-3.5 shrink-0 text-hair transition-colors group-hover:text-accent" aria-hidden />
-                  {f}
-                </button>
-              ))}
-            </div>
-          )}
-          <Composer
-            value={draft}
-            onChange={setDraft}
-            onSubmit={() => submit(draft)}
-            onStop={stop}
-            busy={busy}
-            mode={mode}
-            onMode={changeMode}
-            autoFocus
-            attachments={files}
-            onAttach={attach}
-            onRemove={(key) => setFiles((all) => all.filter((a) => a.key !== key))}
-            placeholder={latest ? "Ask a follow-up…" : "Ask anything about your work…"}
-          />
+      {latest && (
+        <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
+            {latest?.done && latest.followups.length > 0 && !busy && (
+              // Wrapping, never scrolling: every suggestion is fully readable, even at phone width.
+              <div className="mb-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Suggested next questions">
+                {latest.followups.slice(0, 3).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => submit(f)}
+                    className="press group flex max-w-full items-start gap-1.5 rounded-[14px] border border-line bg-surface py-1 pr-3 pl-2 text-left text-[13px] leading-[1.4] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                  >
+                    <CornerDownRight className="mt-[2px] size-3.5 shrink-0 text-hair transition-colors group-hover:text-accent" aria-hidden />
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+            {composer}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 /** "Good evening, Prathamesh": the hour is read in the browser, so it is the reader's own time of day. */
-function Greeting() {
+const HEADLINE_KEY = (workspace: string) => `cortex.headline.${workspace}`;
+
+/**
+ * Cortex's own opening: a status line (today, the apps it is reading live) and a headline about the person's actual
+ * work, taken from their saved brief; the greeting alone when there is no brief yet. Everything shows from what this
+ * browser already has, then refreshes quietly.
+ */
+function Greeting({ workspace }: { workspace: "demo" | "live" }) {
   const first = useUser().user?.firstName;
-  const [part, setPart] = useState<string | null>(null);
+  const [now, setNow] = useState<{ date: string; part: string } | null>(null);
+  const [apps, setApps] = useState<string[]>([]);
+  const [headline, setHeadline] = useState<string | null>(null);
   useEffect(() => {
-    const h = new Date().getHours();
-    setPart(h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
-  }, []);
+    const d = new Date();
+    const h = d.getHours();
+    setNow({
+      date: d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+      part: h < 5 ? "Working late" : h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening",
+    });
+    try {
+      setHeadline(localStorage.getItem(HEADLINE_KEY(workspace)));
+    } catch {}
+    fetchConnections<{ connectors: { id: string; kind?: string; connected: boolean }[] }>()
+      .then((c) => c && setApps(c.connectors.filter((x) => x.connected && x.kind !== "upload" && x.id !== "web").map((x) => x.id)))
+      .catch(() => {});
+    fetch("/api/brief")
+      .then((r) => (r.ok ? (r.json() as Promise<{ brief: { headline: string; cards: unknown[] } | null }>) : null))
+      .then((d) => {
+        if (!d?.brief?.cards.length) return;
+        setHeadline(d.brief.headline);
+        localStorage.setItem(HEADLINE_KEY(workspace), d.brief.headline);
+      })
+      .catch(() => {});
+  }, [workspace]);
+  if (!now) return <div className="h-[92px]" aria-hidden />;
   return (
-    <h1 className="flex min-h-[1.1em] items-center gap-3 text-balance text-[38px] font-[400] leading-[1.1] tracking-[-0.015em] text-ink sm:text-[48px]">
-      <Mark className="size-9 shrink-0 sm:size-11" />
-      {part && (
-        <span className="rise">
-          {part}
-          {first ? `, ${first}` : ""}
-        </span>
-      )}
-    </h1>
+    <div className="rise">
+      <p className="flex items-center gap-2 font-mono text-[11.5px] uppercase tracking-[0.08em] text-muted">
+        <span>{now.date}</span>
+        {apps.length > 0 && (
+          <>
+            <span aria-hidden className="text-hair">/</span>
+            <span className="flex -space-x-1" aria-hidden>
+              {apps.slice(0, 6).map((id) => (
+                <Logo key={id} source={id} className="size-4 ring-2 ring-surface" />
+              ))}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="relative inline-flex size-1.5">
+                <span className="absolute inset-0 animate-ping rounded-full bg-ok opacity-60 motion-reduce:hidden" />
+                <span className="relative size-1.5 rounded-full bg-ok" />
+              </span>
+              {workspace === "demo" ? "Sample" : `${apps.length} live`}
+            </span>
+          </>
+        )}
+      </p>
+      <h1 className="mt-3 text-balance text-[32px] font-[600] leading-[1.1] tracking-[-0.03em] text-ink sm:text-[40px]" style={{ fontFamily: "var(--font-sans)" }}>
+        {now.part}
+        {first ? `, ${first}` : ""}.
+      </h1>
+      {headline && <p className="mt-2 max-w-[58ch] text-pretty text-[16px] leading-relaxed text-muted">{headline}</p>}
+    </div>
   );
 }
