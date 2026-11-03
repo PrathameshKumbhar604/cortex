@@ -367,7 +367,7 @@ function Greeting({ workspace }: { workspace: "demo" | "live" }) {
           </>
         )}
       </p>
-      <h1 className="mt-3 text-balance text-[32px] font-[600] leading-[1.1] tracking-[-0.03em] text-ink sm:text-[40px]" style={{ fontFamily: "var(--font-sans)" }}>
+      <h1 className="mt-3 text-balance text-[32px] font-[400] leading-[1.15] tracking-[-0.015em] text-ink sm:text-[40px]">
         {now.part}
         {first ? `, ${first}` : ""}.
       </h1>
