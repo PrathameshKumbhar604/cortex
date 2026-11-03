@@ -1,6 +1,8 @@
 import { db } from "@/server/db";
 import { jsonError, session, unauthorized } from "@/server/cortex";
 import { shares } from "@/server/shares";
+import { deleteFile } from "@/server/files";
+import { attachmentIds } from "@/lib/chat-files";
 
 // Chats per account, so they follow the person to another browser. The browser keeps a copy (localStorage) and syncs.
 db.exec(`CREATE TABLE IF NOT EXISTS chats (
@@ -40,7 +42,14 @@ export async function DELETE(req: Request) {
   const sess = await session();
   if (!sess) return unauthorized();
   const id = new URL(req.url).searchParams.get("id") ?? "";
+  const row = db.prepare("SELECT json FROM chats WHERE user_id = ? AND id = ?").get(sess.authId, id) as { json: string } | undefined;
   db.prepare("DELETE FROM chats WHERE user_id = ? AND id = ?").run(sess.authId, id);
+  if (row) {
+    // The chat's uploads go with it, unless another of this person's chats still uses them.
+    const others = db.prepare("SELECT json FROM chats WHERE user_id = ?").all(sess.authId) as { json: string }[];
+    const kept = new Set(others.flatMap((r) => attachmentIds(JSON.parse(r.json))));
+    for (const file of attachmentIds(JSON.parse(row.json))) if (!kept.has(file)) await deleteFile(sess.userId, file);
+  }
   shares.revokeChat(sess.authId, id); // a deleted chat takes its public links with it
   return new Response(null, { status: 204 });
 }
