@@ -1,0 +1,35 @@
+# Runs on the server in /opt/cortex. Secrets come from /opt/cortex/.env (never committed); IMAGE is set by the deploy job.
+services:
+  web:
+    image: ${IMAGE}/web:latest
+    env_file: .env
+    environment:
+      MEMORY_SERVICE_URL: http://memory:8000
+    volumes:
+      - ./data:/app/.data # accounts DB, uploaded files, speech models
+    depends_on: [memory]
+    restart: unless-stopped
+
+  memory:
+    image: ${IMAGE}/memory:latest
+    env_file: .env
+    environment:
+      ORACLE_WALLET_DIR: /wallet # only used when ORACLE_DB_DSN is set
+    volumes:
+      - ./memory-data:/data
+      - ./wallet:/wallet:ro
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # HTTPS certificates
+    depends_on: [web]
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
