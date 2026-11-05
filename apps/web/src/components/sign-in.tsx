@@ -83,6 +83,10 @@ export function SignIn({ next }: { next: string }) {
 
   const createAccount = () =>
     run("email", async () => {
+      const check = await fetch("/api/email-check", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: email.trim() }) });
+      if (check.status === 429) return fail({ status: 429 }, "create");
+      if (check.ok && ((await check.json()) as { disposable: boolean }).disposable)
+        return setProblem("Temporary or throwaway email addresses can't be used. Use your personal or work email.");
       const { error } = await signUp.password({ emailAddress: email.trim(), password });
       if (error) return fail(error, "create");
       if (signUp.status === "complete") return finish(signUp);

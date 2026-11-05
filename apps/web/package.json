@@ -16,6 +16,7 @@
     "@cortex/shared": "*",
     "@next/env": "^16.4.3",
     "clsx": "^2.1.1",
+    "disposable-email-domains-js": "^1.26.0",
     "lucide-react": "^1.61.0",
     "motion": "^14.6.0",
     "next": "16.4.3",

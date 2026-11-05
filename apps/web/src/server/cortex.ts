@@ -3,6 +3,7 @@ import path from "node:path";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
+import { isDisposableEmail } from "@/lib/disposable";
 import { dataIdFor, db, getLocalUser, isOwner, mayUseLive, touchUser, upsertUser } from "./db";
 import { filesConnector } from "./files";
 import { ActionStore, MemoryClient, type AgentDeps } from "@cortex/agent";
@@ -74,6 +75,7 @@ export async function session(): Promise<Session | null> {
     local = getLocalUser(userId)!;
   }
   if (local.disabled) return null; // turned off by an admin: treated as signed out everywhere, at once
+  if (isDisposableEmail(local.email)) return null; // throwaway inbox: the sign-up form refuses it, this stops anyone who skipped the form
   touchUser(userId);
   let admin = local.role === "admin";
   if (!admin && isOwner(local.email, local.verified)) {
