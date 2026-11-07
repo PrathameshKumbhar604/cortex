@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { isDisposableEmail } from "@/lib/disposable";
-import { dataIdFor, db, getLocalUser, isOwner, mayUseLive, touchUser, upsertUser } from "./db";
+import { dataIdFor, db, getLocalUser, isOwner, mayUseLive, touchUser, upsertUser, type LocalUser } from "./db";
+import { approvedOnSignUp, needsApproval } from "@/lib/approval";
 import { filesConnector } from "./files";
 import { ActionStore, MemoryClient, type AgentDeps } from "@cortex/agent";
 import { buildRegistry, claimUntaggedAccounts, ConnectorRegistry, type Workspace } from "@cortex/connectors";
@@ -52,11 +53,8 @@ export interface Session {
 
 const RESYNC_MS = 10 * 60_000; // how often the local copy of an account is refreshed from Clerk
 
-/**
- * The signed-in user, or null (every API route returns 401 on null). Clerk proves who it is; Cortex keeps its own copy
- * of the account (role, on/off, last active) and refreshes email and name from Clerk every few minutes.
- */
-export async function session(): Promise<Session | null> {
+/** Who is signed in, synced from Clerk, and whether they may use Cortex; null when signed out. */
+async function localAccount(): Promise<{ userId: string; local: LocalUser; status: "approved" | "pending" | "off" } | null> {
   await connection(); // per request, never prerendered (it reads the clock and the database)
   const { userId } = await auth();
   if (!userId) return null;
@@ -65,17 +63,40 @@ export async function session(): Promise<Session | null> {
     const u = await currentUser();
     if (!u) return null;
     const primary = u.emailAddresses.find((e) => e.id === u.primaryEmailAddressId) ?? u.emailAddresses[0];
-    upsertUser({
-      id: u.id,
-      email: primary?.emailAddress ?? "",
-      name: [u.firstName, u.lastName].filter(Boolean).join(" "),
-      verified: primary?.verification?.status === "verified",
-      createdAt: new Date(u.createdAt).toISOString(),
-    });
+    // A brand-new account starts on the waitlist when the admin has sign-up approval set to manual.
+    const approved = local ? true : approvedOnSignUp((await getSettings()).signupApproval);
+    upsertUser(
+      {
+        id: u.id,
+        email: primary?.emailAddress ?? "",
+        name: [u.firstName, u.lastName].filter(Boolean).join(" "),
+        verified: primary?.verification?.status === "verified",
+        createdAt: new Date(u.createdAt).toISOString(),
+      },
+      approved,
+    );
     local = getLocalUser(userId)!;
   }
-  if (local.disabled) return null; // turned off by an admin: treated as signed out everywhere, at once
-  if (isDisposableEmail(local.email)) return null; // throwaway inbox: the sign-up form refuses it, this stops anyone who skipped the form
+  if (local.disabled) return { userId, local, status: "off" }; // turned off by an admin: treated as signed out everywhere, at once
+  if (isDisposableEmail(local.email)) return { userId, local, status: "off" }; // throwaway inbox: the sign-up form refuses it, this stops anyone who skipped the form
+  if (needsApproval(local, (await getSettings()).signupApproval, isOwner)) return { userId, local, status: "pending" };
+  return { userId, local, status: "approved" };
+}
+
+/** For /api/me: whether the signed-in account may use Cortex or is waiting for approval. */
+export async function accessStatus(): Promise<"approved" | "pending" | null> {
+  const account = await localAccount();
+  return account && account.status !== "off" ? account.status : null;
+}
+
+/**
+ * The signed-in, approved user, or null (every API route returns 401 on null). Clerk proves who it is; Cortex keeps its own copy
+ * of the account (role, on/off, last active) and refreshes email and name from Clerk every few minutes.
+ */
+export async function session(): Promise<Session | null> {
+  const account = await localAccount();
+  if (!account || account.status !== "approved") return null; // turned off, throwaway, or still on the waitlist
+  const { userId, local } = account;
   touchUser(userId);
   let admin = local.role === "admin";
   if (!admin && isOwner(local.email, local.verified)) {

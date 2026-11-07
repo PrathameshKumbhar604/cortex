@@ -17,6 +17,8 @@ import { dismiss, toast } from "@/lib/toast";
 import { claimThreads, deleteThread, syncThreads, onRecent, readThreads, restoreThread, updateThread, type SavedThread } from "@/lib/recent";
 import { cn } from "@/lib/ui";
 import { fetchConnections } from "@/lib/connections";
+import { useAccess } from "@/lib/access";
+import { Waitlist } from "./waitlist";
 
 const NAV = [
   { href: "/", label: "Ask", icon: MessageSquareText },
@@ -154,6 +156,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, []);
   const info = useWorkspace();
   useAccountSync();
+  const bare = path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/");
+  const access = useAccess(!bare);
   const resize = (w: number) => {
     const next = Math.round(Math.min(SIDEBAR.max, Math.max(SIDEBAR.min, w)));
     setWidth(next);
@@ -168,6 +172,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Toaster />
       </MotionConfig>
     ); // no app chrome (sidebar, tour) before sign-in
+  // Sign-up approval is manual and this account hasn't been approved yet: only the waitlist, nothing else loads.
+  if (access?.status === "pending")
+    return (
+      <MotionConfig reducedMotion="user">
+        <Waitlist message={access.message} />
+      </MotionConfig>
+    );
 
   return (
     // MotionConfig wraps the sidebar too, so its menus and list springs follow reduced motion like the page does.
@@ -390,6 +401,7 @@ const ITEM = "flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-[7px] tex
  */
 function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placement: "up" | "down" }) {
   const { user } = useUser();
+  const access = useAccess(false); // the shell fetches it; this only reads the waiting count
   const { signOut } = useClerk();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -469,7 +481,12 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
             {info?.admin && (
               <Link href="/admin" className={ITEM}>
                 <Shield className="size-4 text-muted" strokeWidth={1.75} aria-hidden />
-                Admin panel
+                <span className="min-w-0 flex-1 truncate">Admin panel</span>
+                {!!access?.waiting && (
+                  <span className="shrink-0 rounded-full bg-accent-soft px-1.5 text-[11.5px] font-[550] text-accent-ink tabular-nums" title={`${access.waiting} waiting for approval`}>
+                    {access.waiting}
+                  </span>
+                )}
               </Link>
             )}
             <button

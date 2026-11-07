@@ -1,5 +1,6 @@
 import "server-only";
 import { db, dbReady } from "./db";
+import { isSignupApproval, type SignupApproval } from "@/lib/approval";
 
 /**
  * What the admin panel reads and the app writes: usage per account per day, an activity log (admin changes,
@@ -38,7 +39,7 @@ export async function questionsToday(userId: string): Promise<number> {
   return (db.prepare("SELECT questions FROM usage WHERE user_id = ? AND day = ?").get(userId, today()) as { questions: number } | undefined)?.questions ?? 0;
 }
 
-export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.settings" | "admin.voice" | "voice.off" | "action.executed" | "action.failed" | "error";
+export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.approve" | "admin.unapprove" | "admin.settings" | "admin.voice" | "voice.off" | "action.executed" | "action.failed" | "error";
 
 export async function logEvent(actor: string, kind: AuditKind, target = "", detail = "") {
   await ready;
@@ -52,13 +53,15 @@ export interface Settings {
   dailyQuestionLimit: number | null;
   /** Source ids people may use; null = all. */
   allowedConnectors: string[] | null;
+  /** "manual": new accounts wait on the waitlist until an admin approves them. */
+  signupApproval: SignupApproval;
 }
 
 export async function getSettings(): Promise<Settings> {
   await ready;
   const rows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[];
   const v = Object.fromEntries(rows.map((r) => [r.key, JSON.parse(r.value)]));
-  return { dailyQuestionLimit: v.dailyQuestionLimit ?? null, allowedConnectors: v.allowedConnectors ?? null };
+  return { dailyQuestionLimit: v.dailyQuestionLimit ?? null, allowedConnectors: v.allowedConnectors ?? null, signupApproval: isSignupApproval(v.signupApproval) ? v.signupApproval : "auto" };
 }
 
 export async function saveSettings(s: Settings) {
@@ -66,6 +69,7 @@ export async function saveSettings(s: Settings) {
   const put = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
   put.run("dailyQuestionLimit", JSON.stringify(s.dailyQuestionLimit));
   put.run("allowedConnectors", JSON.stringify(s.allowedConnectors));
+  put.run("signupApproval", JSON.stringify(s.signupApproval));
 }
 
 /** One JSON value in the settings table (voice mode keeps its on/off state here), or null. */
@@ -88,6 +92,8 @@ export interface AdminUser {
   role: string;
   disabled: boolean;
   verified: boolean;
+  /** False while the account waits on the waitlist. */
+  approved: boolean;
   createdAt: string;
   lastActive: string | null;
   dataId: string | null;
@@ -100,7 +106,7 @@ export async function listUsers(): Promise<AdminUser[]> {
   await ready;
   const rows = db
     .prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.disabled AS banned, u.verified AS emailVerified, u.created_at AS createdAt,
+      `SELECT u.id, u.email, u.name, u.role, u.disabled AS banned, u.verified AS emailVerified, u.approved AS approved, u.created_at AS createdAt,
          u.last_active AS lastActive, l.data_id AS dataId,
          (SELECT COALESCE(SUM(questions), 0) FROM usage WHERE user_id = u.id AND day = ?) AS qToday,
          (SELECT COALESCE(SUM(questions), 0) FROM usage WHERE user_id = u.id) AS q,
@@ -119,6 +125,7 @@ export async function listUsers(): Promise<AdminUser[]> {
     role: r.role === "admin" ? "admin" : "member",
     disabled: Number(r.banned) === 1,
     verified: Number(r.emailVerified) === 1,
+    approved: Number(r.approved ?? 1) === 1,
     createdAt: String(r.createdAt),
     lastActive: r.lastActive ? String(r.lastActive) : null,
     dataId: r.dataId ? String(r.dataId) : null,

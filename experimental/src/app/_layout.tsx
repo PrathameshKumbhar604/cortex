@@ -79,6 +79,9 @@ function Routes() {
         <Stack.Protected guard={!isSignedIn}>
           <Stack.Screen name="sign-in" />
         </Stack.Protected>
+        <Stack.Protected guard={!!isSignedIn && onboarding.state === "waitlist"}>
+          <Stack.Screen name="waitlist" />
+        </Stack.Protected>
         <Stack.Protected guard={!!isSignedIn && onboarding.state === "welcome"}>
           <Stack.Screen name="welcome" />
         </Stack.Protected>

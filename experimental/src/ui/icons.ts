@@ -19,6 +19,7 @@ export { default as Copy } from "lucide-react-native/icons/copy";
 export { default as CornerDownRight } from "lucide-react-native/icons/corner-down-right";
 export { default as FileText } from "lucide-react-native/icons/file-text";
 export { default as FolderOpen } from "lucide-react-native/icons/folder-open";
+export { default as Hourglass } from "lucide-react-native/icons/hourglass";
 export { default as Info } from "lucide-react-native/icons/info";
 export { default as LogOut } from "lucide-react-native/icons/log-out";
 export { default as MailCheck } from "lucide-react-native/icons/mail-check";

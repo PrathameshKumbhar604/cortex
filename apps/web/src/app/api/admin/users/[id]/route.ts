@@ -4,20 +4,24 @@ import { db, getLocalUser } from "@/server/db";
 import { jsonError, requireAdmin, syncRole } from "@/server/cortex";
 
 /**
- * Change one account's role or turn it off/on. Off takes effect on the account's very next request (Cortex checks its
+ * Change one account's role, approve it off the waitlist, or turn it off/on (rejecting a waiting account turns it off). Off takes effect on the account's very next request (Cortex checks its
  * own flag) and is mirrored to Clerk as a ban, which ends its sessions and blocks signing in again.
  */
 export async function PATCH(req: Request, ctx: RouteContext<"/api/admin/users/[id]">) {
   const sess = await requireAdmin();
   if (sess instanceof Response) return sess;
   const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as { role?: string; disabled?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { role?: string; disabled?: boolean; approved?: boolean };
   if (id === sess.authId) return jsonError("You can't change your own role or turn off your own account here.", 400);
   if (!getLocalUser(id)) return jsonError("That account doesn't exist any more.", 404);
   if (body.role === "admin" || body.role === "member") {
     db.prepare("UPDATE users SET role = ? WHERE id = ?").run(body.role, id);
     await syncRole(id, body.role);
     await logEvent(sess.email, "admin.role", id, body.role);
+  }
+  if (typeof body.approved === "boolean") {
+    db.prepare("UPDATE users SET approved = ? WHERE id = ?").run(body.approved ? 1 : 0, id);
+    await logEvent(sess.email, body.approved ? "admin.approve" : "admin.unapprove", id);
   }
   if (typeof body.disabled === "boolean") {
     db.prepare("UPDATE users SET disabled = ? WHERE id = ?").run(body.disabled ? 1 : 0, id);

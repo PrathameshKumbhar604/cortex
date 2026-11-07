@@ -12,6 +12,8 @@ mkdirSync(dataDir, { recursive: true });
  * sign-in), the account → data link, file metadata, usage, the activity log, settings and saved briefs.
  */
 export const db = new DatabaseSync(path.join(dataDir, "cortex.sqlite"));
+// Set first, so even the statements below wait for a lock (a build opens this file from many workers at once).
+db.exec("PRAGMA busy_timeout = 5000");
 // Readers never block the writer, and a write that meets a lock waits up to 5 s instead of failing.
 db.exec(`
   PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;
@@ -22,6 +24,14 @@ db.exec(`
     created_at TEXT NOT NULL, last_active TEXT, synced_at INTEGER NOT NULL DEFAULT 0
   );
 `);
+// Sign-up approval (admin panel): accounts that exist when the column arrives stay approved, so nobody is locked out.
+if (!(db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).some((c) => c.name === "approved")) {
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN approved INTEGER NOT NULL DEFAULT 1");
+  } catch (err) {
+    if (!/duplicate column/i.test(String(err))) throw err; // another process added it first
+  }
+}
 /** Kept for the modules that awaited the old auth setup; the tables above exist once this module loads. */
 export const dbReady = Promise.resolve();
 
@@ -32,6 +42,8 @@ export interface LocalUser {
   verified: boolean;
   role: "admin" | "member";
   disabled: boolean;
+  /** False while a new account waits for an admin (manual sign-up approval). */
+  approved: boolean;
   syncedAt: number;
 }
 
@@ -45,16 +57,20 @@ export function getLocalUser(id: string): LocalUser | null {
     verified: Number(r.verified) === 1,
     role: r.role === "admin" ? "admin" : "member",
     disabled: Number(r.disabled) === 1,
+    approved: Number(r.approved ?? 1) === 1,
     syncedAt: Number(r.synced_at),
   };
 }
 
-/** Refreshes the local copy from Clerk (email, name, whether the email is proven); role and on/off are Cortex's own. */
-export function upsertUser(u: { id: string; email: string; name: string; verified: boolean; createdAt: string }) {
+/**
+ * Refreshes the local copy from Clerk (email, name, whether the email is proven); role, on/off and approval are Cortex's
+ * own. `approved` applies only when the account is new here: an existing account keeps its approval.
+ */
+export function upsertUser(u: { id: string; email: string; name: string; verified: boolean; createdAt: string }, approved = true) {
   db.prepare(
-    `INSERT INTO users (id, email, name, verified, created_at, synced_at) VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO users (id, email, name, verified, created_at, synced_at, approved) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET email = excluded.email, name = excluded.name, verified = excluded.verified, synced_at = excluded.synced_at`,
-  ).run(u.id, u.email, u.name, u.verified ? 1 : 0, u.createdAt, Date.now());
+  ).run(u.id, u.email, u.name, u.verified ? 1 : 0, u.createdAt, Date.now(), approved ? 1 : 0);
 }
 
 export function touchUser(id: string) {

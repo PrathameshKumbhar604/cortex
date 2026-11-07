@@ -15,6 +15,8 @@ interface AdminUser {
   role: "admin" | "member";
   disabled: boolean;
   verified: boolean;
+  /** False while the account waits on the waitlist. */
+  approved: boolean;
   createdAt: string;
   lastActive: string | null;
   today: { questions: number };
@@ -25,7 +27,7 @@ interface AdminUser {
 interface Overview {
   me: string;
   users: AdminUser[];
-  settings: { dailyQuestionLimit: number | null; allowedConnectors: string[] | null };
+  settings: { dailyQuestionLimit: number | null; allowedConnectors: string[] | null; signupApproval: "auto" | "manual" };
   activity: { at: string; actor: string; kind: string; target: string; detail: string }[];
   connectors: { id: string; name: string; connected: boolean; available: boolean; detail?: string }[];
   memory: { ok: boolean; backend: string };
@@ -37,6 +39,8 @@ const KIND: Record<string, { label: string; tone: string }> = {
   "admin.role": { label: "Role changed", tone: "text-accent-ink" },
   "admin.disable": { label: "Account turned off", tone: "text-risk" },
   "admin.enable": { label: "Account turned on", tone: "text-ok" },
+  "admin.approve": { label: "Account approved", tone: "text-ok" },
+  "admin.unapprove": { label: "Sent back to the waitlist", tone: "text-warn" },
   "admin.settings": { label: "Settings changed", tone: "text-accent-ink" },
   "admin.voice": { label: "Voice mode turned on", tone: "text-ok" },
   "voice.off": { label: "Voice mode paused", tone: "text-warn" },
@@ -78,7 +82,7 @@ export function AdminView() {
     void load();
   }, [load]);
 
-  const change = async (user: AdminUser, patch: { role?: "admin" | "member"; disabled?: boolean }) => {
+  const change = async (user: AdminUser, patch: { role?: "admin" | "member"; disabled?: boolean; approved?: boolean }) => {
     setPending(user.id);
     const res = await fetch(`/api/admin/users/${user.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
     setPending(null);
@@ -86,7 +90,15 @@ export function AdminView() {
       toast("That change didn't go through", { body: ((await res.json().catch(() => ({}))) as { error?: string }).error, tone: "warn" });
       return;
     }
-    toast(patch.disabled === true ? `${user.email} is turned off` : patch.disabled === false ? `${user.email} is turned on` : `${user.email} is now ${patch.role === "admin" ? "an admin" : "a member"}`);
+    toast(
+      patch.approved === true
+        ? `${user.email} is approved`
+        : patch.disabled === true
+          ? `${user.email} is turned off`
+          : patch.disabled === false
+            ? `${user.email} is turned on`
+            : `${user.email} is now ${patch.role === "admin" ? "an admin" : "a member"}`,
+    );
     await load();
   };
 
@@ -137,6 +149,8 @@ export function AdminView() {
                 </div>
               ))}
             </dl>
+
+            <Waiting users={data.users.filter((u) => !u.approved && u.role !== "admin" && !u.disabled)} pending={pending} onApprove={(u) => void change(u, { approved: true })} onReject={(u) => void change(u, { disabled: true })} />
 
             <section className="mt-12" aria-labelledby="h-accounts">
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-ink pb-2">
@@ -198,7 +212,7 @@ export function AdminView() {
                               )}
                             >
                               {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <span aria-hidden className={cn("size-1.5 rounded-full", u.disabled ? "bg-line-strong" : "bg-ok")} />}
-                              {u.disabled ? "Off" : "Active"}
+                              {u.disabled ? "Off" : !u.approved && u.role !== "admin" ? "Waiting" : "Active"}
                             </button>
                           </td>
                           {[u.today.questions, u.total.questions, u.total.llmCalls, u.total.searches, u.total.actions, u.memories ?? "–", u.files].map((v, i) => (
@@ -223,6 +237,7 @@ export function AdminView() {
             </section>
 
             <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
+              <SignUps data={data} onSave={saveSettings} />
               <Apps data={data} onSave={saveSettings} />
               <Limits data={data} onSave={saveSettings} />
               <Voice data={data} onChange={load} />
@@ -318,6 +333,71 @@ function Apps({ data, onSave }: { data: Overview; onSave: (s: Overview["settings
       <p className="mt-3 text-[12.5px] text-muted">
         Memory: {data.memory.ok ? <span className="text-ok">working ({data.memory.backend})</span> : <span className="text-warn">out of reach</span>}
       </p>
+    </section>
+  );
+}
+
+/** New sign-ups: let everyone in, or hold each new account on the waitlist until it is approved here. */
+function SignUps({ data, onSave }: { data: Overview; onSave: (s: Overview["settings"]) => Promise<void> }) {
+  const mode = data.settings.signupApproval;
+  const options = [
+    { id: "auto", label: "Approve automatically", note: "Anyone who signs up can use Cortex straight away." },
+    { id: "manual", label: "Approve each account", note: "New accounts wait on the waitlist until you approve them here. Existing accounts are not affected." },
+  ] as const;
+  return (
+    <section aria-labelledby="h-signups">
+      <h2 id="h-signups" className="border-b border-ink pb-2 text-[15px] font-[600] text-ink">
+        Sign-ups
+      </h2>
+      <div role="radiogroup" aria-labelledby="h-signups" className="mt-3 flex flex-col gap-2">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.id}
+            onClick={() => mode !== o.id && void onSave({ ...data.settings, signupApproval: o.id })}
+            className={cn("rounded-[10px] border px-3 py-2.5 text-left transition-colors", mode === o.id ? "border-accent bg-accent-soft/50" : "border-line hover:border-line-strong")}
+          >
+            <span className="block text-[13.5px] font-[550] text-ink">{o.label}</span>
+            <span className="mt-0.5 block text-[12.5px] text-muted">{o.note}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Accounts on the waitlist, newest last: approve to let them in, or reject (turns the account off). */
+function Waiting({ users, pending, onApprove, onReject }: { users: AdminUser[]; pending: string | null; onApprove: (u: AdminUser) => void; onReject: (u: AdminUser) => void }) {
+  if (!users.length) return null;
+  return (
+    <section className="rise mt-12" aria-labelledby="h-waiting">
+      <h2 id="h-waiting" className="border-b border-ink pb-2 text-[15px] font-[600] text-ink">
+        Waiting for approval <span className="ml-1 font-[400] text-muted tabular-nums">{users.length}</span>
+      </h2>
+      <ul>
+        {users.map((u) => (
+          <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-[550] text-ink">{u.name || u.email}</p>
+              <p className="truncate text-[12.5px] text-muted">
+                {u.name ? `${u.email} · ` : ""}signed up {ago(u.createdAt)}
+                {u.verified ? "" : " · email not confirmed"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" disabled={pending === u.id} onClick={() => onReject(u)} className="rounded-[8px] border border-line-strong px-3 py-1.5 text-[13px] text-ink hover:bg-shell disabled:opacity-50">
+                Reject
+              </button>
+              <button type="button" disabled={pending === u.id} onClick={() => onApprove(u)} className="inline-flex items-center gap-1.5 rounded-[8px] bg-ink px-3 py-1.5 text-[13px] font-[550] text-on-ink hover:bg-ink-2 disabled:opacity-50">
+                {pending === u.id && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+                Approve
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
