@@ -1,3 +1,4 @@
+import "@/polyfills";
 import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";

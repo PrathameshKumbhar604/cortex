@@ -20,6 +20,9 @@ export function setTokenGetter(fn: TokenGetter) {
   getToken = fn;
 }
 
+/** The current session token, for requests that can't go through `send` (multipart uploads, audio). */
+export const getAuthToken = () => getToken();
+
 let onSignedOut: () => void = () => {};
 export function setSignedOutHandler(fn: () => void) {
   onSignedOut = fn;
