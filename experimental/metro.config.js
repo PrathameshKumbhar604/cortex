@@ -7,8 +7,7 @@ const shared = path.resolve(__dirname, "../packages/shared");
 
 config.watchFolders = [shared];
 config.resolver.extraNodeModules = { "@cortex/shared": path.join(shared, "src") };
-// packages/shared imports zod; resolve it (and everything else) from this app's node_modules only.
+// Anything packages/shared imports resolves from this app's node_modules first.
 config.resolver.nodeModulesPaths = [path.resolve(__dirname, "node_modules")];
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;

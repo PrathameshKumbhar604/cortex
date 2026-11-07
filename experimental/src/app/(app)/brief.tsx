@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Linking, View } from "react-native";
 import { router } from "expo-router";
-import { ArrowUpRight, RotateCw } from "lucide-react-native";
+import { ArrowUpRight, RotateCw } from "@/ui/icons";
 import { explainFailure, sourceName } from "@cortex/shared";
 import { loadBrief, markSeen, readPick, useBrief, type BriefCard } from "@/brief/seen";
 import { haptic } from "@/haptics";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import { FileText, Trash2, Upload } from "lucide-react-native";
+import { FileText, Trash2, Upload } from "@/ui/icons";
 import { api } from "@/api/client";
 import { formatSize, uploadFile, type FileInfo } from "@/files/upload";
 import { haptic } from "@/haptics";

@@ -6,7 +6,7 @@ import { KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "@clerk/expo";
-import { ArrowDown, ChevronRight, CornerDownRight, SquarePen } from "lucide-react-native";
+import { ArrowDown, ChevronRight, CornerDownRight, SquarePen } from "@/ui/icons";
 import type { RunMode } from "@cortex/shared";
 import type { Turn } from "@/agent/reduce";
 import { normalizeTurn } from "@/agent/versions";

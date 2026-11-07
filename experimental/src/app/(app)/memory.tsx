@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Switch, TextInput, View } from "react-native";
-import { Pin, PinOff, Plus, Trash2 } from "lucide-react-native";
+import { Pin, PinOff, Plus, Trash2 } from "@/ui/icons";
 import type { MemoryItem, MemoryKind } from "@cortex/shared";
 import { api } from "@/api/client";
 import { haptic } from "@/haptics";

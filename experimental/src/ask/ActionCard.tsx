@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TextInput, View } from "react-native";
 import Animated, { FadeIn, LinearTransition, ZoomIn } from "react-native-reanimated";
-import { Check, CircleSlash, PenLine, TriangleAlert } from "lucide-react-native";
+import { Check, CircleSlash, PenLine, TriangleAlert } from "@/ui/icons";
 import { sourceName, type ActionProposal } from "@cortex/shared";
 import { haptic } from "@/haptics";
 import { useTheme } from "@/theme/ThemeProvider";

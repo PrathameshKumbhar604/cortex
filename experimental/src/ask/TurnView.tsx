@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { TextInput, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { router } from "expo-router";
-import { Brain, FileText, Pencil } from "lucide-react-native";
+import { Brain, FileText, Pencil } from "@/ui/icons";
 import { explainError, explainFailure } from "@cortex/shared";
 import type { Turn } from "@/agent/reduce";
 import { useTheme } from "@/theme/ThemeProvider";

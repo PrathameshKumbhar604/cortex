@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { Check } from "lucide-react-native";
+import { Check } from "@/ui/icons";
 import type { ConnectorStatus } from "@cortex/shared";
 import { api } from "@/api/client";
 import { Logo } from "@/ask/Logo";

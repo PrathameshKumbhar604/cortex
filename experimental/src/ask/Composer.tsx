@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
-import { ArrowUp, FileText, Mic, Plus, Square, X } from "lucide-react-native";
+import { ArrowUp, FileText, Mic, Plus, Square, X } from "@/ui/icons";
 import type { RunMode } from "@cortex/shared";
 import { formatSize } from "@/files/upload";
 import { haptic } from "@/haptics";

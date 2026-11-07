@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
 import type { Href } from "expo-router";
 import { useClerk, useUser } from "@clerk/expo";
-import { Brain, Cable, Compass, LogOut } from "lucide-react-native";
+import { Brain, Cable, Compass, LogOut } from "@/ui/icons";
 import { useOnboarding } from "@/auth/OnboardingProvider";
 import { haptic } from "@/haptics";
 import { useWorkspace } from "@/state/workspace";

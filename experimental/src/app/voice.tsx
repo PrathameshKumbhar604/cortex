@@ -3,7 +3,7 @@ import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowUp, Mic, MicOff, Square, X } from "lucide-react-native";
+import { ArrowUp, Mic, MicOff, Square, X } from "@/ui/icons";
 import { api } from "@/api/client";
 import { postForm } from "@/api/multipart";
 import { ActionCard } from "@/ask/ActionCard";

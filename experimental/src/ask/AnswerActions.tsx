@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Share as NativeShare, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Check, ChevronLeft, ChevronRight, Copy, RotateCw, Share2 } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Copy, RotateCw, Share2 } from "@/ui/icons";
 import type { Turn } from "@/agent/reduce";
 import { versionInfo } from "@/agent/versions";
 import { api } from "@/api/client";

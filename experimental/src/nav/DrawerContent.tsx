@@ -3,7 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { router, useGlobalSearchParams, usePathname } from "expo-router";
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { useUser } from "@clerk/expo";
-import { ChevronsUpDown, FolderOpen, Newspaper, Pin, Search, SquarePen, X } from "lucide-react-native";
+import { ChevronsUpDown, FolderOpen, Newspaper, Pin, Search, SquarePen, X } from "@/ui/icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/api/client";
 import { haptic } from "@/haptics";

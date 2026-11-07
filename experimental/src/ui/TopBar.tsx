@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import { useNavigation } from "expo-router";
-import { Menu } from "lucide-react-native";
+import { Menu } from "@/ui/icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { haptic } from "@/haptics";
 import { useTheme } from "@/theme/ThemeProvider";

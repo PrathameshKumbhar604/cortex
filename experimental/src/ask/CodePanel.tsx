@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Check, Copy } from "lucide-react-native";
+import { Check, Copy } from "@/ui/icons";
 import { haptic } from "@/haptics";
 import { terminal } from "@/theme/tokens";
 import { font, type as ramp } from "@/theme/type";

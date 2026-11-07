@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight } from "@/ui/icons";
 import { sourceName, type Evidence } from "@cortex/shared";
 import { shortDate } from "@/lib/format";
 import { cleanSnippet, plainText } from "@/lib/snippet";

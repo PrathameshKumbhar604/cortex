@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Pencil, Pin, PinOff, Trash2 } from "lucide-react-native";
+import { Pencil, Pin, PinOff, Trash2 } from "@/ui/icons";
 import { haptic } from "@/haptics";
 import { chats } from "@/state";
 import { useTheme } from "@/theme/ThemeProvider";

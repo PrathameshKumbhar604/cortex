@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { router, type Href } from "expo-router";
-import { CloudOff, Info, RotateCw } from "lucide-react-native";
+import { CloudOff, Info, RotateCw } from "@/ui/icons";
 import type { Explained } from "@cortex/shared";
 import { useTheme } from "@/theme/ThemeProvider";
 import { font } from "@/theme/type";

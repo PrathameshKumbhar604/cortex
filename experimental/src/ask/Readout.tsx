@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
-import { Check, ChevronDown } from "lucide-react-native";
+import { Check, ChevronDown } from "@/ui/icons";
 import { sourceName, type StepId } from "@cortex/shared";
 import type { Turn } from "@/agent/reduce";
 import { seconds } from "@/lib/format";

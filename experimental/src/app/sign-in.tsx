@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, useSignIn, useSignUp, useSSO } from "@clerk/expo";
-import { ArrowRight, MailCheck } from "lucide-react-native";
+import { ArrowRight, MailCheck } from "@/ui/icons";
 import { API_URL, OAUTH_ENABLED } from "@/config";
 import { explainClerk, type Mode } from "@/auth/explain";
 import { haptic } from "@/haptics";

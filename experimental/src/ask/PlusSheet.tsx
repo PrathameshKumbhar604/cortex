@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { AudioLines, Paperclip } from "lucide-react-native";
+import { AudioLines, Paperclip } from "@/ui/icons";
 import type { RunMode } from "@cortex/shared";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Rule, Txt } from "@/ui/primitives";
