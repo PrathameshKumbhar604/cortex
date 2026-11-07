@@ -37,13 +37,28 @@ const readSeen = (): string[] => {
 };
 
 let state: BriefState | null = null;
-let seen = readSeen();
+let seen: string[] | null = null; // read on first use: settings load after this module
+const getSeen = () => (seen ??= readSeen());
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
-export async function loadBrief(refresh = false) {
+/** The sources the brief covers, as picked on the Brief screen (all of them when nothing is picked). */
+export const readPick = (): string[] | null => {
   try {
-    state = await api<BriefState>(`/api/brief${refresh ? "?refresh=1" : ""}`, { timeoutMs: 20_000 });
+    const v = JSON.parse(prefs.getString("cortex.brief.pick") ?? "null");
+    return Array.isArray(v) && v.length ? v : null;
+  } catch {
+    return null;
+  }
+};
+
+export async function loadBrief(refresh = false) {
+  const q = new URLSearchParams();
+  const pick = readPick();
+  if (pick) q.set("sources", pick.join(","));
+  if (refresh) q.set("refresh", "1");
+  try {
+    state = await api<BriefState>(`/api/brief?${q}`, { timeoutMs: 20_000 });
   } catch (e) {
     state = { brief: state?.brief ?? null, generating: false, error: e instanceof Error ? e.message : "Couldn't load the brief." };
   }
@@ -53,7 +68,7 @@ export async function loadBrief(refresh = false) {
 
 /** Remembers the cards on screen as seen (the 200 most recent keys). */
 export function markSeen(cards: BriefCard[]) {
-  seen = [...new Set([...cards.map(cardKey), ...seen])].slice(0, 200);
+  seen = [...new Set([...cards.map(cardKey), ...getSeen()])].slice(0, 200);
   prefs.set(SEEN, JSON.stringify(seen));
   emit();
 }
@@ -66,6 +81,6 @@ export function useBrief() {
   useEffect(() => {
     if (!state) void loadBrief();
   }, []);
-  const unseen = v?.brief ? unseenCount(v.brief.cards, seen) : 0;
+  const unseen = v?.brief ? unseenCount(v.brief.cards, getSeen()) : 0;
   return { state: v, unseen };
 }

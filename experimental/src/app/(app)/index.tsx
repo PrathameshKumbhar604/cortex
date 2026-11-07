@@ -34,7 +34,7 @@ const pick = (list: string[]) => [...list].sort(() => Math.random() - 0.5).slice
 export default function Ask() {
   const { c, scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { t } = useLocalSearchParams<{ t?: string }>();
+  const { t, q } = useLocalSearchParams<{ t?: string; q?: string }>();
   const { turns, busy, serverThreadId } = useAgentState();
   const info = useWorkspace();
   const workspace = info?.workspace ?? "demo";
@@ -72,6 +72,14 @@ export default function Ask() {
       setFiles([]);
     }
   }, [t]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ?q=… (a Brief item's Ask) asks in a new chat, once the new chat above is in place (next render).
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null);
+  useEffect(() => {
+    if (!q) return;
+    router.setParams({ q: undefined });
+    setPendingAsk(q);
+  }, [q]);
 
   // Saved when a question starts and when its answer (or a decision) finishes; just opening a chat doesn't reorder it.
   useEffect(() => {
@@ -112,6 +120,13 @@ export default function Ask() {
     },
     [files, localId, mode],
   );
+
+  useEffect(() => {
+    if (pendingAsk && !busy) {
+      setPendingAsk(null);
+      submit(pendingAsk);
+    }
+  }, [pendingAsk, submit, busy]);
 
   const attach = async () => {
     const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });

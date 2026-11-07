@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { ConnectorStatus } from "@cortex/shared";
 import { api } from "@/api/client";
+import { loadBrief } from "@/brief/seen";
 import { prefs } from "@/storage";
 
 // What /api/connections says about this account: Sample or Live, whether it's an admin, and every source's status.
@@ -34,6 +35,7 @@ export async function switchWorkspace(workspace: "demo" | "live") {
   await api("/api/connections", { method: "PUT", json: { workspace } });
   prefs.set("cortex.workspace", workspace);
   await refreshWorkspace();
+  void loadBrief(); // the brief belongs to the workspace
 }
 
 export function useWorkspace() {
