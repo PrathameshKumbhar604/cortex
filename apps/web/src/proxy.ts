@@ -58,7 +58,9 @@ const withCleanCookies: NextMiddleware = async (request, event) => {
       const to = url.clone();
       to.searchParams.set("cc", "1");
       const res = NextResponse.redirect(to);
-      const parent = parentDomain(url.hostname);
+      // Behind Caddy, nextUrl is the internal address; the Host the browser used is in the headers.
+      const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.hostname).split(",")[0]!.trim().replace(/:\d+$/, "");
+      const parent = parentDomain(host);
       for (const name of stale) {
         res.headers.append("set-cookie", `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
         if (parent) res.headers.append("set-cookie", `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure; Domain=${parent}`);
