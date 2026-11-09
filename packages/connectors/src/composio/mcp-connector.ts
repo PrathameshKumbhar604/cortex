@@ -64,7 +64,11 @@ class ComposioMcpSession {
     } catch {
       throw new ConnectorError("composio", text.slice(0, 200) || `${name} returned nothing`);
     }
-    if (res.isError || body.successful === false) throw new ConnectorError("composio", String(body.error ?? text).slice(0, 200));
+    if (res.isError || body.successful === false) {
+      // A failed tool run says only "1 out of 1 tools failed" at the top; the reason is in the tool's own result.
+      const r = (body.data?.results as { response?: { error?: unknown }; error?: unknown }[] | undefined)?.[0];
+      throw new ConnectorError("composio", String(r?.response?.error || r?.error || body.error || text).slice(0, 200));
+    }
     return body.data ?? {};
   }
 
@@ -109,7 +113,8 @@ class ComposioMcpSession {
       error?: unknown;
     }[];
     const first = results[0];
-    const err = first?.error ?? (first?.response?.successful === false ? first.response.error : null);
+    // The tool's own error says why ("start_datetime is invalid…"); the outer one is only "1 out of 1 tools failed".
+    const err = (first?.response?.successful === false ? first.response.error : null) || first?.error || (data as { error?: unknown }).error;
     if (err) throw new ConnectorError("composio", String(err).slice(0, 200));
     // Large results come back as a truncated `data_preview`; never fall back to the envelope,
     // which also holds Composio's structure metadata and would be mistaken for records.

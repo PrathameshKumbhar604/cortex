@@ -95,6 +95,17 @@ const FILE_TYPES: Record<string, string> = {
 const s = (v: unknown) => (v == null ? "" : String(v));
 const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : s(v).split(",").map((x) => x.trim()).filter(Boolean));
 
+/** A date or date-time as written ("2026-11-17", "2026-11-17T10:30:00Z"): its date and HH:MM, ignoring any zone. */
+function wallTime(v: unknown): { iso: string; date: string; time?: string } {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(s(v).trim());
+  const iso = m?.[1] ?? new Date().toISOString().slice(0, 10);
+  const date = new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return { iso, date, time: m?.[2] };
+}
+const nextDay = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + DAY).toISOString().slice(0, 10);
+// shortcut: one zone for everyone (CORTEX_TIMEZONE on the server); pass the browser's zone once users span regions.
+const userTimeZone = () => process.env.CORTEX_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 /**
  * Composio tool slugs per app. Slugs are data, not code: if Composio renames
  * one, change it here (verify with `npm run composio:inspect`).
@@ -198,24 +209,38 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         risk: "high",
         params: [
           { name: "title", type: "string", description: "event title", required: true },
-          { name: "start", type: "string", description: "ISO start datetime", required: true },
+          { name: "start", type: "string", description: "start as the user said it: YYYY-MM-DDTHH:MM:SS local time, or YYYY-MM-DD for an all-day event", required: true },
           { name: "durationMinutes", type: "number", description: "length in minutes" },
           { name: "attendees", type: "string[]", description: "attendee emails" },
           { name: "description", type: "string", description: "event notes" },
         ],
-        preview: (a) =>
-          `${s(a.title)}\n${new Date(s(a.start)).toLocaleString()} · ${Number(a.durationMinutes ?? 30)} min` +
-          (list(a.attendees).length ? `\nInvite: ${list(a.attendees).join(", ")}` : ""),
-        toArgs: (a) => ({
-          summary: s(a.title),
-          start_datetime: s(a.start),
-          // shortcut: the server's time zone stands in for the user's; send the browser's zone once users are multi-region.
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          event_duration_hour: Math.floor(Number(a.durationMinutes ?? 30) / 60),
-          event_duration_minutes: Number(a.durationMinutes ?? 30) % 60,
-          attendees: list(a.attendees),
-          description: s(a.description),
-        }),
+        preview: (a) => {
+          const w = wallTime(a.start);
+          return (
+            `${s(a.title)}\n${w.time ? `${w.date}, ${w.time} · ${Number(a.durationMinutes ?? 30)} min` : `${w.date} · all day`}` +
+            (list(a.attendees).length ? `\nInvite: ${list(a.attendees).join(", ")}` : "")
+          );
+        },
+        toArgs: (a) => {
+          const w = wallTime(a.start);
+          const minutes = Number(a.durationMinutes ?? 30);
+          const when = w.time
+            ? {
+                // The time as the person said it, in their time zone (a trailing Z or offset from the model is dropped).
+                start_datetime: `${w.iso}T${w.time}:00`,
+                timezone: userTimeZone(),
+                event_duration_hour: Math.floor(minutes / 60),
+                event_duration_minutes: minutes % 60,
+              }
+            : { start_date: w.iso, end_date: nextDay(w.iso) }; // a date alone is an all-day event
+          return {
+            summary: s(a.title),
+            ...when,
+            attendees: list(a.attendees),
+            description: s(a.description),
+            create_meeting_room: list(a.attendees).length > 0, // a Meet link only when someone else is invited
+          };
+        },
       },
     ],
   },
@@ -231,7 +256,27 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
       toArgs: () => ({ showCompleted: false, showHidden: false, max_tasks_total: 50 }),
       records: (data) => (data as { tasks?: unknown } | null)?.tasks ?? data,
     },
-    actions: [],
+    actions: [
+      {
+        id: "create_task",
+        slug: "GOOGLETASKS_INSERT_TASK",
+        title: "Create task",
+        description: "Add a to-do to Google Tasks",
+        risk: "low",
+        params: [
+          { name: "title", type: "string", description: "what to do", required: true },
+          { name: "due", type: "string", description: "due date YYYY-MM-DD (Google Tasks keeps the date only)" },
+          { name: "notes", type: "string", description: "details" },
+        ],
+        preview: (a) => `${s(a.title)}${a.due ? `\nDue ${wallTime(a.due).date}` : ""}${a.notes ? `\n${s(a.notes)}` : ""}`,
+        toArgs: (a) => ({
+          title: s(a.title),
+          tasklist_id: "@default",
+          ...(a.due ? { due: `${wallTime(a.due).iso}T00:00:00.000Z` } : {}),
+          ...(a.notes ? { notes: s(a.notes) } : {}),
+        }),
+      },
+    ],
   },
   {
     id: "drive",

@@ -332,3 +332,41 @@ describe("web search fallbacks", () => {
     expect(buildRegistry("demo", {}).get("web")).toBeUndefined();
   });
 });
+
+describe("calendar and task actions", () => {
+  const action = (source: string, id: string) => TOOLKITS.find((t) => t.id === source)!.actions.find((a) => a.id === id)!;
+
+  it("a date with no time becomes an all-day event", () => {
+    const a = action("calendar", "create_event");
+    const args = a.toArgs({ title: "Practical exam", start: "2026-11-17" });
+    expect(args).toMatchObject({ summary: "Practical exam", start_date: "2026-11-17", end_date: "2026-11-18" });
+    expect(args.start_datetime).toBeUndefined();
+    expect(a.preview({ title: "Practical exam", start: "2026-11-17" })).toContain("all day");
+    expect(a.preview({ title: "Practical exam", start: "2026-11-17" })).not.toContain("12:00");
+  });
+
+  it("a timed event keeps the time as said, in the user's time zone, without a Meet link when nobody is invited", () => {
+    process.env.CORTEX_TIMEZONE = "Asia/Kolkata";
+    const a = action("calendar", "create_event");
+    expect(a.toArgs({ title: "Viva", start: "2026-11-17T10:30:00Z", durationMinutes: 90 })).toMatchObject({
+      start_datetime: "2026-11-17T10:30:00",
+      timezone: "Asia/Kolkata",
+      event_duration_hour: 1,
+      event_duration_minutes: 30,
+      create_meeting_room: false,
+    });
+    expect(a.toArgs({ title: "Sync", start: "2026-11-17T09:00:00+05:30", attendees: ["a@b.co"] })).toMatchObject({ start_datetime: "2026-11-17T09:00:00", create_meeting_room: true });
+    expect(a.preview({ title: "Viva", start: "2026-11-17T10:30:00Z", durationMinutes: 90 })).toContain("10:30");
+  });
+
+  it("creates a Google Task in the default list, due on a date", () => {
+    const a = action("tasks", "create_task");
+    expect(a.toArgs({ title: "Submit lab file", due: "2026-11-18", notes: "Print 2 copies" })).toEqual({
+      title: "Submit lab file",
+      tasklist_id: "@default",
+      due: "2026-11-18T00:00:00.000Z",
+      notes: "Print 2 copies",
+    });
+    expect(a.toArgs({ title: "Call Asha" })).toEqual({ title: "Call Asha", tasklist_id: "@default" });
+  });
+});

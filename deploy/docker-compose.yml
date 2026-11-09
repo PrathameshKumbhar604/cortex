@@ -5,6 +5,7 @@ services:
     env_file: .env
     environment:
       MEMORY_SERVICE_URL: http://memory:8000
+      CORTEX_TIMEZONE: ${CORTEX_TIMEZONE:-Asia/Kolkata} # the zone events are created in; override in .env
     volumes:
       - ./data:/app/.data # accounts DB, uploaded files, speech models
     depends_on: [memory]
