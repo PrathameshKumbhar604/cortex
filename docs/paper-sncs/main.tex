@@ -1,0 +1,409 @@
+%% SN Computer Science (Springer Nature) submission. Built on the Springer Nature LaTeX template (sn-jnl.cls,
+%% December 2024 package): open "Springer Nature LaTeX Template" on Overleaf, replace its sample .tex with this file,
+%% upload refs.bib, compile with pdfLaTeX + BibTeX. See SUBMISSION.md.
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% numbered references
+
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\newcommand{\placeholder}[1]{\textcolor{red}{[#1]}}
+
+\raggedbottom
+
+\begin{document}
+
+\title[Agentic RAG over Live Workspace Data]{Agentic Retrieval-Augmented Generation over Live Workspace Data: A Survey and the Cortex Assistant}
+
+\author*[1]{\fnm{Swapnali} \sur{Gaikwad}}\email{swapnali.gaikwad@dypvp.edu.in}
+\author[1]{\fnm{Ajit} \sur{Paraskar}}\email{ajitparaskar87@gmail.com}
+\author[1]{\fnm{Prathamesh} \sur{Kumbhar}}\email{prathameshkumbhar.dev@gmail.com}
+\author[1]{\fnm{Harshvardhan} \sur{Patil}}\email{harsh.patil.tech@gmail.com}
+\author[1]{\fnm{Bikram} \sur{Ghosh}}\email{ghoshbikram2725@gmail.com}
+
+\affil[1]{\orgdiv{Department of Computer Engineering}, \orgname{Dr. D. Y. Patil Institute of Technology}, \orgaddress{\city{Pimpri, Pune}, \postcode{411018}, \state{Maharashtra}, \country{India}}}
+
+\abstract{Retrieval-augmented generation (RAG) grounds a large language model (LLM) in retrieved text, but a single retrieve-then-read pass struggles with multi-hop questions, noisy passages and changing data. In agentic RAG the model controls retrieval itself: it can decompose a question, search repeatedly, choose a tool, judge its evidence and keep memory. This survey organises the literature into eight design dimensions (query planning, iterative retrieval, granularity and search policy, self-reflection, tool use, long-term memory, attribution and evaluation) and compares 14 representative methods along them. We analyse in depth GRASP, a recent reinforcement-learning policy that chooses at each step between semantic search, keyword search and reading a whole paragraph over a sentence-level index, because it is the clearest evidence that learning the unit of evidence improves answer accuracy. To show which research ideas survive outside static benchmarks, we describe Cortex, an open-source assistant we built over six workplace applications, which plans sub-questions, searches in parallel, verifies each cited claim, keeps memories with provenance and expiry, and executes actions only after user approval. In a preliminary 12-question evaluation over a synthetic workspace, the cited evidence covered 92\% of the expected key facts, the assistant abstained when no evidence existed, and no action ran without consent. We close with open problems: supervision without gold evidence, evidence units for mail, chat and code, conflict handling, and cost-aware evaluation.}
+
+\keywords{Retrieval-augmented generation, Agentic RAG, Large language models, Search policy, Citation verification, Agent memory}
+
+\maketitle
+
+%=====================================================================
+\section{Introduction}
+%=====================================================================
+
+An LLM's knowledge is frozen at training time and goes stale. RAG conditions the answer on passages fetched from an external corpus~\cite{lewis2020rag}, usually in one pass, with a retriever ranking chunks and a generator reading the top few~\cite{gao2023ragsurvey}. That works for one fact in a fixed collection. It fails when the second half of a question can only be searched after the first is answered~\cite{trivedi2023ircot,press2023selfask}, when retrieved text is noisy enough to mislead~\cite{shi2023distracted,liu2024lost}, and when the data keeps changing, as deadlines and issue states do~\cite{vu2024freshllms}.
+
+In agentic RAG the model makes these calls itself. It decides whether to break the question up, when and how to search, whether it has enough evidence, and what is worth remembering~\cite{singh2025agenticrag}. Early methods relied on prompting~\cite{yao2023react,trivedi2023ircot,jiang2023flare}. Newer ones learn search behaviour with reinforcement learning (RL)~\cite{jin2025searchr1,luo2025maragr1}.
+
+We build the review around GRASP (GRanularity-Aware Search Policy)~\cite{gandhi2026grasp}. Most systems fix the retrieval signal and the size of the text unit before any question arrives. GRASP learns both. Its searches return single sentences, and the agent reads the surrounding paragraph only when it asks to.
+
+Our second subject is Cortex, an assistant we built over a small team's apps. It is not an implementation of GRASP. It plans once, searches in parallel and treats each source item as a fixed unit of evidence. Because we built it on free-tier models, rate limits shaped most of its design, and setting it beside GRASP helps show which research ideas survive in that kind of setting.
+
+\textbf{Contributions.} This survey makes four contributions. (i) Section~\ref{sec:method} states the research questions and how the literature was selected. (ii) Section~\ref{sec:taxonomy} sets out an eight-dimension taxonomy of agentic RAG and analyses GRASP in depth. (iii) Section~\ref{sec:compare} compares representative methods along the taxonomy and identifies which dimensions are rarely combined. (iv) Section~\ref{sec:cortex} describes Cortex, a deployed assistant over live workspace data, maps its design to the literature with preliminary measurements, and Section~\ref{sec:challenges} derives open problems from the gaps between the two.
+
+%=====================================================================
+\section{Review Methodology}
+\label{sec:method}
+%=====================================================================
+
+\textbf{Research questions.} The review is guided by three questions. \emph{RQ1:} which design decisions do agentic RAG systems hand to the model, and how can they be organised? \emph{RQ2:} how do representative methods combine these decisions, and which combinations are missing? \emph{RQ3:} which open problems appear when agentic RAG moves from static benchmark corpora to private, changing, multi-source data with side-effecting actions?
+
+\textbf{Sources and search.} We searched arXiv (cs.CL, cs.AI, cs.IR), the ACL Anthology, the NeurIPS, ICLR and ICML proceedings, and Google Scholar for work published between 2018 and \placeholder{month year of the search}, using combinations of the terms ``retrieval-augmented generation'', ``agentic RAG'', ``multi-step retrieval'', ``search agent'', ``tool use'', ``agent memory'' and ``attribution''. Backward and forward citation tracking from the included papers added further work.
+
+\textbf{Inclusion and exclusion.} We included work that (a) lets a language model decide when, how or what to retrieve, or (b) adds a component that agentic systems rely on in practice: tool and connector protocols, long-term memory, citation verification, or evaluation. We excluded work that only improves a retriever or reader without changing who controls retrieval, and duplicate versions of the same paper, preferring the peer-reviewed version where one exists. \placeholder{If you kept counts, add one sentence: ``The search returned N records; after screening titles, abstracts and full texts, M works were included.'' If not, delete this note; do not estimate numbers.}
+
+\textbf{Analysis.} Each included method was read and coded along the eight dimensions of Fig.~\ref{fig:taxonomy}, as described in its own publication. GRASP~\cite{gandhi2026grasp} was chosen for in-depth analysis because, among the included works, it gives the most direct experimental evidence that letting the agent choose the evidence unit changes answer accuracy.
+
+%=====================================================================
+\section{Background}
+%=====================================================================
+
+\subsection{Retrievers and Retrieval Units}
+BM25 ranks documents by term overlap and favours rare terms~\cite{robertson2009bm25}, so it handles exact names and identifiers well. Dense retrievers such as DPR embed questions and passages in one vector space~\cite{karpukhin2020dpr} and can catch paraphrases. Static pipelines often run both and re-rank~\cite{gao2023ragsurvey}.
+
+The indexed unit matters too. In Dense X, indexing short single-fact propositions instead of passages improved retrieval and QA at a fixed reader budget~\cite{chen2024densex}. RAPTOR builds a tree of recursive cluster summaries for broad questions~\cite{sarthi2024raptor}, and GraphRAG summarises communities in an entity graph~\cite{edge2024graphrag}. In each case the unit is fixed at index time.
+
+\subsection{Limits of Single-Pass RAG}
+More context is not always better. Irrelevant sentences lower accuracy~\cite{shi2023distracted}, and models underuse information placed in the middle of long inputs~\cite{liu2024lost}. Multi-hop benchmarks such as HotpotQA~\cite{yang2018hotpotqa}, 2WikiMultiHopQA~\cite{ho2020twowiki} and MuSiQue~\cite{trivedi2022musique} hide the second-hop entity until the first hop is solved, and Press \textit{et al.} name the resulting failure the ``compositionality gap''~\cite{press2023selfask}.
+
+%=====================================================================
+\section{A Taxonomy of Agentic RAG}
+\label{sec:taxonomy}
+%=====================================================================
+
+Fig.~\ref{fig:taxonomy} groups the work into eight dimensions. A single system usually makes choices along several of them at once.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  root/.style={draw, thick, rounded corners=2pt, fill=gray!18, align=center, inner sep=4pt, minimum height=7mm},
+  cat/.style={draw, rounded corners=2pt, align=center, text width=3.75cm, minimum height=2.1cm, inner sep=3pt},
+  hl/.style={cat, very thick, fill=gray!10}
+]
+\node[root] (root) at (0,0) {\textbf{Agentic RAG}\\design dimensions};
+% upper row
+\node[cat] (a) at (-6.45, 1.85) {\textbf{A. Query planning and decomposition}\\[2pt] Self-Ask~\cite{press2023selfask}, query rewriting~\cite{ma2023rewrite}, ReAct~\cite{yao2023react}};
+\node[cat] (b) at (-2.15, 1.85) {\textbf{B. Iterative and adaptive retrieval}\\[2pt] IRCoT~\cite{trivedi2023ircot}, FLARE~\cite{jiang2023flare}, Iter-RetGen~\cite{shao2023iterretgen}, Adaptive-RAG~\cite{jeong2024adaptiverag}};
+\node[hl]  (c) at ( 2.15, 1.85) {\textbf{C. Granularity and search policy}\\[2pt] \textbf{GRASP}~\cite{gandhi2026grasp}, Search-R1~\cite{jin2025searchr1}, MARAG-R1~\cite{luo2025maragr1}, A-RAG~\cite{du2026arag}, Dense X~\cite{chen2024densex}};
+\node[cat] (d) at ( 6.45, 1.85) {\textbf{D. Self-reflection and corrective retrieval}\\[2pt] Self-RAG~\cite{asai2024selfrag}, CRAG~\cite{yan2024crag}, Reflexion~\cite{shinn2023reflexion}};
+% lower row
+\node[cat] (e) at (-6.45,-1.85) {\textbf{E. Tool use and connectors}\\[2pt] Toolformer~\cite{schick2023toolformer}, ReAct~\cite{yao2023react}, MCP~\cite{anthropic2024mcp,hou2025mcp}};
+\node[cat] (f) at (-2.15,-1.85) {\textbf{F. Long-term memory}\\[2pt] MemGPT~\cite{packer2023memgpt}, Generative Agents~\cite{park2023generative}, Mem0~\cite{chhikara2025mem0}};
+\node[cat] (g) at ( 2.15,-1.85) {\textbf{G. Attribution and citation verification}\\[2pt] ALCE~\cite{gao2023alce}, AIS~\cite{rashkin2023ais}, FActScore~\cite{min2023factscore}};
+\node[cat] (h) at ( 6.45,-1.85) {\textbf{H. Evaluation}\\[2pt] multi-hop QA~\cite{yang2018hotpotqa,ho2020twowiki,trivedi2022musique}, RAGAs~\cite{es2024ragas}, FreshQA~\cite{vu2024freshllms}};
+% connectors (bus lines)
+\draw (root.north) -- (0,0.65);
+\draw (-6.45,0.65) -- (6.45,0.65);
+\foreach \nd/\x in {a/-6.45,b/-2.15,c/2.15,d/6.45} { \draw (\x,0.65) -- (\nd.south); }
+\draw (root.south) -- (0,-0.65);
+\draw (-6.45,-0.65) -- (6.45,-0.65);
+\foreach \nd/\x in {e/-6.45,f/-2.15,g/2.15,h/6.45} { \draw (\x,-0.65) -- (\nd.north); }
+\end{tikzpicture}
+\caption{The eight design dimensions used in this review, with representative (not exhaustive) methods for each. Branch C, shaded, holds the anchor work GRASP~\cite{gandhi2026grasp}. Some methods, such as ReAct, appear in two branches.}
+\label{fig:taxonomy}
+\end{figure*}
+
+\subsection{Query Planning and Decomposition}
+Self-Ask writes out follow-up questions and sends each to a search engine~\cite{press2023selfask}. In Rewrite-Retrieve-Read a small rewriter is trained with RL, with the reader's output as feedback~\cite{ma2023rewrite}, while ReAct chooses every action only after seeing the previous observation~\cite{yao2023react}. A plan made up front is predictable and parallelises easily. A step-by-step plan adapts to results but costs extra calls.
+
+\subsection{Iterative and Adaptive Retrieval}
+IRCoT uses each chain-of-thought sentence as the next query~\cite{trivedi2023ircot}. FLARE retrieves when a drafted sentence contains low-confidence tokens~\cite{jiang2023flare}, and Iter-RetGen queries with a whole draft answer~\cite{shao2023iterretgen}. Adaptive-RAG trains a classifier that picks no, single-step or multi-step retrieval by question complexity~\cite{jeong2024adaptiverag}. These methods vary when retrieval happens; the retriever and chunk size stay put.
+
+\subsection{Search Granularity and Search Policies}
+\label{sec:grasp}
+Search-R1 trains an LLM with RL to search in the middle of its reasoning, rewarding only the final answer~\cite{jin2025searchr1}, and Search-o1 adds search to large reasoning models~\cite{li2025searcho1}. MARAG-R1 trains an agent with semantic, keyword, filter and aggregate tools~\cite{luo2025maragr1}. A-RAG exposes keyword search, semantic search and chunk reading as separate interfaces~\cite{du2026arag}. GRASP needs a closer look.
+
+\subsubsection{Problem}
+Gandhi \textit{et al.} observe that RL-trained retrieval agents are normally bound to one retriever and to fixed chunks of fair size~\cite{gandhi2026grasp}. The kind and amount of evidence then cannot change between steps. GRASP folds three decisions into one learned policy: how to mix lexical with dense search, how much to read, and when to stop.
+
+\subsubsection{Formulation and actions}
+GRASP models the search loop as an MDP with a fixed turn limit. Its state holds the question, the history, the evidence and tools used so far, and the remaining turn budget. Each paragraph is split into sentences that point back to it. At each step the policy reasons and then takes one action: \emph{semantic search} (Qwen3-0.6B embeddings), \emph{keyword search} (BM25), \emph{read paragraph} (the parent of a retrieved sentence) or \emph{answer}. Searches return the top $K=5$ sentences, so the agent spends context on a full paragraph only by choice.
+
+\subsubsection{Reward}
+The trajectory reward is
+\begin{equation}
+R = R_A + \alpha R_R + \beta R_S + \gamma R_E, \quad (\alpha,\beta,\gamma) = (0.7, 0.15, 0.15).
+\label{eq:grasp}
+\end{equation}
+$R_A$ is answer token F1. $R_R$ is the F1 between paragraphs read and gold supporting paragraphs, which penalises reading distractors. $R_S$ is 1 only if semantic and keyword search \emph{each} find a gold paragraph. $R_E = (T - T_{\text{cur}})/T$, where $T$ is the turn budget, rewards finishing early. It is paid only when $R_A > 0.5$, so a fast wrong answer earns nothing. The auxiliary weights sum to 1, which keeps answer F1 dominant and limits reward hacking.
+
+\subsubsection{Training and evaluation}
+Qwen2.5-3B-Instruct is fine-tuned with GRPO~\cite{shao2024deepseekmath} on the HotpotQA distractor split~\cite{yang2018hotpotqa} for 270 steps, only about 19\% of an epoch. Episodes stop after 10 turns, and retrieved tokens are masked out of the loss. Testing uses 500 validation questions from each of HotpotQA, 2WikiMultiHopQA and MuSiQue~\cite{yang2018hotpotqa,ho2020twowiki,trivedi2022musique}. The last two are never seen in training. Baselines are single-step lexical, semantic and hybrid retrieval, IRCoT driven by a proprietary model, the public Search-R1 PPO and GRPO checkpoints, and an untrained ``Base'' agent given GRASP's prompt and tools.
+
+\begin{table}[t]
+\centering
+\caption{Results reported by GRASP~\cite{gandhi2026grasp}: retrieval recall (R) and answer F1 on 500 validation questions per dataset. Compare the F1 columns: GRASP is best on all three, while IRCoT leads on HotpotQA recall. Numbers are copied from the GRASP paper, not re-run.}
+\label{tab:grasp}
+\setlength{\tabcolsep}{4pt}
+\footnotesize
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & \multicolumn{2}{c}{HotpotQA} & \multicolumn{2}{c}{2Wiki} & \multicolumn{2}{c}{MuSiQue} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Method & R & F1 & R & F1 & R & F1 \\
+\midrule
+Single-step hybrid   & 0.86 & 0.48 & 0.60 & 0.32 & 0.59 & 0.20 \\
+IRCoT                & \textbf{0.91} & 0.36 & 0.83 & 0.40 & 0.62 & 0.15 \\
+Search-R1 (PPO)      & 0.76 & 0.47 & 0.74 & 0.48 & 0.55 & 0.26 \\
+Search-R1 (GRPO)     & 0.74 & 0.56 & 0.77 & 0.53 & 0.62 & 0.30 \\
+Base (no RL)         & 0.36 & 0.24 & 0.27 & 0.20 & 0.24 & 0.10 \\
+GRASP                & 0.90 & \textbf{0.66} & \textbf{0.90} & \textbf{0.60} & \textbf{0.70} & \textbf{0.33} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Findings}
+On all three datasets GRASP has the best F1, and it has the best recall on 2WikiMultiHopQA and MuSiQue (Table~\ref{tab:grasp}). The authors put IRCoT's slightly higher HotpotQA recall down to the strong proprietary model writing its reasoning. Even single-step retrieval beats the untrained Base agent, so tools do little for a model that has not learned to use them. In a HotpotQA ablation, F1 falls only from 0.631 to 0.621 without keyword search and to 0.567 without semantic search, but removing the read action (searches then return whole paragraphs) brings it down to 0.484. The authors' reading is that a paragraph puts many entities in view at once, and the agent's next queries drift back toward the original question instead of following one clue.
+
+\subsubsection{Learned behaviour}
+A typical trajectory starts with semantic search. The agent reads one paragraph to pick up a bridge entity and runs a keyword search on it; if that fails, it widens to a broader semantic query. The authors liken this to skimming a page and then scanning it for a name.
+
+\subsubsection{Limitations stated by the authors}
+$R_R$ and $R_S$ need gold supporting facts, which few corpora have. The policy also sometimes answers too early, tool use plateaus near eight calls, and only one 3B backbone was tried. For future work they propose larger tool sets, rewards built from weaker or model-based grounding signals, and granularity that ranges from spans to whole document regions. Their ethics statement recommends provenance, citations, audit logs and human approval for consequential actions, all of which return in Section~\ref{sec:cortex}.
+
+\subsection{Self-Reflection and Corrective Retrieval}
+Self-RAG learns reflection tokens that decide when to retrieve and grade relevance and support~\cite{asai2024selfrag}. CRAG scores what was retrieved and switches to web search if the documents look poor~\cite{yan2024crag}, and Reflexion writes notes on past failures for the next attempt~\cite{shinn2023reflexion}. GRASP has no critic at inference time. The grounded-reading reward does that job, but only while the policy is trained.
+
+\subsection{Tool Use and Connector Protocols}
+Toolformer learns from a few examples where API calls help~\cite{schick2023toolformer}, and ReAct made interleaved reasoning and tool calls common~\cite{yao2023react}. Anthropic's Model Context Protocol (MCP), released in November 2024, standardises how clients discover and call external tools~\cite{anthropic2024mcp}, but every server adds attack surface~\cite{hou2025mcp}. Indirect prompt injection becomes a concrete risk once retrieved text can trigger tool calls~\cite{greshake2023injection}.
+
+\subsection{Long-Term Memory}
+MemGPT swaps data between the context window and external storage, much like OS paging~\cite{packer2023memgpt}. Generative Agents score memories on recency, importance and relevance, then write reflections back~\cite{park2023generative}. Mem0 pulls facts out of conversations and consolidates them, optionally as a graph~\cite{chhikara2025mem0}. Once the data is personal, provenance, expiry and deletion cannot be afterthoughts.
+
+\subsection{Attribution and Citation Verification}
+ALCE tests whether cited passages support an LLM's statements and finds many that do not~\cite{gao2023alce}. AIS defines attribution to identified sources for human raters~\cite{rashkin2023ais}, and FActScore scores atomic facts against a knowledge source~\cite{min2023factscore}. Like Cortex, all three judge individual claims.
+
+\subsection{Evaluation}
+Most agentic RAG work, GRASP included, evaluates on Wikipedia multi-hop QA~\cite{yang2018hotpotqa,ho2020twowiki,trivedi2022musique}. RAGAs scores faithfulness without reference answers~\cite{es2024ragas}, and FreshQA targets answers that change over time~\cite{vu2024freshllms}. We found no benchmark for agents that work over private, changing, multi-source data and also take actions.
+
+%=====================================================================
+\section{Comparative Analysis}
+\label{sec:compare}
+%=====================================================================
+
+Table~\ref{tab:compare} compares representative methods. ``Granularity'' records whether the evidence unit is fixed or chosen by the agent, and ``Live data'' whether sources change at question time. A dash means the work does not address that dimension.
+
+\begin{table*}[t]
+\centering
+\caption{Surveyed methods and Cortex along the taxonomy dimensions, as described in each publication. Read down a column to see which dimensions are rarely combined: no method with a learned policy also has memory, live data or actions.}
+\label{tab:compare}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}p{1.55cm}p{3.05cm}p{2.05cm}p{2.0cm}p{1.75cm}p{2.25cm}p{1.75cm}p{1.6cm}@{}}
+\toprule
+\textbf{Method} & \textbf{Retrieval strategy} & \textbf{Granularity} & \textbf{Policy} & \textbf{Memory} & \textbf{Verification} & \textbf{Live data} & \textbf{Actions} \\
+\midrule
+RAG~\cite{lewis2020rag} & Single-shot dense retrieval & Fixed passage & Fine-tuned retriever and generator & -- & -- & -- & -- \\
+Self-Ask~\cite{press2023selfask} & Explicit follow-up sub-questions & Search-engine answers & Prompting & -- & -- & Web search & -- \\
+IRCoT~\cite{trivedi2023ircot} & Retrieve at each reasoning step & Fixed paragraph & Prompting & -- & -- & -- & -- \\
+FLARE~\cite{jiang2023flare} & Retrieve when draft has low confidence & Fixed passage & Prompting & -- & Regenerate uncertain sentence & -- & -- \\
+Adaptive-RAG~\cite{jeong2024adaptiverag} & Route: none, single or multi-step & Fixed & Trained classifier & -- & -- & -- & -- \\
+Self-RAG~\cite{asai2024selfrag} & On demand via reflection tokens & Fixed passage & Fine-tuned & -- & Relevance and support tokens & -- & -- \\
+CRAG~\cite{yan2024crag} & Evaluator-triggered correction & Strip filtering & Trained evaluator & -- & Retrieval evaluator & Web fallback & -- \\
+ReAct~\cite{yao2023react} & Interleaved thought and action & API page or lookup & Prompting & -- & -- & Wikipedia API & Environment actions \\
+Search-R1~\cite{jin2025searchr1} & Multi-turn search in reasoning & Fixed passage & RL (PPO, GRPO) & -- & -- & -- & -- \\
+MARAG-R1~\cite{luo2025maragr1} & Semantic, keyword, filter, aggregate tools & Fixed chunk & SFT, then RL & -- & -- & -- & -- \\
+A-RAG~\cite{du2026arag} & Hierarchical retrieval interfaces & Keyword to chunk & Model-driven tool use & -- & -- & -- & -- \\
+\textbf{GRASP}~\cite{gandhi2026grasp} & Coordinated semantic and keyword search & Sentence, paragraph on demand & RL (GRPO), 4-part reward & -- & Grounded-reading reward (training only) & -- & -- \\
+MemGPT~\cite{packer2023memgpt} & Paging between context and storage & -- & Function calls & Tiered virtual context & -- & -- & -- \\
+Mem0~\cite{chhikara2025mem0} & Memory extraction and retrieval & -- & -- & Consolidated, graph variant & -- & -- & -- \\
+\midrule
+\textbf{Cortex} (ours) & LLM plan of 2--5 sub-questions, parallel per-source search, one bounded retry & Fixed per source item & Rules, prompted router and planner, hard budgets & Salience, TTL, decay, pin, edit, forget & Claim-level lexical check, LLM re-check, conflicts & Six apps, web, MCP servers & Proposed; run only after approval \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The learned search policies (Search-R1, MARAG-R1, GRASP) were all trained on static Wikipedia corpora with gold evidence, while the methods that query live sources use prompting. Only A-RAG and GRASP let the agent choose the evidence unit at query time, and GRASP's ablation is the most direct evidence we found that this choice changes accuracy. Memory, claim verification and actions appear in none of the learned-retrieval papers. They show up in deployed systems, where cost and side effects matter as much as benchmark scores.
+
+%=====================================================================
+\section{Case Study: Cortex}
+\label{sec:cortex}
+%=====================================================================
+
+Cortex answers questions such as ``what changed on this project this week, and what is at risk?'' over a user's connected apps. Every factual sentence cites numbered evidence, each claim is checked against the evidence it cites, conflicts between sources are listed, and requested actions wait for approval. We describe only what is implemented.
+
+\subsection{Architecture}
+Cortex has two modes. Deep mode plans sub-questions and asks an LLM to re-check doubtful claims. Fast mode skips both steps and saves those calls. Fig.~\ref{fig:cortex} shows one Deep-mode run. The orchestrator is a hand-written loop rather than a graph framework, so every branch is visible in the code and every run has a fixed ceiling: at most 5 sub-questions, 18 tool calls, 16 evidence items (8 in Fast mode), 90\,s, and 5 LLM calls in Deep mode or 3 in Fast mode.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  font=\scriptsize,
+  node distance=5mm,
+  stage/.style={draw, rounded corners=2pt, align=center, text width=3.5cm, minimum height=7mm, inner sep=2pt, fill=white},
+  side/.style={draw, dashed, rounded corners=2pt, align=center, text width=2.3cm, inner sep=2pt, fill=white},
+  gate/.style={draw, very thick, rounded corners=2pt, align=center, text width=2.3cm, inner sep=2pt, fill=gray!12},
+  arr/.style={-{Stealth[length=1.5mm]}},
+  darr/.style={{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}}
+]
+% centre column: the pipeline
+\node[stage] (u) {\textbf{Check and recall}: source status; top-5 memories};
+\node[stage, below=of u] (r) {\textbf{Route}: rules, else one small-model call};
+\node[stage, below=of r] (p) {\textbf{Plan} (LLM, JSON): \mbox{2--5} sub-questions with sources and keywords};
+\node[stage, below=of p] (s) {\textbf{Search}: all (sub-question, source) pairs in parallel; rank};
+\node[stage, below=of s] (y) {\textbf{Synthesize} (LLM, streamed): cite every factual sentence};
+\node[stage, below=of y] (v) {\textbf{Verify}: lexical claim check; LLM re-check of doubtful claims};
+\node[stage, below=of v] (a) {\textbf{Propose actions}: validate against connector schema};
+\node[stage, below=of a] (m) {\textbf{Remember}: rules gate, then at most 2 extracted items};
+\foreach \x/\y in {u/r, r/p, p/s, s/y, y/v, v/a, a/m} { \draw[arr] (\x) -- (\y); }
+% left column: memory service beside the step that reads it
+\coordinate (L) at (-3.35,0);
+\coordinate (R) at (3.35,0);
+\node[side, anchor=north] (mem) at (u.north -| L) {\textbf{Memory service}\\ vector search or SQLite FTS5\\ provenance, TTL, decay, pin, forget};
+\draw[darr] (u.west) -- (u.west -| mem.east);
+\draw[arr] (m.west) -| node[pos=0.75, fill=white, inner sep=1pt, font=\tiny, rotate=90] {write} (mem.south);
+% right column: connectors, LLM router, approval gate
+\node[side] (c) at (s -| R) {\textbf{Connectors}: Composio (6 apps), MCP servers, Firecrawl, sample data};
+\node[side, minimum height=1.9cm] (l) at ($(y.north -| R)!0.5!(v.south -| R)$) {\textbf{LLM router}: free-tier providers, failover, cooldowns, cache};
+\node[gate] (g) at (m -| R) {\textbf{User approval}: approve, edit or decline; one use, 30\,min expiry};
+\draw[darr] (s.east) -- (s.east -| c.west);
+\draw[arr] (y.east) -- (y.east -| l.west);
+\draw[arr] (v.east) -- (v.east -| l.west);
+\draw[arr] (a.east) -- ++(0.25,0) |- (g.west);
+\draw[arr, dashed] (g.east) -- ++(0.3,0) |- node[pos=0.25, fill=white, inner sep=1pt, font=\tiny, rotate=90] {execute once} (c.east);
+\end{tikzpicture}%
+}
+\caption{One Cortex run in Deep mode, top to bottom. Solid boxes are pipeline steps; dashed boxes are services they call. The only path to a connector's write action runs through the shaded approval box, which needs a separate request from the user. If search finds no evidence, the run stops after \emph{Search} without an LLM call.}
+\label{fig:cortex}
+\end{figure}
+
+\textbf{Check and recall.} An unavailable source is reported with the reason, and the run continues without it. The memory service returns up to five memories. Pinned ones are always included, and the rest are ranked by relevance times $0.5 + 0.5 \times$ salience.
+
+\textbf{Route.} Regular expressions handle clear cases at no model cost: greetings, ``remember that\ldots'', imperatives such as ``email\ldots'', and app names that narrow the search. Other questions cost one small-model call that returns a route (general, personal, web or action), the sources and the model tier. This follows Adaptive-RAG~\cite{jeong2024adaptiverag}, with rules and prompting in place of a trained classifier. It routed all 20 of our test questions correctly.
+
+\textbf{Plan.} In Deep mode one fast-tier LLM call returns JSON with a rewritten question, an optional time window and 2--5 sub-questions, each naming 1--3 sources and keywords. Invalid JSON, Fast mode and the action route fall back to one sub-question over all in-scope sources.
+
+\textbf{Search and rank.} All (source, query) pairs run in parallel with a 12\,s timeout, one retry and a 90\,s cache. A sub-question that finds nothing gets one broader retry at no LLM cost. Evidence is deduplicated and ranked by keyword overlap plus a recency bonus. If nothing is found, Cortex says so and stops without calling a model.
+
+\textbf{Synthesize.} The model may use only the numbered evidence and must cite every factual sentence. It then lists conflicts, gaps, proposed actions, memory candidates and follow-up questions.
+
+\textbf{Verify.} A cited sentence is \emph{supported} if at least 40\% of its content words, and every number and date, appear in the evidence it cites. Between 20\% and 40\% it is \emph{partial}, and below 20\% it is \emph{unsupported}. Hedges and advice are skipped. In Deep mode one LLM call re-checks up to eight doubtful claims. Groundedness is the mean claim score, with partial support counted as half.
+
+\textbf{Actions.} Proposed actions are validated against the connector's schema, stored with an exact preview and shown as a confirmation card. Only the approval endpoint executes them. Each approval is single-use, bound to one user and expires after 30 minutes, so model text never reaches a write API directly.
+
+\textbf{Memory.} A rules gate discards questions, small talk and anything that looks like a secret. Otherwise one fast-model call proposes at most two memories, each with a kind (priority, preference, fact, person or decision), a salience and a reason shown to the user. Explicit requests are stored at salience 0.95, other candidates only at 0.5 or above. A contradiction replaces an unpinned memory, and a near-duplicate reinforces it. In a scripted 30-message test this stored all 12 expected memories and no secrets. Priorities expire after 45 days, facts after 90 and decisions after 120, while preferences and people do not expire. Salience halves every 30 days unless pinned, and users can edit or delete any memory.
+
+Oracle Agent Memory stores the memory text and serves vector search with a 0.35 distance cut-off. A SQLite ledger holds provenance, pins, expiry and decay, caps unpinned memories at 200 per user, and provides FTS5 keyword search when Oracle is not configured.
+
+\textbf{Connectors and models.} Gmail, Google Calendar, Google Drive, Notion, Slack and GitHub connect through Composio. MCP servers and Firecrawl web search are configurable, and a fictional sample workspace with seeded conflicts is used for demos and evaluation. The LLM router tries free-tier providers in a fixed order (Groq, Gemini, Cerebras, OpenRouter, then Puter). A provider that hits a rate limit is put on cooldown, responses are cached, and a streamed answer switches provider only if no token has arrived yet.
+
+\textbf{Implementation.} A TypeScript monorepo shares one pipeline across the Next.js app, the tests and the evaluation scripts. The memory service runs on FastAPI.
+
+\subsection{Mapping Cortex to the Literature}
+Table~\ref{tab:map} links each design choice to prior work and to GRASP.
+
+\begin{table}[t]
+\centering
+\caption{Cortex design choices, the work each draws on, and how GRASP relates. The right column shows where a GRASP idea could replace a fixed rule in Cortex.}
+\label{tab:map}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}p{1.6cm}p{1.95cm}p{4.3cm}@{}}
+\toprule
+\textbf{Cortex choice} & \textbf{Related work} & \textbf{Relation to GRASP} \\
+\midrule
+Up-front plan of sub-questions & Self-Ask~\cite{press2023selfask}, rewriting~\cite{ma2023rewrite} & GRASP decides step by step; Cortex plans once for predictable cost. \\
+Parallel search, one retry & IRCoT~\cite{trivedi2023ircot}, Adaptive-RAG~\cite{jeong2024adaptiverag} & Multi-turn search could replace the fixed retry when a hop depends on an earlier result. \\
+Item-level evidence & Dense X~\cite{chen2024densex}, A-RAG~\cite{du2026arag} & Fixed unit; GRASP's ablation argues for sentence hits plus an explicit ``read'' action. \\
+Keyword queries to each source's own search & BM25~\cite{robertson2009bm25}, DPR~\cite{karpukhin2020dpr} & One signal per source; GRASP's complementary-search idea applies. \\
+Hard budgets & FLARE~\cite{jiang2023flare}, Adaptive-RAG~\cite{jeong2024adaptiverag} & Play the role of GRASP's turn-efficiency term, but fixed rather than learned. \\
+Claim verification, conflicts & ALCE~\cite{gao2023alce}, AIS~\cite{rashkin2023ais}, FActScore~\cite{min2023factscore}, CRAG~\cite{yan2024crag} & Could supply the weak grounding signal GRASP lists as future work. \\
+``Not found'' answer, list of gaps & Self-RAG~\cite{asai2024selfrag} & Addresses GRASP's stated failure mode of answering too early. \\
+Governed memory & MemGPT~\cite{packer2023memgpt}, Gen.\ Agents~\cite{park2023generative}, Mem0~\cite{chhikara2025mem0} & Outside GRASP's scope. \\
+MCP connectors, approval gate & ReAct~\cite{yao2023react}, MCP~\cite{anthropic2024mcp,hou2025mcp}, injection~\cite{greshake2023injection} & Follows GRASP's ethics advice on human approval for consequential actions. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Planning and retrieval.} One up-front plan, close to Self-Ask with rewriting~\cite{press2023selfask,ma2023rewrite}, fits free-tier limits and keeps latency low. The price is that no sub-question can use another's result, which is the bridge-entity step IRCoT and GRASP rely on~\cite{trivedi2023ircot,gandhi2026grasp}.
+
+\textbf{Where GRASP applies.} Four GRASP ideas carry over. \emph{Read on demand.} Cortex passes each source item to the synthesizer whole or truncated, so a long email thread costs a lot of context. The read-action ablation argues for returning the best-matching sentences with a pointer to the parent item and fetching the full thread only when a snippet looks relevant but incomplete. \emph{Complementary signals.} Connectors mostly rely on each app's keyword search. An embedding index over fetched items would add a semantic signal, although workspace questions full of issue numbers and names may favour keywords more than Wikipedia does. \emph{Learned budgets.} Cortex's hard limits play the role of GRASP's turn-efficiency term but cannot adapt to question difficulty. \emph{Weak rewards.} Cortex has no gold evidence, but its verifier labels each claim against specific evidence, which is one candidate for the model-based grounding signal GRASP proposes. A policy trained on those labels could learn to please a lexical checker without becoming more correct, so human spot checks would be needed.
+
+\textbf{Beyond GRASP's setting.} GRASP works on a static Wikipedia corpus. Cortex's sources fail independently, their facts go stale, they contradict each other, and the agent can change them. So Cortex reports each outage, filters by time window, lists conflicts instead of silently picking a side, and gates execution on user approval, which also limits injected instructions~\cite{greshake2023injection,hou2025mcp}.
+
+\subsection{Preliminary Measurements}
+Table~\ref{tab:prelim} reports two Deep-mode runs of Cortex's 12-question evaluation over its sample workspace: the first pipeline, and a later version with the router and a stricter checker. Both used free-tier models (Groq \texttt{openai/gpt-oss-120b}, with Gemini 3.5 Flash-Lite as fallback). Citation recall is the share of expected key facts present in the cited evidence.
+
+\begin{table}[t]
+\centering
+\caption{Preliminary Cortex measurements (12 questions, fictional sample workspace, free-tier models, one run per version). Look at the action and latency rows for the effect of the router; the groundedness values use different checkers and should not be compared. This is not a benchmark comparison.}
+\label{tab:prelim}
+\footnotesize
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Metric & First & + Router \\
+\midrule
+Mean groundedness (lexical + LLM re-check) & 0.88 & 0.75 \\
+Mean citation recall & 0.92 & 0.92 \\
+Honest ``not found'' answers & 1/1 & 1/1 \\
+Cross-source conflicts detected & 1/2 & 1/2 \\
+Expected actions proposed & 1/2 & 2/2 \\
+Actions executed without consent & 0 & 0 \\
+Median latency & 3.7\,s & 4.6\,s \\
+90th-percentile latency & 7.1\,s & 6.3\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These numbers are limited. We wrote the questions, the workspace is synthetic, and each version ran once. Groundedness comes from Cortex's own, partly lexical verifier, and the second run used a stricter checker, so the drop from 0.88 to 0.75 does not by itself mean answers got worse. In the first run rate limits sent 8 of 12 questions to Gemini, so model choice is confounded. No other system ran on the same data. Still, citation and verification worked end to end, Cortex said ``not found'' instead of guessing, no action ran without approval, and a separate action route raised correct proposals from 1/2 to 2/2. Conflict detection found only one of the two seeded conflicts, because it depends on the synthesizer noticing the disagreement. We have not built a dedicated conflict component yet.
+
+%=====================================================================
+\section{Open Challenges and Future Directions}
+\label{sec:challenges}
+%=====================================================================
+
+\textbf{Supervision without gold evidence.} RL search policies need gold supporting facts~\cite{gandhi2026grasp,luo2025maragr1}. Verifier labels, agreement between trajectories, or AIS- and FActScore-style scores~\cite{rashkin2023ais,min2023factscore} could substitute, with human checks against gaming.
+
+\textbf{Granularity over heterogeneous data.} What the ``sentence'' and its ``parent'' should be in an email thread, a pull request or a calendar event is still open. Hierarchical units~\cite{sarthi2024raptor,du2026arag} and propositions~\cite{chen2024densex} give two places to start.
+
+\textbf{Freshness and conflict.} Time-sensitive questions remain hard~\cite{vu2024freshllms}, and few methods ever show a conflict to the user. Most treat it as noise to filter out.
+
+\textbf{Verification quality.} Claim checkers should be calibrated against human attribution judgements~\cite{rashkin2023ais,gao2023alce} and should report uncertainty.
+
+\textbf{Safety and memory.} Approval gates reduce injection risk without removing it~\cite{greshake2023injection,hou2025mcp}, and long-term memory~\cite{packer2023memgpt,park2023generative,chhikara2025mem0} raises questions of consent and deletion that no benchmark measures.
+
+\textbf{Cost-aware evaluation.} GRASP settles near eight tool calls~\cite{gandhi2026grasp}, but a deployed system must also budget LLM calls, much as Adaptive-RAG budgets retrieval depth~\cite{jeong2024adaptiverag}. Benchmarks over private, changing data should score citation support, abstention, conflicts and action safety, not only accuracy.
+
+%=====================================================================
+\section{Conclusion}
+%=====================================================================
+
+GRASP shows that how much an agent reads, and which retrieval signal it uses, can be learned. Its 3B model beat prompted and RL-trained baselines on answer F1. Cortex instead runs over live, heterogeneous sources under tight budgets, with a fixed retrieval plan and its effort spent on verification, conflict reporting, governed memory and approval-gated actions. Combining the two needs rewards without gold evidence, evidence units for mail, chat and code, and evaluations of trust and safety.
+
+
+%=====================================================================
+\section*{Threats to Validity}
+%=====================================================================
+The survey covers work we found through the search described in Section~\ref{sec:method}; relevant systems outside those sources, or published after the search date, may be missing. Recent preprints, including the GRASP paper analysed in depth, have not all completed peer review, and their reported numbers are reproduced from the papers rather than re-run. The Cortex measurements come from 12 questions we wrote over a synthetic workspace, with one run per version and the system's own partly lexical verifier, so they illustrate behaviour rather than establish performance.
+
+\backmatter
+
+\bmhead{Acknowledgements}
+\placeholder{Optional: thank anyone who helped, e.g. the department. Delete this heading if not needed.}
+
+\section*{Declarations}
+
+\begin{itemize}
+\item \textbf{Funding:} No funding was received for conducting this study.\placeholder{confirm}
+\item \textbf{Conflict of interest/Competing interests:} The authors declare that they have no conflict of interest. The authors developed the Cortex system described in Section~\ref{sec:cortex}.
+\item \textbf{Ethics approval and consent to participate:} Not applicable. The study involves no human participants, human data or animals; the evaluation uses a fictional synthetic workspace.
+\item \textbf{Consent for publication:} Not applicable.
+\item \textbf{Data availability:} The evaluation questions and the synthetic workspace are available from the corresponding author on reasonable request.\placeholder{or give a repository URL}
+\item \textbf{Code availability:} The Cortex source code is available at \placeholder{public repository URL, or ``from the corresponding author on reasonable request''}.
+\item \textbf{Author contributions:} \placeholder{e.g. S.G.\ supervised the work and revised the manuscript; A.P., P.K., H.P.\ and B.G.\ surveyed the literature, built and evaluated Cortex, and wrote the manuscript. All authors read and approved the final manuscript.}
+\item \textbf{Use of generative AI:} \placeholder{Springer Nature requires disclosure. State honestly how AI tools were used, e.g. ``The authors used an AI assistant to help draft and edit the text and the LaTeX source; all content was checked by the authors, who take full responsibility for it.''}
+\end{itemize}
+
+\bibliography{refs}
+
+\end{document}
