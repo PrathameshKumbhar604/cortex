@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Brain, Calendar, ChevronRight, FileText, GitBranch, Globe, HardDrive, Hash, Mail, NotebookText, Paperclip, X, type LucideIcon } from "lucide-react";
+import { Brain, Calendar, ChevronRight, FileText, GitBranch, Globe, HardDrive, Hash, ListTodo, Mail, NotebookText, Paperclip, X, type LucideIcon } from "lucide-react";
 import { sourceName, type Evidence } from "@cortex/shared";
 import { cleanSnippet, faviconUrl, hostOf, plainText } from "@/lib/snippet";
 import { cn, shortDate, sourceColor } from "@/lib/ui";
@@ -13,6 +13,7 @@ export function SourceMark({ source, className }: { source: string; className?: 
 const ICON: Record<string, LucideIcon> = {
   gmail: Mail,
   calendar: Calendar,
+  tasks: ListTodo,
   drive: HardDrive,
   notion: NotebookText,
   slack: Hash,
@@ -48,6 +49,7 @@ const gstatic = (app: string) => `https://ssl.gstatic.com/images/branding/produc
 const APP_LOGO: Record<string, string> = {
   gmail: gstatic("gmail"),
   calendar: gstatic("calendar"),
+  tasks: gstatic("tasks"),
   drive: gstatic("drive"),
   notion: faviconUrl("notion.so"),
   slack: faviconUrl("slack.com"),

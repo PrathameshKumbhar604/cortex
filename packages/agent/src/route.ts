@@ -86,7 +86,7 @@ export function routeByRules(question: string, available: string[]): RouteDecisi
 // Words that say where or how to look ("search on web", "and in slack?", "tell me more"), not what to look for.
 const STEER =
   "search searching look find check google web internet online up again also instead then too now just more details detail explain elaborate expand that it this those them these same one please can could you try and but or so ok okay on in the my me tell do there".split(" ");
-const SOURCE_NAMES = "mail email emails inbox gmail calendar drive docs notion slack github files uploads".split(" ");
+const SOURCE_NAMES = "mail email emails inbox gmail calendar tasks drive docs notion slack github files uploads".split(" ");
 const STEER_WORDS = new RegExp(`\\b(what about|how about|${[...STEER, ...SOURCE_NAMES].join("|")})\\b`, "gi");
 // "check my gmail", "and in slack?": the app named is where to look; in "what's on my calendar?" it's the topic.
 const REDIRECT = /^\s*(and|also|or|what about|how about)\b|\b(search|check|look|find|try|google|instead|too|as well)\b/i;

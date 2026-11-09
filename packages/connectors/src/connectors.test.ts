@@ -110,10 +110,47 @@ describe("large mailbox retrieval", () => {
     expect(args("github", "open pull requests login")).toMatchObject({ q: "open login involves:@me updated:>=2026-10-01 updated:<=2026-10-08", per_page: 10 });
   });
 
-  it("drops generic words from the Calendar text filter", () => {
+  it("drops generic and time words from the Calendar text filter", () => {
     const cal = TOOLKITS.find((t) => t.id === "calendar")!;
-    expect(cal.search.toArgs({ query: "meetings" }).query).toBeUndefined();
-    expect(cal.search.toArgs({ query: "standup meetings" }).query).toBe("standup");
+    expect(cal.search.toArgs({ query: "meetings" }).q).toBeUndefined();
+    expect(cal.search.toArgs({ query: "what's on my calendar today" }).q).toBeUndefined();
+    expect(cal.search.toArgs({ query: "upcoming events this week" }).q).toBeUndefined();
+    expect(cal.search.toArgs({ query: "standup meetings" }).q).toBe("standup");
+  });
+
+  it("searches every calendar, from yesterday to a month ahead when the question names no dates", () => {
+    const cal = TOOLKITS.find((t) => t.id === "calendar")!;
+    expect(cal.search.slug).toBe("GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS");
+    const a = cal.search.toArgs({ query: "meetings" });
+    const from = Date.parse(String(a.time_min));
+    expect(Math.abs(from - (Date.now() - 86_400_000))).toBeLessThan(60_000);
+    expect(Date.parse(String(a.time_max)) - from).toBe(31 * 86_400_000);
+    expect(a.single_events).toBe(true);
+    // A window from the planner is kept as given.
+    expect(cal.search.toArgs({ query: "x", since: "2026-10-01T00:00:00Z", until: "2026-10-08T00:00:00Z" })).toMatchObject({ time_min: "2026-10-01T00:00:00Z", time_max: "2026-10-08T00:00:00Z" });
+  });
+
+  it("reads calendar events, not the list of calendars searched", () => {
+    const cal = TOOLKITS.find((t) => t.id === "calendar")!;
+    const data = {
+      calendars_queried: [{ id: "a", summary: "Work" }, { id: "b", summary: "Holidays" }],
+      events: [],
+      summary_view: [{ calendar: "Work", title: "Design review", start: "2026-11-10T10:00:00+05:30", end: "2026-11-10T11:00:00+05:30", event_id: "e1", display_url: "https://calendar.google.com/x" }],
+    };
+    const [e, ...rest] = extractEvidence("calendar", cal.search.records!(data));
+    expect(rest).toHaveLength(0);
+    expect(e).toMatchObject({ title: "Design review", url: "https://calendar.google.com/x", ref: "e1" });
+    expect(e!.quote).toContain("Work");
+    expect(e!.quote).toContain("2026-11-10");
+    expect(e!.timestamp).toBe(new Date("2026-11-10T10:00:00+05:30").toISOString());
+  });
+
+  it("lists open Google Tasks with their due dates", () => {
+    const tasks = TOOLKITS.find((t) => t.id === "tasks")!;
+    expect(tasks).toMatchObject({ toolkit: "googletasks", search: { slug: "GOOGLETASKS_LIST_ALL_TASKS" } });
+    expect(tasks.search.toArgs({ query: "my tasks" })).toMatchObject({ showCompleted: false });
+    const [t] = extractEvidence("tasks", { tasks: [{ id: "t1", title: "Submit thesis draft", notes: "chapter 2", due: "2026-11-12T00:00:00.000Z", status: "needsAction" }] });
+    expect(t).toMatchObject({ title: "Submit thesis draft", quote: "chapter 2", timestamp: "2026-11-12T00:00:00.000Z", ref: "t1" });
   });
 
   it("decodes the text part of a multipart Gmail message, falling back to HTML", () => {

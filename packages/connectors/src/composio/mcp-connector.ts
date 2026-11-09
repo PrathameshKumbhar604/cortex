@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { ConnectorStatus } from "@cortex/shared";
 import { extractEvidence } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
-import type { ComposioToolkitSpec } from "./toolkits";
+import { TOOLKITS, type ComposioToolkitSpec } from "./toolkits";
 
 const ENDPOINT = "https://connect.composio.dev/mcp";
 const STATUS_TTL_MS = 2_000; // short so a finished sign-in shows up while the Connections page polls (one list call for all users)
@@ -118,7 +118,7 @@ class ComposioMcpSession {
 }
 
 const sessions = new Map<string, ComposioMcpSession>();
-const ALL_TOOLKITS = ["gmail", "googlecalendar", "googledrive", "notion", "slack", "github"];
+const ALL_TOOLKITS = TOOLKITS.map((t) => t.toolkit);
 
 export class ComposioMcpConnector implements Connector {
   readonly kind = "composio" as const;
@@ -198,7 +198,7 @@ export class ComposioMcpConnector implements Connector {
     const data = await this.session.execute(this.spec.search.slug, args, await this.accountFor(ctx.userId));
     // No spec.detail stage here: the hosted MCP cuts every string to ~200 characters, so a full-message
     // fetch returns the same snippet. The SDK connector (project keys) fetches full bodies.
-    return extractEvidence(this.id, data, input.limit ?? 8);
+    return extractEvidence(this.id, this.spec.search.records?.(data) ?? data, input.limit ?? 8);
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

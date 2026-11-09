@@ -12,7 +12,12 @@ export interface ComposioToolkitSpec {
   toolkit: string; // Composio toolkit slug
   describes: string;
   impact: string;
-  search: { slug: string; toArgs(input: SearchInput): Record<string, unknown> };
+  search: {
+    slug: string;
+    toArgs(input: SearchInput): Record<string, unknown>;
+    /** Where the results are in the response, when it also holds other lists (extraction takes the largest array). */
+    records?(data: unknown): unknown;
+  };
   /** Optional second stage: fetch full content for the best few hits only. */
   detail?: { slug: string; toArgs(ref: string): Record<string, unknown>; top: number; text?(data: unknown): string };
   actions: ComposioActionSpec[];
@@ -25,7 +30,11 @@ const GENERIC = new Set(
   ("email emails mail mails inbox message messages meeting meetings event events calendar schedule drive doc docs file files notion page pages " +
     "slack channel channels github issue issues pr prs pull request requests me my our the from in on of for to and with any all about").split(" "),
 );
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const DAY = 86_400_000;
+const daysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString();
+// Words about when, not what: an event's text rarely contains them, so as a Calendar filter they hide every event.
+const WHEN = new Set("today tomorrow tonight yesterday upcoming coming next this week weeks weekend month day days agenda plans plan scheduled whats what left soon".split(" "));
+type Row = Record<string, unknown>;
 const terms = (q: string) =>
   q
     .split(/\s+/)
@@ -143,16 +152,36 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     describes: "meetings, deadlines, events and their dates",
     impact: "Meeting times and scheduled deadlines may be missing.",
     search: {
-      slug: "GOOGLECALENDAR_EVENTS_LIST",
-      toArgs: (i) => ({
-        calendarId: "primary",
-        query: terms(i.query).join(" ") || undefined,
-        timeMin: i.since,
-        timeMax: i.until,
-        maxResults: i.limit ?? 10,
-        singleEvents: true,
-        orderBy: "startTime",
-      }),
+      // Every calendar the person sees in Google Calendar (shared, work, holidays), not just the primary one.
+      slug: "GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS",
+      toArgs: (i) => {
+        // No dates in the question: from yesterday to a month ahead (with no start, Google returns the oldest events first).
+        const from = i.since ?? daysAgo(1);
+        return {
+          q: terms(i.query).filter((t) => !WHEN.has(t.toLowerCase())).join(" ") || undefined,
+          time_min: from,
+          time_max: i.until ?? new Date(Date.parse(from) + 31 * DAY).toISOString(),
+          single_events: true,
+          max_results_per_calendar: Math.min(i.limit ?? 10, 25),
+        };
+      },
+      // The response also lists the calendars it searched; the events are in summary_view (title, start, end, calendar).
+      records: (data) => {
+        const d = data as { summary_view?: Row[]; events?: Row[] } | null;
+        const rows = d?.summary_view?.length ? d.summary_view : d?.events;
+        if (!rows) return data;
+        return rows.map((r) =>
+          r.calendar === undefined
+            ? r
+            : {
+                title: r.title,
+                description: `${s(r.start)}${r.end ? ` to ${s(r.end)}` : ""}${r.is_all_day ? " (all day)" : ""} · ${s(r.calendar)}`,
+                start: r.start,
+                htmlLink: r.display_url,
+                id: r.event_id,
+              },
+        );
+      },
     },
     actions: [
       {
@@ -183,6 +212,20 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         }),
       },
     ],
+  },
+  {
+    id: "tasks",
+    name: "Google Tasks",
+    toolkit: "googletasks",
+    describes: "to-dos and tasks with their due dates",
+    impact: "Your to-dos and their due dates may be missing.",
+    search: {
+      slug: "GOOGLETASKS_LIST_ALL_TASKS",
+      // Open tasks across every list; few enough that Cortex reads them all and the answer picks what matters.
+      toArgs: () => ({ showCompleted: false, showHidden: false, max_tasks_total: 50 }),
+      records: (data) => (data as { tasks?: unknown } | null)?.tasks ?? data,
+    },
+    actions: [],
   },
   {
     id: "drive",

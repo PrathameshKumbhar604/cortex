@@ -148,6 +148,7 @@ export interface ChatTurn {
 export const SOURCE_NAMES: Record<string, string> = {
   gmail: "Gmail",
   calendar: "Google Calendar",
+  tasks: "Google Tasks",
   drive: "Google Drive",
   notion: "Notion",
   slack: "Slack",
