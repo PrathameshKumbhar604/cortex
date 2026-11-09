@@ -16,7 +16,7 @@ export interface ComposioToolkitSpec {
     slug: string;
     toArgs(input: SearchInput): Record<string, unknown>;
     /** Where the results are in the response, when it also holds other lists (extraction takes the largest array). */
-    records?(data: unknown): unknown;
+    records?(data: unknown, input: SearchInput): unknown;
   };
   /** Optional second stage: fetch full content for the best few hits only. */
   detail?: { slug: string; toArgs(ref: string): Record<string, unknown>; top: number; text?(data: unknown): string };
@@ -35,6 +35,8 @@ const daysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString();
 // Words about when, not what: an event's text rarely contains them, so as a Calendar filter they hide every event.
 const WHEN = new Set("today tomorrow tonight yesterday upcoming coming next this week weeks weekend month day days agenda plans plan scheduled whats what left soon".split(" "));
 type Row = Record<string, unknown>;
+const SUBSCRIBED = /@group\.v\.calendar\.google\.com$/;
+const SUBSCRIBED_ASK = /\b(holidays?|festivals?|birthdays?|bank holiday|public holiday|vacation days?)\b/i;
 const terms = (q: string) =>
   q
     .split(/\s+/)
@@ -166,11 +168,15 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         };
       },
       // The response also lists the calendars it searched; the events are in summary_view (title, start, end, calendar).
-      records: (data) => {
-        const d = data as { summary_view?: Row[]; events?: Row[] } | null;
+      // Only the person's own calendars count: subscribed ones (public holidays, birthdays: Google gives them
+      // @group.v.calendar.google.com ids) join in only when the question asks for them.
+      records: (data, input) => {
+        const d = data as { summary_view?: Row[]; events?: Row[]; calendars_queried?: Row[] } | null;
         const rows = d?.summary_view?.length ? d.summary_view : d?.events;
         if (!rows) return data;
-        return rows.map((r) =>
+        const subscribed = new Set((d?.calendars_queried ?? []).filter((c) => SUBSCRIBED.test(s(c.id))).map((c) => s(c.summary)));
+        const wanted = SUBSCRIBED_ASK.test(input.query);
+        return rows.filter((r) => wanted || !subscribed.has(s(r.calendar))).map((r) =>
           r.calendar === undefined
             ? r
             : {

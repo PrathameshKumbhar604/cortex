@@ -198,7 +198,7 @@ export class ComposioMcpConnector implements Connector {
     const data = await this.session.execute(this.spec.search.slug, args, await this.accountFor(ctx.userId));
     // No spec.detail stage here: the hosted MCP cuts every string to ~200 characters, so a full-message
     // fetch returns the same snippet. The SDK connector (project keys) fetches full bodies.
-    return extractEvidence(this.id, this.spec.search.records?.(data) ?? data, input.limit ?? 8);
+    return extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

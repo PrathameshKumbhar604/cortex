@@ -137,12 +137,34 @@ describe("large mailbox retrieval", () => {
       events: [],
       summary_view: [{ calendar: "Work", title: "Design review", start: "2026-11-10T10:00:00+05:30", end: "2026-11-10T11:00:00+05:30", event_id: "e1", display_url: "https://calendar.google.com/x" }],
     };
-    const [e, ...rest] = extractEvidence("calendar", cal.search.records!(data));
+    const [e, ...rest] = extractEvidence("calendar", cal.search.records!(data, { query: "my meetings" }));
     expect(rest).toHaveLength(0);
     expect(e).toMatchObject({ title: "Design review", url: "https://calendar.google.com/x", ref: "e1" });
     expect(e!.quote).toContain("Work");
     expect(e!.quote).toContain("2026-11-10");
     expect(e!.timestamp).toBe(new Date("2026-11-10T10:00:00+05:30").toISOString());
+  });
+
+  it("keeps to your own calendars; holidays and birthdays only when asked for", () => {
+    const cal = TOOLKITS.find((t) => t.id === "calendar")!;
+    const data = {
+      calendars_queried: [
+        { id: "me@gmail.com", summary: "me@gmail.com" },
+        { id: "abc123@group.calendar.google.com", summary: "Thesis" },
+        { id: "en.indian#holiday@group.v.calendar.google.com", summary: "Holidays in India" },
+        { id: "addressbook#contacts@group.v.calendar.google.com", summary: "Birthdays" },
+      ],
+      summary_view: [
+        { calendar: "me@gmail.com", title: "Advisor meeting", start: "2026-11-10T10:00:00+05:30", event_id: "a" },
+        { calendar: "Thesis", title: "Draft due", start: "2026-11-12", event_id: "b" },
+        { calendar: "Holidays in India", title: "Diwali", start: "2026-11-08", event_id: "c" },
+        { calendar: "Birthdays", title: "Asha's birthday", start: "2026-11-09", event_id: "d" },
+      ],
+    };
+    const titles = (query: string) => extractEvidence("calendar", cal.search.records!(data, { query }), 10).map((e) => e.title);
+    expect(titles("my events this week")).toEqual(["Advisor meeting", "Draft due"]);
+    expect(titles("any holidays this month?")).toContain("Diwali");
+    expect(titles("whose birthday is coming up")).toContain("Asha's birthday");
   });
 
   it("lists open Google Tasks with their due dates", () => {

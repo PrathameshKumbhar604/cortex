@@ -28,6 +28,7 @@ const PERSONAL = /\b(my|mine|our|ours|i|i'm|i've|me|we|us)\b/i;
 const SOURCE_HINTS: [RegExp, string][] = [
   [/\b(e-?mails?|inbox|gmail|mail|reply|sent)\b/i, "gmail"],
   [/\b(calendar|meetings?|events?|schedule|tomorrow|today|next week|standup)\b/i, "calendar"],
+  [/\b(tasks?|to-?dos?|to do list|reminders?|due)\b/i, "tasks"],
   [/\b(drive|docs?|files?|report|slides|sheet)\b/i, "drive"],
   [/\b(notion|pages?|spec|notes|wiki)\b/i, "notion"],
   [/\b(slack|channels?|dms?|chat|thread)\b/i, "slack"],
