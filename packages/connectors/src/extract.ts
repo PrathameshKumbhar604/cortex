@@ -4,9 +4,9 @@ import type { RawEvidence } from "./types";
 type Obj = Record<string, unknown>;
 
 const TITLE_KEYS = ["subject", "title", "summary", "name", "filename"];
-const BODY_KEYS = ["messageText", "snippet", "preview", "body", "text", "description", "content", "plain_text", "markdown"];
+const BODY_KEYS = ["messageText", "snippet", "preview", "body", "text", "description", "content", "plain_text", "markdown", "notes"];
 const URL_KEYS = ["html_url", "permalink", "webViewLink", "htmlLink", "url", "link"];
-const TIME_KEYS = ["messageTimestamp", "updated_at", "created_at", "last_edited_time", "modifiedTime", "createdTime", "date", "ts", "start"];
+const TIME_KEYS = ["messageTimestamp", "updated_at", "created_at", "last_edited_time", "modifiedTime", "createdTime", "date", "ts", "start", "due"];
 const AUTHOR_KEYS = ["sender", "from", "author", "user", "username", "organizer", "owner", "creator"];
 
 function isObj(v: unknown): v is Obj {

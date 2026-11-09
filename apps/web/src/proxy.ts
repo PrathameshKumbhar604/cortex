@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextMiddleware } from "next/server";
+import { cookieSuffix, parentDomain, staleClerkCookies } from "@/lib/stale-cookies";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const ANON = "cortex_uid";
@@ -41,7 +42,36 @@ const withClerk = clerkMiddleware(async (auth, request) => {
   return res;
 });
 
-export default configured ? withClerk : () => new NextResponse(SETUP, { status: 503, headers: { "content-type": "text/html; charset=utf-8" } });
+let suffix: Promise<string> | undefined;
+
+/**
+ * Opening the sign-in page first clears Clerk cookies another Clerk instance left in this browser (an earlier domain,
+ * a development key, another app on runs-on.dev): they can make sign-in fail until the person clears cookies. Once,
+ * then the page loads normally; `cc=1` stops a loop if the browser keeps one anyway.
+ */
+const withCleanCookies: NextMiddleware = async (request, event) => {
+  const url = request.nextUrl;
+  if (request.method === "GET" && url.pathname === "/sign-in" && !url.searchParams.has("cc")) {
+    suffix ??= cookieSuffix(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!);
+    const stale = staleClerkCookies(request.cookies.getAll().map((c) => c.name), await suffix);
+    if (stale.length) {
+      const to = url.clone();
+      to.searchParams.set("cc", "1");
+      const res = NextResponse.redirect(to);
+      // Behind Caddy, nextUrl is the internal address; the Host the browser used is in the headers.
+      const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.hostname).split(",")[0]!.trim().replace(/:\d+$/, "");
+      const parent = parentDomain(host);
+      for (const name of stale) {
+        res.headers.append("set-cookie", `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
+        if (parent) res.headers.append("set-cookie", `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure; Domain=${parent}`);
+      }
+      return res;
+    }
+  }
+  return withClerk(request, event);
+};
+
+export default configured ? withCleanCookies : () => new NextResponse(SETUP, { status: 503, headers: { "content-type": "text/html; charset=utf-8" } });
 
 export const config = {
   // Clerk's recommended matcher: every page and API route, never Next internals or static files.

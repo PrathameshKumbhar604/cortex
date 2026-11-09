@@ -12,7 +12,7 @@ mkdirSync(dataDir, { recursive: true });
  * sign-in), the account → data link, file metadata, usage, the activity log, settings and saved briefs.
  */
 export const db = new DatabaseSync(path.join(dataDir, "cortex.sqlite"));
-// Set first, so even the statements below wait for a lock (a build opens this file from many workers at once).
+// Set first, so even switching on WAL waits for a lock: a build opens a fresh file from many workers at once.
 db.exec("PRAGMA busy_timeout = 5000");
 // Readers never block the writer, and a write that meets a lock waits up to 5 s instead of failing.
 db.exec(`

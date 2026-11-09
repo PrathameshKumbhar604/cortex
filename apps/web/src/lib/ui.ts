@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export const SOURCE_COLOR: Record<string, string> = {
   gmail: "var(--src-gmail)",
   calendar: "var(--src-calendar)",
+  tasks: "var(--src-calendar)", // Google Tasks lives inside Google Calendar
   drive: "var(--src-drive)",
   notion: "var(--src-notion)",
   slack: "var(--src-slack)",

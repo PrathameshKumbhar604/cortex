@@ -21,7 +21,10 @@ from .ledger import TTL_DAYS, Ledger
 # looser paraphrases are caught by the extraction model, which sees related memories. Re-tune with more data.
 DUPLICATE_DISTANCE = 0.15
 
-load_dotenv(Path(__file__).resolve().parents[3] / ".env")
+# The repo's .env when run locally; in Docker the path is shorter and the env comes from compose instead.
+_parents = Path(__file__).resolve().parents
+if len(_parents) > 3:
+    load_dotenv(_parents[3] / ".env")
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("cortex.memory")
 

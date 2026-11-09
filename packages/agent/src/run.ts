@@ -500,7 +500,8 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       yield { type: "step", step: "synthesize", status: "active", detail: "drafting" };
       const drafted = await draftAction(input, deps, { evidence: ranked, briefs: actionBriefs(scoped.length ? scoped : connected), history, budget, signal });
       if (drafted) {
-        const md = drafted.proposals.length ? "Here's the draft. Check it, edit if needed, and approve. Nothing happens until you do." : drafted.ask!;
+        const n = drafted.proposals.length;
+        const md = n > 1 ? `Here are ${n} drafts. Check each, edit if needed, and approve. Nothing happens until you do.` : n ? "Here's the draft. Check it, edit if needed, and approve. Nothing happens until you do." : drafted.ask!;
         yield* skip(["verify", "remember"]);
         yield { type: "evidence", items: [] };
         yield { type: "token", text: md };
@@ -685,7 +686,7 @@ async function draftAction(
     }
   }
   const proposals: ActionProposal[] = [];
-  for (const d of drafts.slice(0, 3)) {
+  for (const d of drafts.slice(0, 5)) {
     const p = deps.actions.propose(input.userId, deps.registry, d);
     if ("id" in p) proposals.push(p);
   }

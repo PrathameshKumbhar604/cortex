@@ -12,7 +12,12 @@ export interface ComposioToolkitSpec {
   toolkit: string; // Composio toolkit slug
   describes: string;
   impact: string;
-  search: { slug: string; toArgs(input: SearchInput): Record<string, unknown> };
+  search: {
+    slug: string;
+    toArgs(input: SearchInput): Record<string, unknown>;
+    /** Where the results are in the response, when it also holds other lists (extraction takes the largest array). */
+    records?(data: unknown, input: SearchInput): unknown;
+  };
   /** Optional second stage: fetch full content for the best few hits only. */
   detail?: { slug: string; toArgs(ref: string): Record<string, unknown>; top: number; text?(data: unknown): string };
   actions: ComposioActionSpec[];
@@ -25,7 +30,13 @@ const GENERIC = new Set(
   ("email emails mail mails inbox message messages meeting meetings event events calendar schedule drive doc docs file files notion page pages " +
     "slack channel channels github issue issues pr prs pull request requests me my our the from in on of for to and with any all about").split(" "),
 );
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const DAY = 86_400_000;
+const daysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString();
+// Words about when, not what: an event's text rarely contains them, so as a Calendar filter they hide every event.
+const WHEN = new Set("today tomorrow tonight yesterday upcoming coming next this week weeks weekend month day days agenda plans plan scheduled whats what left soon".split(" "));
+type Row = Record<string, unknown>;
+const SUBSCRIBED = /@group\.v\.calendar\.google\.com$/;
+const SUBSCRIBED_ASK = /\b(holidays?|festivals?|birthdays?|bank holiday|public holiday|vacation days?)\b/i;
 const terms = (q: string) =>
   q
     .split(/\s+/)
@@ -83,6 +94,17 @@ const FILE_TYPES: Record<string, string> = {
 
 const s = (v: unknown) => (v == null ? "" : String(v));
 const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : s(v).split(",").map((x) => x.trim()).filter(Boolean));
+
+/** A date or date-time as written ("2026-11-17", "2026-11-17T10:30:00Z"): its date and HH:MM, ignoring any zone. */
+function wallTime(v: unknown): { iso: string; date: string; time?: string } {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(s(v).trim());
+  const iso = m?.[1] ?? new Date().toISOString().slice(0, 10);
+  const date = new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return { iso, date, time: m?.[2] };
+}
+const nextDay = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + DAY).toISOString().slice(0, 10);
+// shortcut: one zone for everyone (CORTEX_TIMEZONE on the server); pass the browser's zone once users span regions.
+const userTimeZone = () => process.env.CORTEX_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /**
  * Composio tool slugs per app. Slugs are data, not code: if Composio renames
@@ -143,16 +165,40 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
     describes: "meetings, deadlines, events and their dates",
     impact: "Meeting times and scheduled deadlines may be missing.",
     search: {
-      slug: "GOOGLECALENDAR_EVENTS_LIST",
-      toArgs: (i) => ({
-        calendarId: "primary",
-        query: terms(i.query).join(" ") || undefined,
-        timeMin: i.since,
-        timeMax: i.until,
-        maxResults: i.limit ?? 10,
-        singleEvents: true,
-        orderBy: "startTime",
-      }),
+      // Every calendar the person sees in Google Calendar (shared, work, holidays), not just the primary one.
+      slug: "GOOGLECALENDAR_EVENTS_LIST_ALL_CALENDARS",
+      toArgs: (i) => {
+        // No dates in the question: from yesterday to a month ahead (with no start, Google returns the oldest events first).
+        const from = i.since ?? daysAgo(1);
+        return {
+          q: terms(i.query).filter((t) => !WHEN.has(t.toLowerCase())).join(" ") || undefined,
+          time_min: from,
+          time_max: i.until ?? new Date(Date.parse(from) + 31 * DAY).toISOString(),
+          single_events: true,
+          max_results_per_calendar: Math.min(i.limit ?? 10, 25),
+        };
+      },
+      // The response also lists the calendars it searched; the events are in summary_view (title, start, end, calendar).
+      // Only the person's own calendars count: subscribed ones (public holidays, birthdays: Google gives them
+      // @group.v.calendar.google.com ids) join in only when the question asks for them.
+      records: (data, input) => {
+        const d = data as { summary_view?: Row[]; events?: Row[]; calendars_queried?: Row[] } | null;
+        const rows = d?.summary_view?.length ? d.summary_view : d?.events;
+        if (!rows) return data;
+        const subscribed = new Set((d?.calendars_queried ?? []).filter((c) => SUBSCRIBED.test(s(c.id))).map((c) => s(c.summary)));
+        const wanted = SUBSCRIBED_ASK.test(input.query);
+        return rows.filter((r) => wanted || !subscribed.has(s(r.calendar))).map((r) =>
+          r.calendar === undefined
+            ? r
+            : {
+                title: r.title,
+                description: `${s(r.start)}${r.end ? ` to ${s(r.end)}` : ""}${r.is_all_day ? " (all day)" : ""} · ${s(r.calendar)}`,
+                start: r.start,
+                htmlLink: r.display_url,
+                id: r.event_id,
+              },
+        );
+      },
     },
     actions: [
       {
@@ -163,23 +209,71 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         risk: "high",
         params: [
           { name: "title", type: "string", description: "event title", required: true },
-          { name: "start", type: "string", description: "ISO start datetime", required: true },
+          { name: "start", type: "string", description: "start as the user said it: YYYY-MM-DDTHH:MM:SS local time, or YYYY-MM-DD for an all-day event", required: true },
           { name: "durationMinutes", type: "number", description: "length in minutes" },
           { name: "attendees", type: "string[]", description: "attendee emails" },
           { name: "description", type: "string", description: "event notes" },
         ],
-        preview: (a) =>
-          `${s(a.title)}\n${new Date(s(a.start)).toLocaleString()} · ${Number(a.durationMinutes ?? 30)} min` +
-          (list(a.attendees).length ? `\nInvite: ${list(a.attendees).join(", ")}` : ""),
+        preview: (a) => {
+          const w = wallTime(a.start);
+          return (
+            `${s(a.title)}\n${w.time ? `${w.date}, ${w.time} · ${Number(a.durationMinutes ?? 30)} min` : `${w.date} · all day`}` +
+            (list(a.attendees).length ? `\nInvite: ${list(a.attendees).join(", ")}` : "")
+          );
+        },
+        toArgs: (a) => {
+          const w = wallTime(a.start);
+          const minutes = Number(a.durationMinutes ?? 30);
+          const when = w.time
+            ? {
+                // The time as the person said it, in their time zone (a trailing Z or offset from the model is dropped).
+                start_datetime: `${w.iso}T${w.time}:00`,
+                timezone: userTimeZone(),
+                event_duration_hour: Math.floor(minutes / 60),
+                event_duration_minutes: minutes % 60,
+              }
+            : { start_date: w.iso, end_date: nextDay(w.iso) }; // a date alone is an all-day event
+          return {
+            summary: s(a.title),
+            ...when,
+            attendees: list(a.attendees),
+            description: s(a.description),
+            create_meeting_room: list(a.attendees).length > 0, // a Meet link only when someone else is invited
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "tasks",
+    name: "Google Tasks",
+    toolkit: "googletasks",
+    describes: "to-dos and tasks with their due dates",
+    impact: "Your to-dos and their due dates may be missing.",
+    search: {
+      slug: "GOOGLETASKS_LIST_ALL_TASKS",
+      // Open tasks across every list; few enough that Cortex reads them all and the answer picks what matters.
+      toArgs: () => ({ showCompleted: false, showHidden: false, max_tasks_total: 50 }),
+      records: (data) => (data as { tasks?: unknown } | null)?.tasks ?? data,
+    },
+    actions: [
+      {
+        id: "create_task",
+        slug: "GOOGLETASKS_INSERT_TASK",
+        title: "Create task",
+        description: "Add a to-do to Google Tasks",
+        risk: "low",
+        params: [
+          { name: "title", type: "string", description: "what to do", required: true },
+          { name: "due", type: "string", description: "due date YYYY-MM-DD (Google Tasks keeps the date only)" },
+          { name: "notes", type: "string", description: "details" },
+        ],
+        preview: (a) => `${s(a.title)}${a.due ? `\nDue ${wallTime(a.due).date}` : ""}${a.notes ? `\n${s(a.notes)}` : ""}`,
         toArgs: (a) => ({
-          summary: s(a.title),
-          start_datetime: s(a.start),
-          // shortcut: the server's time zone stands in for the user's; send the browser's zone once users are multi-region.
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          event_duration_hour: Math.floor(Number(a.durationMinutes ?? 30) / 60),
-          event_duration_minutes: Number(a.durationMinutes ?? 30) % 60,
-          attendees: list(a.attendees),
-          description: s(a.description),
+          title: s(a.title),
+          tasklist_id: "@default",
+          ...(a.due ? { due: `${wallTime(a.due).iso}T00:00:00.000Z` } : {}),
+          ...(a.notes ? { notes: s(a.notes) } : {}),
         }),
       },
     ],

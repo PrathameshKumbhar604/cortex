@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { ConnectorStatus } from "@cortex/shared";
 import { extractEvidence } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
-import type { ComposioToolkitSpec } from "./toolkits";
+import { TOOLKITS, type ComposioToolkitSpec } from "./toolkits";
 
 const ENDPOINT = "https://connect.composio.dev/mcp";
 const STATUS_TTL_MS = 2_000; // short so a finished sign-in shows up while the Connections page polls (one list call for all users)
@@ -64,7 +64,11 @@ class ComposioMcpSession {
     } catch {
       throw new ConnectorError("composio", text.slice(0, 200) || `${name} returned nothing`);
     }
-    if (res.isError || body.successful === false) throw new ConnectorError("composio", String(body.error ?? text).slice(0, 200));
+    if (res.isError || body.successful === false) {
+      // A failed tool run says only "1 out of 1 tools failed" at the top; the reason is in the tool's own result.
+      const r = (body.data?.results as { response?: { error?: unknown }; error?: unknown }[] | undefined)?.[0];
+      throw new ConnectorError("composio", String(r?.response?.error || r?.error || body.error || text).slice(0, 200));
+    }
     return body.data ?? {};
   }
 
@@ -109,7 +113,8 @@ class ComposioMcpSession {
       error?: unknown;
     }[];
     const first = results[0];
-    const err = first?.error ?? (first?.response?.successful === false ? first.response.error : null);
+    // The tool's own error says why ("start_datetime is invalid…"); the outer one is only "1 out of 1 tools failed".
+    const err = (first?.response?.successful === false ? first.response.error : null) || first?.error || (data as { error?: unknown }).error;
     if (err) throw new ConnectorError("composio", String(err).slice(0, 200));
     // Large results come back as a truncated `data_preview`; never fall back to the envelope,
     // which also holds Composio's structure metadata and would be mistaken for records.
@@ -118,7 +123,7 @@ class ComposioMcpSession {
 }
 
 const sessions = new Map<string, ComposioMcpSession>();
-const ALL_TOOLKITS = ["gmail", "googlecalendar", "googledrive", "notion", "slack", "github"];
+const ALL_TOOLKITS = TOOLKITS.map((t) => t.toolkit);
 
 export class ComposioMcpConnector implements Connector {
   readonly kind = "composio" as const;
@@ -198,7 +203,7 @@ export class ComposioMcpConnector implements Connector {
     const data = await this.session.execute(this.spec.search.slug, args, await this.accountFor(ctx.userId));
     // No spec.detail stage here: the hosted MCP cuts every string to ~200 characters, so a full-message
     // fetch returns the same snippet. The SDK connector (project keys) fetches full bodies.
-    return extractEvidence(this.id, data, input.limit ?? 8);
+    return extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

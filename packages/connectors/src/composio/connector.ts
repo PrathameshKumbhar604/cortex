@@ -71,7 +71,7 @@ export class ComposioConnector implements Connector {
 
   async search(input: SearchInput, ctx: ConnectorContext) {
     const data = await this.run(this.spec.search.slug, this.spec.search.toArgs(input), ctx);
-    const items = extractEvidence(this.id, data, input.limit ?? 8);
+    const items = extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
     const detail = this.spec.detail;
     if (!detail || items.length === 0) return items;
     const best = rankByQuery(items, input.query).slice(0, detail.top).filter((e) => e.ref);
