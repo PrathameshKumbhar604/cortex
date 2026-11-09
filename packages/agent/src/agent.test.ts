@@ -326,6 +326,32 @@ describe("action requests", () => {
     expect(lastEvidence && lastEvidence.type === "evidence" && lastEvidence.items).toEqual([]);
   });
 
+  it("drafts every action in one request, each with its own approval card", async () => {
+    const drafts = {
+      actions: [
+        { connector: "calendar", action: "create_event", title: "Practical exam", args: { title: "Practical exam", start: "2026-11-17" } },
+        { connector: "calendar", action: "create_event", title: "Viva", args: { title: "Viva", start: "2026-11-18T10:30:00" } },
+      ],
+    };
+    const { llm } = stubLlm("unused", drafts);
+    const events = await collect(runAgent({ question: "add my practical exam on 17 Nov and the viva on 18 Nov at 10:30", mode: "fast", userId: "u1" }, deps(llm)));
+    expect(events.filter((e) => e.type === "action_proposal")).toHaveLength(2);
+  });
+
+  it("a yes to Cortex's offer goes to drafting, not another round of asking", async () => {
+    const draft = { connector: "calendar", action: "create_event", title: "Practical exam", args: { title: "Practical exam", start: "2026-11-17" } };
+    const { llm, calls } = stubLlm("unused", draft, { route: "personal", sources: [], complex: false });
+    const history = [
+      { role: "user" as const, content: "add the practical exam on 17 Nov to my calendar" },
+      { role: "assistant" as const, content: "Shall I create the all-day event “Practical exam” on 2026-11-17?" },
+    ];
+    for (const yes of ["Yes", "yes please", "ok go ahead", "Yes allday"]) {
+      const events = await collect(runAgent({ question: yes, mode: "fast", userId: "u1", history }, deps(llm)));
+      expect(events.some((e) => e.type === "action_proposal"), yes).toBe(true);
+    }
+    expect(calls.route).toBe(0); // decided by the rule, no router call
+  });
+
   it("routes the reply to a clarifying question back to drafting", async () => {
     const { llm, calls } = stubLlm("unused", { ask: "x" }, { route: "general", sources: [], complex: false });
     const history = [

@@ -84,6 +84,9 @@ export function routeByRules(question: string, available: string[]): RouteDecisi
   return null; // ambiguous: ask the model
 }
 
+/** A short yes ("yes", "ok go ahead", "yes allday", "sure, do it"). */
+const AGREES = /^\s*(yes|yeah|yep|yup|sure|ok(ay)?|go ahead|do it|please do|confirm(ed)?|approve[ds]?|haan|ha)\b[\s\w,.!']{0,40}$/i;
+
 // Words that say where or how to look ("search on web", "and in slack?", "tell me more"), not what to look for.
 const STEER =
   "search searching look find check google web internet online up again also instead then too now just more details detail explain elaborate expand that it this those them these same one please can could you try and but or so ok okay on in the my me tell do there".split(" ");
@@ -163,8 +166,9 @@ export async function decideRoute(
 ): Promise<{ decision: RouteDecision; llm?: { provider: string; model: string; cached: boolean } }> {
   const ids = sources.map((s) => s.id);
   const asked = history.at(-1);
-  // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on).
-  if (asked?.role === "assistant" && asked.needsDetails) {
+  // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on),
+  // and so does a yes to "Shall I create…?": the approval card is the confirmation, never another question.
+  if (asked?.role === "assistant" && (asked.needsDetails || (AGREES.test(question) && /\?\s*$/.test(asked.content.trim())))) {
     const request = history.findLast((t) => t.role === "user")?.content ?? "";
     return { decision: { route: "action", sources: hintedSources(`${request} ${question}`, ids), tier: "strong", reason: "answers a question about an action", by: "rules" } };
   }

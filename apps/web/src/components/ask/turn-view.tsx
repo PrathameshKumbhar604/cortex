@@ -8,7 +8,7 @@ import { explainError, explainFailure } from "@cortex/shared";
 import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
 import { cn } from "@/lib/ui";
-import { ActionCard } from "./action-card";
+import { ActionDeck } from "./action-deck";
 import { AnswerActions, VersionSwitch } from "./answer-actions";
 import { Answer, Cite } from "./answer";
 import { MAX } from "./composer";
@@ -138,9 +138,7 @@ export function TurnView({
         </div>
       )}
 
-      {turn.actions.map((a) => (
-        <ActionCard key={a.id} proposal={a} onDecide={(d, edits) => onDecide(a.id, d, edits)} />
-      ))}
+      {turn.actions.length > 0 && <ActionDeck actions={turn.actions} onDecide={onDecide} />}
 
       {(turn.memoryWritten.length > 0 || turn.memoryUsed.length > 0) && turn.done && (
         <p className="readout mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">

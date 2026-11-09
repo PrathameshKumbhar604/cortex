@@ -123,7 +123,7 @@ One line per contradiction between sources about the same fact, e.g. "Demo Day d
 ${SECTION.missing}
 One line per thing the question asked that the evidence does not answer. Otherwise "none".
 ${SECTION.actions}
-A JSON array of actions ONLY if the user asked you to draft, send, post, create, schedule or update something; otherwise []. Put the full drafted text in the action's args, NOT in the answer: in the answer, say in one sentence what you prepared and that it is waiting for their approval. Available:
+A JSON array of actions ONLY if the user asked you to draft, send, post, create, schedule or update something; otherwise []. Put the full drafted text in the action's args, NOT in the answer: in the answer, say in one sentence what you prepared and that it is waiting for their approval. Never ask "Shall I…?" or "Do you want me to…?": the approval card is the confirmation. Available:
 ${actionList}
 Format: [{"connector":"gmail","action":"send_email","title":"Email Dr. Ruiz the update","args":{...}}]. Fill args from evidence; never guess an email address that is not in the evidence.
 ${SECTION.next}
@@ -151,7 +151,7 @@ export function actionPrompt(question: string, evidence: Evidence[], actions: Ac
   return [
     {
       role: "system" as const,
-      content: `Draft the single action the user asked for. It will be shown to them for approval before anything is sent.
+      content: `Draft every action the user asked for (up to 5: "add the exam and the viva" is two). Each is shown to them on its own approval card before anything happens, so never ask them to confirm in words.
 Now: ${now()}. Write datetimes as local ISO without an offset (2026-10-30T16:00:00); resolve "tomorrow", "next Monday" etc. from now.
 Available actions:
 ${actions.map((a) => `- ${a.connector}.${a.action}(${a.params}): ${a.title}`).join("\n") || "- none"}
@@ -160,7 +160,9 @@ If the latest message does not ask you to send, create, post or change something
 If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question.
 Never mention field names, IDs, formats or other technical terms. Find IDs (a page, file or channel the user names) in the evidence; if you can't, ask for it by name ("Which Notion page should it go under?").
 Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
-Return only JSON, one of: {"connector":"...","action":"...","title":"short description","args":{...}}, {"ask":"your question"}, {"notAction":true}.`,
+For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
+If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
+Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...}}, ...]}, {"ask":"your question"}, {"notAction":true}.`,
     },
     {
       role: "user" as const,
