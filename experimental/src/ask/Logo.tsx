@@ -10,6 +10,7 @@ const gstatic = (app: string) => `https://ssl.gstatic.com/images/branding/produc
 const APP_LOGO: Record<string, string> = {
   gmail: gstatic("gmail"),
   calendar: gstatic("calendar"),
+  tasks: "https://ssl.gstatic.com/images/branding/product/2x/tasks_48dp.png", // Tasks has no 2020q4 asset
   drive: gstatic("drive"),
   notion: faviconUrl("notion.so"),
   slack: faviconUrl("slack.com"),

@@ -38,6 +38,9 @@ export function Mark({ className }: { className?: string }) {
   );
 }
 
+/** Pages with no app chrome (sidebar, tour, account sync): sign-in, shared answers, and the public policy pages. */
+const barePath = (path: string) => path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/") || path === "/privacy" || path === "/delete-account";
+
 export function Wordmark() {
   return (
     <span className="flex items-center gap-2 font-serif text-[21px] font-[500] tracking-[-0.01em] text-ink">
@@ -156,7 +159,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, []);
   const info = useWorkspace();
   useAccountSync();
-  const bare = path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/");
+  const bare = barePath(path);
   const access = useAccess(!bare);
   const resize = (w: number) => {
     const next = Math.round(Math.min(SIDEBAR.max, Math.max(SIDEBAR.min, w)));
@@ -165,7 +168,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       localStorage.setItem(SIDEBAR.key, String(next));
     } catch {}
   };
-  if (path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/"))
+  if (barePath(path))
     return (
       <MotionConfig reducedMotion="user">
         {children}
@@ -326,7 +329,7 @@ function useWorkspace() {
   const [info, setInfo] = useState<WorkspaceInfo | null>(null);
   const path = usePathname();
   useEffect(() => {
-    if (path === "/sign-in" || path === "/sso-callback" || path.startsWith("/s/")) return;
+    if (barePath(path)) return;
     let live = true;
     fetchConnections<{ workspace: WorkspaceInfo["workspace"]; admin?: boolean; connectors: { connected: boolean }[] }>()
       .then((d) => {
@@ -515,6 +518,9 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
               <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
               Sign out
             </button>
+            <Link href="/delete-account" className={cn(ITEM, "text-[12.5px] text-muted hover:bg-risk-soft hover:text-risk")}>
+              Delete account
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>

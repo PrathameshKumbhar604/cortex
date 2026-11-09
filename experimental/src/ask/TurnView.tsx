@@ -9,7 +9,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { font, type as ramp } from "@/theme/type";
 import { Button, Press, Rule, Txt } from "@/ui/primitives";
 import { Problem } from "@/ui/Problem";
-import { ActionCard } from "./ActionCard";
+import { ActionDeck } from "./ActionDeck";
 import { Answer } from "./Answer";
 import { AnswerActions, VersionSwitch } from "./AnswerActions";
 import { citedIds } from "./answerText";
@@ -120,9 +120,7 @@ export const TurnView = memo(function TurnView({ turn, chatId, onDecide, onRetry
         </View>
       )}
 
-      {turn.actions.map((a) => (
-        <ActionCard key={a.id} proposal={a} onDecide={(d, edits) => onDecide(a.id, d, edits)} />
-      ))}
+      {turn.actions.length > 0 && <ActionDeck actions={turn.actions} onDecide={onDecide} />}
 
       {turn.done && (learned.length > 0 || turn.memoryUsed.length > 0) && (
         <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 10, rowGap: 4 }}>

@@ -101,7 +101,8 @@ export const tokens: { light: Palette; dark: Palette } = {
 
 /** The source's mark colour, or the muted grey for an unknown source. */
 export function srcColor(p: Palette, source: string): string {
-  return (p.src as Record<string, string>)[source] ?? p.hair;
+  // Google Tasks lives inside Google Calendar and shares its mark, as on the web.
+  return (p.src as Record<string, string>)[source === "tasks" ? "calendar" : source] ?? p.hair;
 }
 
 /** Code panels are dark in both themes, like the web terminal panel. */

@@ -7,6 +7,7 @@ import { onForeground } from "@/connections/connect";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Hourglass, LogOut, RotateCw } from "@/ui/icons";
 import { Button, Txt, Wordmark } from "@/ui/primitives";
+import { DeleteAccountSheet } from "@/nav/DeleteAccountSheet";
 
 /** A new account while sign-up approval is manual: wait here; approval lets you in by itself. */
 export default function Waitlist() {
@@ -16,6 +17,7 @@ export default function Waitlist() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [checking, setChecking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const check = async () => {
     setChecking(true);
     await recheck();
@@ -56,6 +58,8 @@ export default function Waitlist() {
         <Button label="Check again" icon={<RotateCw size={16} color={c.onInk} />} busy={checking} onPress={() => void check()} />
         <Button kind="ghost" label="Sign out" icon={<LogOut size={16} color={c.muted} />} onPress={() => void signOut()} />
       </View>
+      <Button kind="ghost" label="Delete account" onPress={() => setDeleting(true)} style={{ alignSelf: "flex-start", marginTop: 24 }} />
+      <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} email={user?.primaryEmailAddress?.emailAddress ?? ""} />
     </ScrollView>
   );
 }

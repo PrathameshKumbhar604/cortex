@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
 import type { Href } from "expo-router";
 import { useClerk, useUser } from "@clerk/expo";
-import { Brain, Cable, Compass, LogOut } from "@/ui/icons";
+import { Brain, Cable, Compass, LogOut, Trash2 } from "@/ui/icons";
+import { DeleteAccountSheet } from "./DeleteAccountSheet";
 import { useOnboarding } from "@/auth/OnboardingProvider";
 import { haptic } from "@/haptics";
 import { useWorkspace } from "@/state/workspace";
@@ -28,6 +29,7 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
   const { replay } = useOnboarding();
   const info = useWorkspace();
   const [haptics, setHaptics] = useState(() => prefs.getBool("cortex.haptics", true));
+  const [deleting, setDeleting] = useState(false);
   const [otherChats, setOtherChats] = useState(() => prefs.getBool("cortex.useOtherChats", false));
   const [voice, setVoice] = useState(readVoice);
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -41,6 +43,7 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
   const persona = PERSONAS.find((p) => p.lang === voice.lang && p.gender === voice.gender);
 
   return (
+    <>
     <Sheet open={open} onClose={onClose} maxHeight={0.9}>
       <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 12 }}>
@@ -135,8 +138,19 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
             void signOut();
           }}
         />
+        <SheetRow
+          icon={<Trash2 size={18} color={c.muted} strokeWidth={1.75} />}
+          label="Delete account"
+          onPress={() => {
+            onClose();
+            setDeleting(true);
+          }}
+        />
       </ScrollView>
     </Sheet>
+    {/* Beside the account sheet, not inside it: that one closes as this one opens. */}
+    <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} email={email} />
+    </>
   );
 }
 

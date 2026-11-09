@@ -17,6 +17,7 @@ import { toast } from "@/ui/toast";
 const WHAT: Record<string, string> = {
   gmail: "Emails, requests and replies",
   calendar: "Meetings and deadlines",
+  tasks: "To-dos and due dates",
   drive: "Docs, reports and files",
   notion: "Specs, goals and notes",
   slack: "Team discussions and blockers",

@@ -3,7 +3,7 @@ import { cookieSuffix, parentDomain, staleClerkCookies } from "@/lib/stale-cooki
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const ANON = "cortex_uid";
-const isPublic = createRouteMatcher(["/sign-in(.*)", "/sso-callback(.*)", "/api/email-check"]);
+const isPublic = createRouteMatcher(["/sign-in(.*)", "/sso-callback(.*)", "/api/email-check", "/privacy", "/delete-account"]);
 
 /**
  * Signed-out visitors go to /sign-in (API calls get 401). Every route still checks the session itself. The anonymous

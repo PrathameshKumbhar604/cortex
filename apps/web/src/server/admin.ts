@@ -39,7 +39,7 @@ export async function questionsToday(userId: string): Promise<number> {
   return (db.prepare("SELECT questions FROM usage WHERE user_id = ? AND day = ?").get(userId, today()) as { questions: number } | undefined)?.questions ?? 0;
 }
 
-export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.approve" | "admin.unapprove" | "admin.settings" | "admin.voice" | "voice.off" | "action.executed" | "action.failed" | "error";
+export type AuditKind = "admin.role" | "admin.disable" | "admin.enable" | "admin.approve" | "admin.unapprove" | "account.delete" | "admin.settings" | "admin.voice" | "voice.off" | "action.executed" | "action.failed" | "error";
 
 export async function logEvent(actor: string, kind: AuditKind, target = "", detail = "") {
   await ready;
