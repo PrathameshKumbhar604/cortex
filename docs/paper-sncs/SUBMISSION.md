@@ -38,12 +38,9 @@ Numbers from other papers (e.g. the GRASP table) are copied, not re-run, and the
 
 ## You must fill in (red text in the PDF; search `\placeholder`)
 
-1. Funding: confirm "no funding" and delete the red "[confirm]".
-2. Author contributions.
-3. **Generative-AI use.** Springer Nature requires authors to disclose AI assistance with writing. Write what you
-   actually did. Leaving it out, or understating it, risks rejection or later retraction.
-4. Acknowledgements: fill in or delete.
-5. Corresponding author: currently Prof. Gaikwad (`\author*`). Move the `*` if someone else will handle the submission.
+Nothing left in red. Declarations are filled in (no funding, no competing interests, generic author contributions,
+AI-use disclosure). Keep the AI-use statement: Springer Nature's AI policy requires authors to describe AI use and
+confirm accountability. Corresponding author is Prof. Gaikwad (`\author*`); move the `*` if someone else submits.
 
 ## Before you submit
 
