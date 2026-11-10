@@ -25,7 +25,7 @@ export default function DeleteAccountPage() {
         </ul>
         <p className="mt-4">Nothing is kept afterwards. Error logs that mention your email are removed as they age out.</p>
         <p className="mt-4">
-          In the Android app: open the menu, tap your name, then <b>Delete account</b>. On the web: sign in, then use the button below.
+          In the Android app: open the menu, tap your name, then <b>Privacy and data</b>, then <b>Delete account</b>. On the web: sign in, then use the button below.
         </p>
         <div className="mt-8">
           <DeleteAccount />

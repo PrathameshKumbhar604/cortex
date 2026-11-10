@@ -76,6 +76,7 @@ function Routes() {
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.shell }, animation: "fade_from_bottom" }}>
+        <Stack.Screen name="sso-callback" options={{ animation: "none" }} />
         <Stack.Protected guard={!isSignedIn}>
           <Stack.Screen name="sign-in" />
         </Stack.Protected>

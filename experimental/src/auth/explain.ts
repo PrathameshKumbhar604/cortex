@@ -16,6 +16,7 @@ export function explainClerk(err: unknown, mode: Mode): string {
   if (/form_param_format_invalid|email_address/.test(code)) return "That doesn't look like an email address. Check for typos.";
   if (/user_locked/.test(code)) return "This account is locked for a little while after too many tries. Try again later.";
   if (/banned|user_disabled/.test(code)) return "This account has been turned off. Ask your Cortex admin to turn it back on.";
+  if (/redirect/.test(code)) return "Google and GitHub sign-in aren't ready in the app yet. Use your email for now.";
   if (/strategy|oauth/.test(code)) return "That way of signing in isn't turned on for this Cortex. Use your email instead.";
   if (e?.status === 429 || /too_many|rate/.test(code)) return "Too many tries in a row. Wait a minute, then try again.";
   return mode === "create" ? "We couldn't create your account just now. Try again in a moment." : "We couldn't sign you in just now. Try again in a moment.";

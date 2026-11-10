@@ -36,6 +36,7 @@ export { default as Plus } from "lucide-react-native/icons/plus";
 export { default as RotateCw } from "lucide-react-native/icons/rotate-cw";
 export { default as Search } from "lucide-react-native/icons/search";
 export { default as Share2 } from "lucide-react-native/icons/share-2";
+export { default as ShieldCheck } from "lucide-react-native/icons/shield-check";
 export { default as Square } from "lucide-react-native/icons/square";
 export { default as SquarePen } from "lucide-react-native/icons/square-pen";
 export { default as Trash2 } from "lucide-react-native/icons/trash-2";

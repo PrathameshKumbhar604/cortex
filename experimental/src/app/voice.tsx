@@ -32,8 +32,8 @@ const LABEL: Record<Phase, string> = {
 };
 
 /**
- * Voice mode: a hands-free conversation. Listen → you talk → a pause ends the turn → think → speak → listen. Talking
- * over Cortex interrupts it. Every turn is a normal chat turn, so ending the conversation leaves the chat behind.
+ * Voice mode: a hands-free conversation. Listen → you talk → a pause ends the turn → think → speak → listen. The
+ * square button interrupts Cortex (the mic waits while it talks: the phone's stream has no echo cancellation). Every turn is a normal chat turn, so ending the conversation leaves the chat behind.
  */
 export default function Voice() {
   const { c, scheme } = useTheme();
@@ -209,7 +209,7 @@ export default function Voice() {
   const fold: FoldState = phase === "starting" ? "starting" : phase === "approval" || muted ? "paused" : phase === "transcribing" ? "thinking" : phase;
   const status = muted && phase !== "approval" ? "Mic off" : LABEL[phase];
   const hint =
-    phase === "listening" && !muted ? "Talk whenever you're ready. A pause sends it." : phase === "hearing" ? "Take your time. A pause sends it." : phase === "speaking" ? "Start talking to interrupt." : phase === "approval" ? "Nothing happens until you choose." : "";
+    phase === "listening" && !muted ? "Talk whenever you're ready. A pause sends it." : phase === "hearing" ? "Take your time. A pause sends it." : phase === "speaking" ? "Tap the square to interrupt." : phase === "approval" ? "Nothing happens until you choose." : "";
   const rp = persona(replyVoice.lang, replyVoice.gender);
   const transcript = useRef<React.ComponentRef<typeof ScrollView>>(null);
 

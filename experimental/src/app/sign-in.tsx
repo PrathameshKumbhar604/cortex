@@ -2,7 +2,8 @@ import { useState } from "react";
 import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth, useSignIn, useSignUp, useSSO } from "@clerk/expo";
+import { useAuth, useSignIn, useSignUp } from "@clerk/expo";
+import { useSSO } from "@clerk/expo/experimental"; // the Core 3 flow, like the rest of this screen: it finalizes the session itself
 import { ArrowRight, MailCheck } from "@/ui/icons";
 import { API_URL, OAUTH_ENABLED } from "@/config";
 import { explainClerk, type Mode } from "@/auth/explain";
@@ -125,8 +126,14 @@ export default function SignIn() {
 
   const sso = (provider: "google" | "github") =>
     run(provider, async () => {
-      const { createdSessionId, setActive } = await startSSOFlow({ strategy: `oauth_${provider}` });
-      if (createdSessionId) await setActive?.({ session: createdSessionId });
+      try {
+        const { createdSessionId, authSessionResult } = await startSSOFlow({ strategy: `oauth_${provider}` });
+        if (createdSessionId) haptic.success();
+        else if (authSessionResult?.type === "success") fail(null, mode); // signed in at Google/GitHub, but no session came back
+        // closed the browser sheet: nothing to say
+      } catch (err) {
+        fail(err, mode); // a Clerk refusal is not a network problem
+      }
     });
 
   const back = () => {

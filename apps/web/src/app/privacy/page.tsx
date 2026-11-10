@@ -61,8 +61,8 @@ export default function Privacy() {
         <h2>Deleting your data</h2>
         <p>
           You can delete single chats, files and memories at any time. To delete your whole account and everything above, use{" "}
-          <Link href="/delete-account" className="text-accent-ink underline underline-offset-2">Delete account</Link> on the website, or <b>Delete account</b> in the app&rsquo;s
-          account menu. It takes effect at once and cannot be undone.
+          <Link href="/delete-account" className="text-accent-ink underline underline-offset-2">Delete account</Link> on the website, or <b>Privacy and data</b>, then <b>Delete account</b>, in the
+          app&rsquo;s account menu. It takes effect at once and cannot be undone.
         </p>
 
         <h2>Children</h2>

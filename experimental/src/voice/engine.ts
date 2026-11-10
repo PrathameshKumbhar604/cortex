@@ -12,6 +12,7 @@ import { rms, SR, to16k, wavBytes } from "./wav";
 
 const PREROLL_MS = 400; // audio kept from before speech was detected, so the first syllable isn't lost
 const PREFETCH = 2; // sentences fetched ahead of the one playing
+const ECHO_TAIL_MS = 600; // after Cortex stops talking, the room still rings with it for a moment
 
 export interface EngineEvents {
   onSpeechStart: (bargeIn: boolean) => void;
@@ -35,6 +36,7 @@ export class NativeVoiceEngine {
   private prerollAt = 0;
   private chunks: Float32Array[] = [];
   private mic = 0;
+  private quietUntil = 0;
   listening = true;
   // playback
   private queue: Item[] = [];
@@ -96,6 +98,9 @@ export class NativeVoiceEngine {
     const ms = (mono.length / rate) * 1000;
     const level = rms(mono);
     this.mic = level;
+    // expo-audio's stream records the raw MIC source, with no echo cancellation: while Cortex talks (and just after),
+    // its own voice from the speaker would read as the user starting a turn. So turn-taking waits; Interrupt cuts it off.
+    if (this.speaking || Date.now() < this.quietUntil) return;
     if (!this.vad.active) for (const x of pcm) this.preroll[this.prerollAt++ % this.preroll.length] = x;
     if (!this.listening) return;
     if (this.vad.active) this.chunks.push(pcm);
@@ -167,6 +172,7 @@ export class NativeVoiceEngine {
     this.playing = null;
     p?.stop();
     void Speech.stop();
+    if (p) this.quietUntil = Date.now() + ECHO_TAIL_MS;
   }
 
   private pump() {
@@ -185,7 +191,10 @@ export class NativeVoiceEngine {
   private next() {
     this.playing = null;
     if (this.queue.length) this.pump();
-    else this.on.onIdle();
+    else {
+      this.quietUntil = Date.now() + ECHO_TAIL_MS;
+      this.on.onIdle();
+    }
   }
 
   /** No meter on the player: a gentle synthetic level keeps the orb alive while Cortex talks. */
@@ -198,20 +207,30 @@ export class NativeVoiceEngine {
   private playFile(uri: string) {
     const player: AudioPlayer = createAudioPlayer({ uri });
     this.pulse(true);
-    const handle = {
-      stop: () => {
-        sub.remove();
-        this.pulse(false);
-        player.pause();
-        player.release();
-      },
-    };
-    const sub = player.addListener("playbackStatusUpdate", (s) => {
-      if (!s.didJustFinish) return;
+    let ended = false;
+    let timed = false;
+    // A clip that never loads or never reports its end must not leave voice mode stuck on "Speaking".
+    let watchdog = setTimeout(() => end(true), 20_000);
+    const end = (advance: boolean) => {
+      if (ended) return;
+      ended = true;
+      clearTimeout(watchdog);
       sub.remove();
       this.pulse(false);
+      try {
+        player.pause();
+      } catch {}
       player.release();
-      if (this.playing === handle) this.next();
+      if (advance && this.playing === handle) this.next();
+    };
+    const handle = { stop: () => end(false) };
+    const sub = player.addListener("playbackStatusUpdate", (s) => {
+      if (s.didJustFinish) return end(true);
+      if (!timed && s.isLoaded && s.duration > 0) {
+        timed = true;
+        clearTimeout(watchdog);
+        watchdog = setTimeout(() => end(true), (s.duration + 2) * 1000);
+      }
     });
     player.play();
     return handle;
@@ -220,13 +239,17 @@ export class NativeVoiceEngine {
   /** The last resort, when neither Sarvam nor the server's free backup voices could speak: Android's own voice. */
   private playDevice(item: Item) {
     this.pulse(true);
+    // The same guard as playFile: some Android voices never call onDone.
+    const watchdog = setTimeout(() => done(), 4000 + item.text.split(/\s+/).length * 600);
     const handle = {
       stop: () => {
+        clearTimeout(watchdog);
         this.pulse(false);
         void Speech.stop();
       },
     };
     const done = () => {
+      clearTimeout(watchdog);
       this.pulse(false);
       if (this.playing === handle) this.next();
     };

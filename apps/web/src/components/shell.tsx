@@ -518,8 +518,8 @@ function AccountMenu({ info, placement }: { info: WorkspaceInfo | null; placemen
               <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
               Sign out
             </button>
-            <Link href="/delete-account" className={cn(ITEM, "text-[12.5px] text-muted hover:bg-risk-soft hover:text-risk")}>
-              Delete account
+            <Link href="/privacy" className={cn(ITEM, "text-[12.5px] text-muted")}>
+              Privacy and data
             </Link>
           </motion.div>
         )}

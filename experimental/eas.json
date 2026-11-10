@@ -23,7 +23,7 @@
         "APP_ENV": "preview",
         "EXPO_PUBLIC_API_URL": "https://cortex.runs-on.dev",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuY29ydGV4LnJ1bnMtb24uZGV2JA",
-        "EXPO_PUBLIC_OAUTH_ENABLED": "0"
+        "EXPO_PUBLIC_OAUTH_ENABLED": "1"
       }
     },
     "production": {
@@ -35,7 +35,7 @@
         "APP_ENV": "production",
         "EXPO_PUBLIC_API_URL": "https://cortex.runs-on.dev",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuY29ydGV4LnJ1bnMtb24uZGV2JA",
-        "EXPO_PUBLIC_OAUTH_ENABLED": "0"
+        "EXPO_PUBLIC_OAUTH_ENABLED": "1"
       }
     }
   },

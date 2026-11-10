@@ -2,7 +2,9 @@ import { useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
 import type { Href } from "expo-router";
 import { useClerk, useUser } from "@clerk/expo";
-import { Brain, Cable, Compass, LogOut, Trash2 } from "@/ui/icons";
+import * as WebBrowser from "expo-web-browser";
+import { API_URL } from "@/config";
+import { ArrowUpRight, Brain, Cable, Compass, LogOut, ShieldCheck, Trash2 } from "@/ui/icons";
 import { DeleteAccountSheet } from "./DeleteAccountSheet";
 import { useOnboarding } from "@/auth/OnboardingProvider";
 import { haptic } from "@/haptics";
@@ -29,6 +31,7 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
   const { replay } = useOnboarding();
   const info = useWorkspace();
   const [haptics, setHaptics] = useState(() => prefs.getBool("cortex.haptics", true));
+  const [privacy, setPrivacy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [otherChats, setOtherChats] = useState(() => prefs.getBool("cortex.useOtherChats", false));
   const [voice, setVoice] = useState(readVoice);
@@ -129,6 +132,14 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
         </View>
         <Rule style={{ marginTop: 14 }} />
         <SheetRow
+          icon={icon(ShieldCheck)}
+          label="Privacy and data"
+          onPress={() => {
+            onClose();
+            setPrivacy(true);
+          }}
+        />
+        <SheetRow
           icon={<LogOut size={18} color={c.risk} strokeWidth={1.75} />}
           label="Sign out"
           danger
@@ -138,17 +149,28 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
             void signOut();
           }}
         />
-        <SheetRow
-          icon={<Trash2 size={18} color={c.muted} strokeWidth={1.75} />}
-          label="Delete account"
-          onPress={() => {
-            onClose();
-            setDeleting(true);
-          }}
-        />
       </ScrollView>
     </Sheet>
-    {/* Beside the account sheet, not inside it: that one closes as this one opens. */}
+    {/* Beside the account sheet, not inside it: that one closes as these open. */}
+    <Sheet open={privacy} onClose={() => setPrivacy(false)} title="Privacy and data">
+      <Txt variant="small" tone="muted" style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+        Cortex reads your connected apps only to answer you, and acts only after you approve. Disconnect any app from Sources at any time.
+      </Txt>
+      <SheetRow
+        icon={icon(ArrowUpRight)}
+        label="Privacy policy"
+        onPress={() => void WebBrowser.openBrowserAsync(`${API_URL}/privacy`, { showTitle: true, createTask: false })}
+      />
+      <Rule />
+      <SheetRow
+        icon={<Trash2 size={18} color={c.muted} strokeWidth={1.75} />}
+        label="Delete account"
+        onPress={() => {
+          setPrivacy(false);
+          setDeleting(true);
+        }}
+      />
+    </Sheet>
     <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} email={email} />
     </>
   );

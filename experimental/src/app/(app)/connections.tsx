@@ -47,12 +47,11 @@ export default function Connections() {
   const connect = async (x: ConnectorStatus) => {
     setBusy(x.id);
     try {
-      await connectApp(x.id, refreshWorkspace);
-      const now = (await refreshWorkspace())?.connectors.find((y) => y.id === x.id);
-      if (now?.connected) {
+      const ok = await connectApp(x.id, async () => !!(await refreshWorkspace())?.connectors.find((y) => y.id === x.id)?.connected);
+      if (ok) {
         haptic.success();
         toast(`${x.name} is connected`);
-      }
+      } else toast(`${x.name} isn't connected yet. If you finished signing in, pull down to check again.`);
     } catch (e) {
       toast(e instanceof Error ? e.message : `Couldn't start ${x.name} sign-in.`);
     } finally {
@@ -121,6 +120,11 @@ export default function Connections() {
       </View>
 
       <View style={{ marginTop: 32 }}>
+        {info?.workspace === "demo" && info.liveAvailable && (
+          <Txt variant="small" tone="muted" style={{ marginBottom: 12 }}>
+            Choose Your accounts above to connect your own apps.
+          </Txt>
+        )}
         <Rule strong />
         {!info && <ActivityIndicator color={c.accent} style={{ marginTop: 24 }} />}
         {(info?.connectors ?? [])
