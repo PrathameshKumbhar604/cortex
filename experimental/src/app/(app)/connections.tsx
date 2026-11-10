@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Check } from "@/ui/icons";
 import type { ConnectorStatus } from "@cortex/shared";
 import { api } from "@/api/client";
 import { Logo } from "@/ask/Logo";
-import { connectApp, onForeground } from "@/connections/connect";
+import { connectApp, connectLink, NEEDS_BROWSER_SHEET, onForeground } from "@/connections/connect";
+import { ConnectDialog } from "@/connections/ConnectDialog";
 import { haptic } from "@/haptics";
 import { refreshWorkspace, switchWorkspace, useWorkspace } from "@/state/workspace";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -32,8 +33,25 @@ export default function Connections() {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmOff, setConfirmOff] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [dialog, setDialog] = useState<{ id: string; name: string; url: string } | null>(null);
 
   useEffect(() => onForeground(() => void refreshWorkspace()), []);
+
+  const dialogConnected = useCallback(async () => {
+    const id = dialog?.id;
+    return !!id && !!(await refreshWorkspace())?.connectors.find((y) => y.id === id)?.connected;
+  }, [dialog]);
+  const dialogDone = useCallback(
+    (ok: boolean) => {
+      if (ok && dialog) {
+        haptic.success();
+        toast(`${dialog.name} is connected`);
+      } else void refreshWorkspace();
+      setDialog(null);
+      setBusy(null);
+    },
+    [dialog],
+  );
 
   const switchTo = async (w: "demo" | "live") => {
     if (info?.workspace === w) return;
@@ -46,6 +64,15 @@ export default function Connections() {
   };
   const connect = async (x: ConnectorStatus) => {
     setBusy(x.id);
+    if (!NEEDS_BROWSER_SHEET.has(x.id)) {
+      try {
+        setDialog({ id: x.id, name: x.name, url: await connectLink(x.id) }); // busy clears when the dialog closes
+      } catch (e) {
+        toast(e instanceof Error ? e.message : `Couldn't start ${x.name} sign-in.`);
+        setBusy(null);
+      }
+      return;
+    }
     try {
       const ok = await connectApp(x.id, async () => !!(await refreshWorkspace())?.connectors.find((y) => y.id === x.id)?.connected);
       if (ok) {
@@ -148,7 +175,7 @@ export default function Connections() {
                     {x.detail}
                   </Txt>
                 )}
-                {busy === x.id && !x.connected && (
+                {busy === x.id && !x.connected && NEEDS_BROWSER_SHEET.has(x.id) && (
                   <Txt variant="note" tone="ink2" accessibilityLiveRegion="polite">
                     Finish signing in to {x.name}, then close the sheet. This page updates by itself.
                   </Txt>
@@ -184,6 +211,7 @@ export default function Connections() {
             </View>
           ))}
       </View>
+      <ConnectDialog target={dialog} isConnected={dialogConnected} onDone={dialogDone} />
     </Screen>
   );
 }
