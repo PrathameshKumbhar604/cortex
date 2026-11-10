@@ -11,7 +11,7 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit}
-\newcommand{\placeholder}[1]{\textcolor{red}{[#1]}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 
 \raggedbottom
 
@@ -151,6 +151,7 @@ Fig.~\ref{fig:taxonomy} groups the literature into eight dimensions. A single sy
 
 \begin{figure*}[t]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
   root/.style={draw, thick, rounded corners=2pt, fill=gray!18, align=center, inner sep=4pt, minimum height=7mm},
@@ -172,7 +173,8 @@ Fig.~\ref{fig:taxonomy} groups the literature into eight dimensions. A single sy
 \draw (root.south) -- (0,-0.7);
 \draw (-6.45,-0.7) -- (6.45,-0.7);
 \foreach \nd/\x in {e/-6.45,f/-2.15,g/2.15,h/6.45} { \draw (\x,-0.7) -- (\nd.north); }
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{The eight design dimensions used in this survey, with representative (not exhaustive) methods for each. Dimension C, shaded, holds the RL-trained search policies, including GRASP~\cite{gandhi2026grasp}, which Section~\ref{sec:grasp} examines in detail.}
 \label{fig:taxonomy}
 \end{figure*}
@@ -280,7 +282,8 @@ Table~\ref{tab:compare} codes 25 representative methods along the taxonomy. ``Gr
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{@{}p{1.75cm}p{3.1cm}p{2.0cm}p{2.1cm}p{1.6cm}p{2.3cm}p{1.6cm}p{1.5cm}@{}}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}L{2.8cm}L{3.1cm}L{2.1cm}L{2.2cm}L{1.7cm}L{2.4cm}L{1.6cm}L{1.6cm}@{}}
 \toprule
 \textbf{Method} & \textbf{Retrieval strategy} & \textbf{Granularity} & \textbf{Policy} & \textbf{Memory} & \textbf{Verification} & \textbf{Live data} & \textbf{Actions} \\
 \midrule
@@ -310,7 +313,8 @@ A-RAG~\cite{du2026arag} & Hierarchical retrieval interfaces & Keyword to chunk &
 MemGPT~\cite{packer2023memgpt} & Paging context and storage & -- & Function calls & Tiered context & -- & -- & -- \\
 A-MEM~\cite{xu2025amem} & Linked-note retrieval & Note & Prompting & Evolving note graph & -- & -- & -- \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
 Four patterns follow from the table.
@@ -337,7 +341,7 @@ Table~\ref{tab:bench} summarises the benchmarks used by the surveyed work and wh
 \scriptsize
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{@{}p{2.1cm}p{2.5cm}p{3.2cm}@{}}
+\begin{tabular}{@{}L{2.9cm}L{2.7cm}L{5.4cm}@{}}
 \toprule
 \textbf{Benchmark} & \textbf{Setting} & \textbf{What it tests} \\
 \midrule
