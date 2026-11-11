@@ -77,7 +77,8 @@ export class ActionStore {
     try {
       const res = await connector.execute(p.actionId, args, { userId });
       p.status = res.ok ? "executed" : "failed";
-      p.result = res.message + (res.url ? ` ${res.url}` : "");
+      p.result = res.message;
+      p.url = res.url;
     } catch (err) {
       p.status = "failed";
       p.result = `${connector.name} didn't accept it: ${describeError(err)}.`;

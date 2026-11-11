@@ -1,6 +1,6 @@
 import { Composio } from "@composio/core";
 import type { ConnectorStatus } from "@cortex/shared";
-import { extractEvidence, rankByQuery } from "../extract";
+import { extractEvidence, findUrl, rankByQuery } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type RawEvidence, type SearchInput } from "../types";
 import type { ComposioToolkitSpec } from "./toolkits";
 
@@ -105,7 +105,7 @@ export class ComposioConnector implements Connector {
     const action = this.spec.actions.find((a) => a.id === actionId);
     if (!action) throw new ConnectorError(this.id, `Unknown action ${actionId}`, false);
     const data = await this.run(action.slug, action.toArgs(args), ctx);
-    const url = extractEvidence(this.id, data, 1)[0]?.url;
+    const url = findUrl(data) ?? extractEvidence(this.id, data, 1)[0]?.url;
     return { ok: true, message: `${action.title} done in ${this.name}.`, url };
   }
 }

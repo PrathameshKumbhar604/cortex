@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleSlash, Loader2, PenLine, TriangleAlert } from "lucide-react";
+import { Check, CircleSlash, ExternalLink, Loader2, PenLine, TriangleAlert } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { play } from "@/lib/sound";
@@ -103,7 +103,22 @@ export function ActionCard({
         </pre>
       )}
 
-      {proposal.result && <p className={cn("mt-2 text-[13px]", proposal.status === "failed" ? "text-risk" : "text-muted")}>{proposal.result}</p>}
+      {(proposal.result || (proposal.status === "executed" && proposal.url)) && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          {proposal.result && <p className={cn("text-[13px]", proposal.status === "failed" ? "text-risk" : "text-muted")}>{proposal.result}</p>}
+          {proposal.status === "executed" && proposal.url && (
+            <a
+              href={proposal.url}
+              target="_blank"
+              rel="noreferrer"
+              className="press inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line px-3 text-[13px] font-[500] text-ink-2 hover:border-line-strong hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              View in {sourceName(proposal.connectorId)}
+              <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          )}
+        </div>
+      )}
 
       {pending && (
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2">

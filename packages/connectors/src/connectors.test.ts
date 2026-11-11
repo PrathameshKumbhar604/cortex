@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ComposioMcpConnector, ConnectorRegistry, DemoConnector, FirecrawlConnector, TOOLKITS, aliasFor, buildRegistry, extractEvidence } from "./index";
 import type { Connector } from "./types";
 import { driveQuery, gmailAccountLinks, gmailBody, gmailQuery, notionMarkdown } from "./composio/toolkits";
-import { htmlToText, rankByQuery } from "./extract";
+import { findUrl, htmlToText, rankByQuery } from "./extract";
 
 const ctx = { userId: "u1" };
 
@@ -396,5 +396,14 @@ describe("Gmail links", () => {
     const items = [{ source: "gmail" as const, title: "t", quote: "q", url: "https://mail.google.com/mail/u/0/#all/abc" }];
     await gmailAccountLinks(items, async () => { throw new Error("down"); }, "acct-2");
     expect(items[0]!.url).toBe("https://mail.google.com/mail/u/0/#all/abc");
+  });
+});
+
+describe("the link to what an action created", () => {
+  it("finds the item's own link wherever the app puts it", () => {
+    expect(findUrl({ id: "p1", url: "https://www.notion.so/YouTube-Links-p1", properties: { title: [{ href: "https://x.test" }] } })).toBe("https://www.notion.so/YouTube-Links-p1");
+    expect(findUrl({ data: { number: 7, html_url: "https://github.com/o/r/issues/7", user: { html_url: "https://github.com/me" } } })).toBe("https://github.com/o/r/issues/7");
+    expect(findUrl({ response_data: { htmlLink: "https://calendar.google.com/event?eid=1" } })).toBe("https://calendar.google.com/event?eid=1");
+    expect(findUrl({ id: "m1", threadId: "t1", link: "not a link" })).toBeUndefined();
   });
 });

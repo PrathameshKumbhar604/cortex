@@ -108,6 +108,29 @@ export function extractEvidence(source: SourceId, data: unknown, limit = 8): Raw
   return out;
 }
 
+/**
+ * The link to what an action created, wherever the app put it in its response ({url}, {data: {html_url}}, …): the first
+ * http link under a link key, searched breadth-first so the item's own link wins over ones nested in its properties.
+ */
+export function findUrl(data: unknown): string | undefined {
+  let level: unknown[] = [data];
+  for (let depth = 0; depth < 5 && level.length; depth++) {
+    const next: unknown[] = [];
+    for (const v of level) {
+      if (!v || typeof v !== "object") continue;
+      if (!Array.isArray(v)) {
+        for (const k of URL_KEYS) {
+          const s = (v as Obj)[k];
+          if (typeof s === "string" && /^https?:\/\//.test(s)) return s;
+        }
+      }
+      next.push(...Object.values(v));
+    }
+    level = next;
+  }
+  return undefined;
+}
+
 /** Orders hits by how many query words appear in their title and snippet, newest first on ties. */
 export function rankByQuery<T extends { title: string; quote: string; timestamp?: string }>(items: T[], query: string): T[] {
   const words = query.toLowerCase().split(/\W+/).filter((w) => w.length > 2);

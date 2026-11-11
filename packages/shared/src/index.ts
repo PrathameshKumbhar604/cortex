@@ -67,6 +67,7 @@ export interface ActionProposal {
   risk: ActionRisk;
   status: "pending" | "approved" | "rejected" | "executed" | "failed";
   result?: string;
+  url?: string; // where the created item lives, once it ran ("View in Notion")
 }
 
 export type MemoryKind = "priority" | "preference" | "fact" | "person" | "decision";

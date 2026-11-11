@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { ConnectorStatus } from "@cortex/shared";
-import { extractEvidence } from "../extract";
+import { extractEvidence, findUrl } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
 import { withDetails } from "./connector";
 import { TOOLKITS, type ComposioToolkitSpec } from "./toolkits";
@@ -215,7 +215,7 @@ export class ComposioMcpConnector implements Connector {
     if (!action) throw new ConnectorError(this.id, `Unknown action ${actionId}`, false);
     const clean = Object.fromEntries(Object.entries(action.toArgs(args)).filter(([, v]) => v !== undefined && v !== ""));
     const data = await this.session.execute(action.slug, clean, await this.accountFor(ctx.userId));
-    const url = extractEvidence(this.id, data, 1)[0]?.url;
+    const url = findUrl(data) ?? extractEvidence(this.id, data, 1)[0]?.url;
     return { ok: true, message: `${action.title} done in ${this.name}.`, url };
   }
 }
