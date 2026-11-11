@@ -15,7 +15,7 @@ export function Choices({ question, options, onPick }: { question: string; optio
   const first = useRef<HTMLButtonElement>(null);
   const titleId = useId();
 
-  useEffect(() => first.current?.focus({ preventScroll: true }), []);
+  useEffect(() => (first.current ?? input.current)?.focus({ preventScroll: true }), []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -73,7 +73,7 @@ export function Choices({ question, options, onPick }: { question: string; optio
               value={other}
               onChange={(e) => setOther(e.target.value)}
               onKeyDown={(e) => e.key === "Escape" && (setOther(""), input.current?.blur())}
-              placeholder="Something else…"
+              placeholder={options.length ? "Something else…" : "Type your answer…"}
               aria-label="Type your own answer"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
             />

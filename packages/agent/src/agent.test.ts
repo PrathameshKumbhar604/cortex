@@ -379,6 +379,18 @@ describe("action requests", () => {
   });
 });
 
+describe("choices for a question back", () => {
+  it("offers the target app's pages by name when the model gives no options", async () => {
+    const { llm } = stubLlm("unused", { ask: "Which Notion page should it go under?" });
+    const deps = { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() };
+    const events = await collect(runAgent({ question: "add the demo day notes to my notion", mode: "fast", userId: "u1" }, deps));
+    const answer = events.find((e) => e.type === "answer");
+    const options = answer && answer.type === "answer" ? answer.options : undefined;
+    expect(options?.length).toBeGreaterThan(0);
+    expect(options!.length).toBeLessThanOrEqual(4);
+  });
+});
+
 describe("routing a request to save something", () => {
   it("treats 'add it to my notes' as an action over the apps it names", () => {
     const d = routeByRules("read the latest mail which has the youtube links and add it to my notes", ["gmail", "notion"]);

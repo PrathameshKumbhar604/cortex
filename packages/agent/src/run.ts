@@ -498,7 +498,8 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
     // 5a. Actions: draft for approval, or ask for what's missing. No answer to verify, so no claims or citations.
     if (route.route === "action") {
       yield { type: "step", step: "synthesize", status: "active", detail: "drafting" };
-      const drafted = await draftAction(input, deps, { evidence: ranked, briefs: actionBriefs(scoped.length ? scoped : connected), history, budget, signal });
+      const targets = scoped.length ? scoped : connected;
+      const drafted = await draftAction(input, deps, { evidence: ranked, briefs: actionBriefs(targets), targets, history, budget, signal });
       if (drafted) {
         const n = drafted.proposals.length;
         const md = n > 1 ? `Here are ${n} drafts. Check each, edit if needed, and approve. Nothing happens until you do.` : n ? "Here's the draft. Check it, edit if needed, and approve. Nothing happens until you do." : drafted.ask!;
@@ -667,7 +668,7 @@ async function recall(input: RunInput, deps: AgentDeps, question: string, askedA
 async function draftAction(
   input: RunInput,
   deps: AgentDeps,
-  o: { evidence: Evidence[]; briefs: ActionBrief[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
+  o: { evidence: Evidence[]; briefs: ActionBrief[]; targets: Connector[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
 ): Promise<{ proposals: ActionProposal[]; ask?: string; options?: string[] } | null> {
   const drafts: unknown[] = [];
   let ask: string | undefined;
@@ -694,7 +695,23 @@ async function draftAction(
     const p = deps.actions.propose(input.userId, deps.registry, d);
     if ("id" in p) proposals.push(p);
   }
-  return proposals.length ? { proposals } : { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", options };
+  if (proposals.length) return { proposals };
+  return { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", options: options?.length ? options : await placeOptions(input, deps, o) };
+}
+
+/**
+ * Choices for "where should it go?" when the model offered none: the pages, channels and the like that the target app
+ * holds, from the evidence first, else that app's most recent items. Users pick a name; never an id.
+ */
+async function placeOptions(input: RunInput, deps: AgentDeps, o: { evidence: Evidence[]; targets: Connector[]; signal: AbortSignal }): Promise<string[]> {
+  const places = o.targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && /(Id|^channel)$/.test(p.name))));
+  const names = (items: { title: string; source: string }[]) =>
+    [...new Set(items.filter((e) => places.some((c) => c.id === e.source)).map((e) => e.title.trim()).filter((t) => t && t.length <= 80))].slice(0, 4);
+  const found = names(o.evidence);
+  if (found.length || !places.length) return found;
+  const ctx = { userId: input.userId, signal: o.signal };
+  const recent = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: "", limit: 4 }, ctx)));
+  return names(recent.flatMap((r) => (r.ok ? r.items : [])));
 }
 
 async function* rememberStep(
