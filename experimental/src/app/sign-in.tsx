@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, useSignIn, useSignUp } from "@clerk/expo";
 import { useSSO } from "@clerk/expo/experimental"; // the Core 3 flow, like the rest of this screen: it finalizes the session itself
 import { ArrowRight, MailCheck } from "@/ui/icons";
-import { API_URL, OAUTH_ENABLED } from "@/config";
+import { API_URL } from "@/config";
 import { explainClerk, type Mode } from "@/auth/explain";
 import { haptic } from "@/haptics";
 import { openLink } from "@/lib/links";
@@ -18,7 +18,8 @@ const EMAIL = /^\S+@\S+\.\S+$/;
 
 /**
  * The web's own sign-in, on the phone: email + password, an emailed 6-digit code for new accounts, new devices and
- * password resets. Google / GitHub appear once the Clerk dashboard allows the app (EXPO_PUBLIC_OAUTH_ENABLED).
+ * password resets. Google / GitHub need the Clerk dashboard to allow the app's return address (cortex://sso-callback);
+ * until it does, a tap explains that and email still works.
  */
 export default function SignIn() {
   const { c } = useTheme();
@@ -196,17 +197,15 @@ export default function SignIn() {
             {mode === "sign-in" ? "Sign in to pick up where you left off." : "Free. Takes ten seconds."}
           </Txt>
 
-          {OAUTH_ENABLED && (
-            <View style={{ marginTop: 24, gap: 10 }}>
-              <Button kind="secondary" label="Continue with Google" busy={busy === "google"} disabled={!isLoaded || !!busy} onPress={() => void sso("google")} />
-              <Button kind="secondary" label="Continue with GitHub" busy={busy === "github"} disabled={!isLoaded || !!busy} onPress={() => void sso("github")} />
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 6 }}>
-                <Rule style={{ flex: 1 }} />
-                <Txt variant="note" tone="hair">or continue with email</Txt>
-                <Rule style={{ flex: 1 }} />
-              </View>
+          <View style={{ marginTop: 24, gap: 10 }}>
+            <Button kind="secondary" label="Continue with Google" busy={busy === "google"} disabled={!isLoaded || !!busy} onPress={() => void sso("google")} />
+            <Button kind="secondary" label="Continue with GitHub" busy={busy === "github"} disabled={!isLoaded || !!busy} onPress={() => void sso("github")} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 6 }}>
+              <Rule style={{ flex: 1 }} />
+              <Txt variant="note" tone="hair">or continue with email</Txt>
+              <Rule style={{ flex: 1 }} />
             </View>
-          )}
+          </View>
 
           <View accessibilityRole="tablist" style={{ marginTop: 24, flexDirection: "row", backgroundColor: c.shell, borderRadius: 12, padding: 4 }}>
             {(["sign-in", "create"] as const).map((m) => (
