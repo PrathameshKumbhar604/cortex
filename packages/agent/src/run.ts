@@ -725,7 +725,8 @@ async function placeOptions(
   deps: AgentDeps,
   o: { evidence: Evidence[]; targets: Connector[]; signal: AbortSignal },
 ): Promise<{ options: string[]; refs: OptionRef[] }> {
-  const places = o.targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && /(Id|^channel)$/.test(p.name))));
+  // Only id params: those apps' search results are the items themselves (Notion pages). Slack's results are messages, not channels.
+  const places = o.targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && p.name.endsWith("Id"))));
   const pick = (items: { title: string; source: string; ref?: string }[]) => {
     const fit = items.filter((e) => places.some((c) => c.id === e.source) && e.title.trim() && e.title.length <= 80);
     const options = [...new Set(fit.map((e) => e.title.trim()))].slice(0, 4);
