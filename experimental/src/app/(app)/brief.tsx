@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
+import { openLink } from "@/lib/links";
 import { router } from "expo-router";
 import { ArrowUpRight, RotateCw } from "@/ui/icons";
 import { explainFailure, sourceName } from "@cortex/shared";
@@ -173,7 +174,7 @@ function Card({ card }: { card: BriefCard }) {
         {open && (
           <View style={{ marginTop: 8, gap: 8, borderLeftWidth: 1, borderLeftColor: c.line, paddingLeft: 12 }}>
             {card.evidence.map((e) => (
-              <Txt key={e.id} variant="small" tone="ink2" onPress={e.url ? () => void Linking.openURL(e.url!) : undefined}>
+              <Txt key={e.id} variant="small" tone="ink2" onPress={e.url ? () => openLink(e.url) : undefined}>
                 <Txt variant="readout" tone="muted">{`${sourceName(e.source)}  `}</Txt>
                 {e.quote}
                 {e.url ? "  ↗" : ""}

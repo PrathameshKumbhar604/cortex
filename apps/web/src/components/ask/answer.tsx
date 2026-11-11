@@ -62,6 +62,9 @@ export function Answer({ text, claims, evidence, verified, streaming, onCite, on
           </a>
         );
       },
+      // Never load an image an answer names: text hidden in an email or web page can make the model write one whose
+      // address carries the user's data to someone else's server. Its description is shown instead.
+      img: ({ alt }) => (alt ? <span>{alt}</span> : null),
       code: ({ children }) => <code className="rounded bg-shell px-1 py-px font-mono text-[0.86em] text-ink-2">{children}</code>,
       pre: ({ children }) => {
         const code = Children.toArray(children).find(isValidElement) as ReactElement<{ className?: string; children?: ReactNode }> | undefined;

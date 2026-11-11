@@ -150,6 +150,8 @@ export function withinLimit(key: string, max: number, windowMs = 60_000) {
   if (recent.length >= max) return false;
   recent.push(now);
   hits.set(key, recent);
+  // Keys include client-sent values (an IP header): forget idle ones, so the map can't be grown without limit.
+  if (hits.size > 5000) for (const [k, v] of hits) if (now - (v.at(-1) ?? 0) > 60 * 60_000) hits.delete(k);
   return true;
 }
 

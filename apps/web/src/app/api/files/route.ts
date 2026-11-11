@@ -1,5 +1,5 @@
 import { jsonError, session, unauthorized, withinLimit } from "@/server/cortex";
-import { listFiles, MAX_BYTES, saveFile } from "@/server/files";
+import { listFiles, MAX_BYTES, MAX_TOTAL_BYTES, saveFile, storageUsed } from "@/server/files";
 
 export async function GET() {
   const sess = await session();
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const file = form?.get("file");
   if (!(file instanceof File) || file.size === 0) return jsonError("Choose a file to upload.");
   if (file.size > MAX_BYTES) return jsonError("That file is over 10 MB. Try a smaller one.", 413);
+  if ((await storageUsed(sess.userId)) + file.size > MAX_TOTAL_BYTES) return jsonError("Your file space is full (250 MB). Delete a file you no longer need, then try again.", 413);
   try {
     return Response.json({ file: await saveFile(sess.userId, file) }, { status: 201 });
   } catch {

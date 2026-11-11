@@ -42,7 +42,10 @@ function openSignInWindow(name: string): Window | null {
   const win = window.open("", "cortex-connect", `popup,width=${w},height=${h},left=${left},top=${top}`);
   if (!win) return null;
   win.document.title = `Connect ${name}`;
-  win.document.body.innerHTML = `<p style="font:15px/1.5 system-ui,sans-serif;color:GrayText;text-align:center;margin-top:42vh">Opening ${name} sign-in…</p>`;
+  const note = win.document.createElement("p");
+  note.style.cssText = "font:15px/1.5 system-ui,sans-serif;color:GrayText;text-align:center;margin-top:42vh";
+  note.textContent = `Opening ${name} sign-in…`; // text, never HTML: the name comes from configuration
+  win.document.body.replaceChildren(note);
   win.document.body.style.cssText = "margin:0;color-scheme:light dark;background:Canvas";
   return win;
 }

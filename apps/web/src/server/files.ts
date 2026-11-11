@@ -7,6 +7,13 @@ import type { Connector, RawEvidence } from "@cortex/connectors";
 import { db, dbReady } from "./db";
 
 export const MAX_BYTES = 10 * 1024 * 1024;
+/** Per person, all files together: without it, one account could fill the server's disk 10 MB at a time. */
+export const MAX_TOTAL_BYTES = 250 * 1024 * 1024;
+
+export async function storageUsed(userId: string): Promise<number> {
+  await ready;
+  return (db.prepare("SELECT COALESCE(SUM(size), 0) AS n FROM files WHERE user_id = ?").get(userId) as { n: number }).n;
+}
 const MAX_TEXT = 200_000; // characters kept for search per file
 const root = process.env.CORTEX_ROOT ?? path.resolve(process.cwd(), "../..");
 const uploads = path.join(root, ".data", "uploads");

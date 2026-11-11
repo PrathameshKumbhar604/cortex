@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo } from "react";
-import { Linking, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { openLink } from "@/lib/links";
 import Markdown, { type ASTNode, type RenderRules } from "react-native-markdown-display";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import type { Claim, Evidence } from "@cortex/shared";
@@ -90,7 +91,7 @@ function makeRules(c: Palette, partial: string[], evidence: Evidence[], onJump: 
         );
       }
       return (
-        <Text key={node.key} accessibilityRole="link" onPress={() => void Linking.openURL(href)} style={{ color: c.accentInk, textDecorationLine: "underline" }}>
+        <Text key={node.key} accessibilityRole="link" onPress={() => openLink(href)} style={{ color: c.accentInk, textDecorationLine: "underline" }}>
           {children}
         </Text>
       );

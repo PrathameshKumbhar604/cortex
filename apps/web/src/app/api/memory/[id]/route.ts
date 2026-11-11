@@ -10,13 +10,15 @@ async function owns(id: string) {
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/memory/[id]">) {
   const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as { content?: string; pinned?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { content?: unknown; pinned?: unknown };
+  const content = typeof body.content === "string" ? body.content.trim().slice(0, 500) : "";
+  if (content && content.length < 3) return jsonError("Write what Cortex should remember.");
   try {
     const own = await owns(id);
     if (!own) return unauthorized();
     const { memory, owned } = own;
     if (!owned) return jsonError("Memory not found.", 404);
-    return Response.json({ item: await memory.update(id, { content: body.content?.trim() || undefined, pinned: body.pinned }) });
+    return Response.json({ item: await memory.update(id, { content: content || undefined, pinned: typeof body.pinned === "boolean" ? body.pinned : undefined }) });
   } catch {
     return jsonError("The memory service isn't reachable right now.", 503);
   }

@@ -17,7 +17,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/files/[id]">) {
       "content-type": inline ? file.type : "application/octet-stream",
       "content-disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
       "x-content-type-options": "nosniff",
-      "content-security-policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+      "content-security-policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'",
       "cache-control": "private, max-age=0",
     },
   });

@@ -94,7 +94,8 @@ export class ConnectorRegistry {
     let lastErr: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const items = await withTimeout(c.search(input, ctx), SEARCH_TIMEOUT_MS, c.name);
+        // A source's link is shown as a clickable link: only web addresses and Cortex's own paths, never javascript: or data:.
+        const items = (await withTimeout(c.search(input, ctx), SEARCH_TIMEOUT_MS, c.name)).map((e) => (e.url && !/^(https?:\/\/|\/(?!\/))/i.test(e.url) ? { ...e, url: undefined } : e));
         this.cache.set(key, items, SEARCH_CACHE_TTL_MS);
         return { ok: true, items, cached: false, ms: Date.now() - started };
       } catch (err) {

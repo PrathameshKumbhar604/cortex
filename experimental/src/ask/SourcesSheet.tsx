@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { openLink } from "@/lib/links";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { ChevronRight } from "@/ui/icons";
 import { sourceName, type Evidence } from "@cortex/shared";
@@ -99,7 +100,7 @@ function SourceCard({ ev, n, query, flash, onLayout }: { ev: Evidence; n?: numbe
     <Animated.View onLayout={(e) => onLayout(e.nativeEvent.layout.y)} style={[{ borderRadius: 12 }, bg]}>
       <Pressable
         disabled={!ev.url}
-        onPress={() => ev.url && void Linking.openURL(ev.url)}
+        onPress={() => openLink(ev.url)}
         accessibilityRole={ev.url ? "link" : undefined}
         android_ripple={{ color: c.pressed }}
         style={{ paddingHorizontal: 12, paddingVertical: 12, gap: 4 }}

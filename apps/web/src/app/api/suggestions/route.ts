@@ -18,6 +18,7 @@ export async function GET() {
   try {
     const questions = await starterQuestions(brief.cards, deps(sess.workspace).llm, AbortSignal.timeout(6000));
     if (questions) cache.set(key, { at: Date.now(), questions });
+    if (cache.size > 500) cache.delete(cache.keys().next().value!); // oldest out
     return Response.json({ questions });
   } catch {
     return Response.json({ questions: null });

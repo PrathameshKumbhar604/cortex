@@ -32,7 +32,11 @@ export async function POST(req: Request) {
     return jsonError(`You've reached today's limit of ${dailyQuestionLimit} question${dailyQuestionLimit === 1 ? "" : "s"} on this Cortex. It resets at midnight (UTC).`, 429);
   }
   const d = await depsFor(sess);
-  const history = (body.history ?? []).slice(-80).map((t) => ({
+  // The body is whatever the client sent: wrong shapes are dropped here, never trusted further in.
+  const turns = Array.isArray(body.history) ? body.history.filter((t): t is ChatTurn => !!t && typeof t === "object" && (t.role === "user" || t.role === "assistant")) : [];
+  const threadId = typeof body.threadId === "string" && /^[\w-]{1,100}$/.test(body.threadId) ? body.threadId : undefined;
+  const attached = Array.isArray(body.attachments) ? body.attachments.filter((x): x is string => typeof x === "string") : [];
+  const history = turns.slice(-80).map((t) => ({
     role: t.role,
     content: String(t.content).slice(0, 4000),
     needsDetails: t.needsDetails === true,
@@ -53,12 +57,12 @@ export async function POST(req: Request) {
             question,
             mode: body.mode === "fast" ? "fast" : "deep",
             userId: sess.userId,
-            threadId: body.threadId,
+            threadId,
             history,
             useOtherChats: body.useOtherChats === true,
             regenerate: body.regenerate === true,
             replyLanguage: body.language === "hi" || body.language === "mr" ? body.language : undefined,
-            attachments: await attachmentEvidence(sess.userId, (body.attachments ?? []).filter((x) => typeof x === "string"), question),
+            attachments: await attachmentEvidence(sess.userId, attached, question),
             signal: req.signal,
           },
           { ...d, memory: scopedMemory(d.memory, memoryUser(sess)) },

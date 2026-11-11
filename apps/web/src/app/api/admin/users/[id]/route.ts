@@ -1,6 +1,6 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { logEvent } from "@/server/admin";
-import { db, getLocalUser } from "@/server/db";
+import { db, getLocalUser, isOwner } from "@/server/db";
 import { jsonError, requireAdmin, syncRole } from "@/server/cortex";
 
 /**
@@ -13,7 +13,10 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/admin/users/[i
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as { role?: string; disabled?: boolean; approved?: boolean };
   if (id === sess.authId) return jsonError("You can't change your own role or turn off your own account here.", 400);
-  if (!getLocalUser(id)) return jsonError("That account doesn't exist any more.", 404);
+  const target = getLocalUser(id);
+  if (!target) return jsonError("That account doesn't exist any more.", 404);
+  // An admin an owner appointed must not be able to lock the owner out (switching an account off also bans it in Clerk).
+  if (isOwner(target.email, target.verified)) return jsonError("An owner's account can't be changed here.", 403);
   if (body.role === "admin" || body.role === "member") {
     db.prepare("UPDATE users SET role = ? WHERE id = ?").run(body.role, id);
     await syncRole(id, body.role);

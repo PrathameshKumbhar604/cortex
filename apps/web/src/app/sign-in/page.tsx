@@ -16,7 +16,8 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
 
 async function SignInForVisitor({ searchParams }: Pick<PageProps<"/sign-in">, "searchParams">) {
   const { next } = await searchParams;
-  const to = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/"; // same-site paths only
+  // Same-site paths only. Browsers read "/\host" as "//host", so a backslash (or a control character) is refused too.
+  const to = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") && !/[\\\u0000-\u001f]/.test(next) ? next : "/";
   if (await session()) redirect(to);
   return <SignIn next={to} />;
 }

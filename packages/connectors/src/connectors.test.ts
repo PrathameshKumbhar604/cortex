@@ -407,3 +407,16 @@ describe("the link to what an action created", () => {
     expect(findUrl({ id: "m1", threadId: "t1", link: "not a link" })).toBeUndefined();
   });
 });
+
+describe("source links from a connector", () => {
+  it("keeps web links and Cortex's own paths, and drops anything a click could run", async () => {
+    const reg = new ConnectorRegistry();
+    const urls = ["https://example.com/a", "/api/files/abc", "javascript:alert(1)", "data:text/html,<script>1</script>", "//evil.example/x", undefined];
+    reg.register({
+      ...new DemoConnector(TOOLKITS.find((t) => t.id === "notion")!),
+      search: async () => urls.map((url, i) => ({ source: "notion", title: `t${i}`, quote: "q", url })),
+    } as Connector);
+    const r = await reg.safeSearch("notion", { query: "links" }, ctx);
+    expect(r.ok && r.items.map((e) => e.url)).toEqual(["https://example.com/a", "/api/files/abc", undefined, undefined, undefined, undefined]);
+  });
+});
