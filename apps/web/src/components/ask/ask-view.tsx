@@ -122,7 +122,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     } catch {}
   };
 
-  const submit = (q: string, opts: { mode?: RunMode; language?: VoiceLang } = {}) => {
+  const submit = (q: string, opts: { mode?: RunMode; language?: VoiceLang; reply?: boolean } = {}) => {
     const question = q.trim();
     if (!question || busy) return;
     setDraft("");
@@ -135,7 +135,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
     play("send");
     const ready = files.filter((f) => f.status === "ready" && f.id).map((f) => ({ id: f.id!, name: f.name, size: f.size }));
     setFiles([]);
-    void ask(question, opts.mode ?? mode, ready, opts.language);
+    void ask(question, opts.mode ?? mode, ready, opts.language, opts.reply);
   };
 
   // Voice mode: offered on a new thread only. Its turns are this chat's turns, so ending it leaves a normal chat.
@@ -287,7 +287,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
 
           {turns.map((t, i) => (
             // Keyed by position: a regenerated turn keeps its place (and the navigator its marker) while its attempt id changes.
-            <section key={i} data-turn className={cn(i > 0 && "mt-12 border-t border-line pt-10")}>
+            <section key={i} data-turn className={cn(i > 0 && (t.reply ? "mt-3" : "mt-12 border-t border-line pt-10"))}>
               <TurnView
                 key={t.id}
                 turn={t}
@@ -326,7 +326,7 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
         <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
           <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
             {latest.done && !busy && latest.needsDetails && latest.options?.length ? (
-              <Choices key={latest.id} question={latest.answer} options={latest.options} onPick={(a) => submit(a)} />
+              <Choices key={latest.id} question={latest.answer} options={latest.options} onPick={(a) => submit(a, { reply: true })} />
             ) : null}
             {latest?.done && latest.followups.length > 0 && !busy && (
               // Wrapping, never scrolling: every suggestion is fully readable, even at phone width.

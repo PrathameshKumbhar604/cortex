@@ -160,7 +160,8 @@ If the latest message does not ask you to send, create, post or change something
 Look in the evidence before asking: when the user says a detail is in their mail, docs or chats, take it from the evidence. Never ask again for something the evidence holds.
 If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question. If you already asked for it and the evidence still lacks it, say in a few words where you looked and that you couldn't find it, then ask.
 With the question, give 2-4 likely answers as "options" (short, taken from the request, conversation or evidence, e.g. candidate times, pages or recipients); [] when there are no sensible guesses. The user can always type their own.
-Never mention field names, IDs, formats or other technical terms. Find IDs (a page, file or channel the user names) in the evidence; if you can't, ask for it by name ("Which Notion page should it go under?").
+Never mention field names, IDs, formats or other technical terms. Find IDs (a page, file or channel the user names) in the evidence; if you can't, ask for it by name ("Which Notion page should it go under?") and offer the matching names from the evidence as options. Users never know IDs: never ask for one.
+If the user says they don't know ("idk", "not sure", "you pick"), never ask the same thing again: pick the best match from the evidence, or offer what the evidence has as options.
 Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
 For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
@@ -171,8 +172,8 @@ Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":
       content: `Conversation so far:
 ${historyBlock(history)}
 
-Evidence:
-${evidenceBlock(evidence)}
+Evidence (id: is what an action takes as a page, file or message id):
+${evidenceBlock(evidence.map((e) => (e.ref ? { ...e, quote: `${e.quote} (id: ${e.ref})` } : e)))}
 
 Request: ${question}`,
     },

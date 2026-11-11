@@ -4,7 +4,7 @@ import type { LlmRouter } from "@cortex/llm";
 import type { AgentEvent, ChatTurn, MemoryItem } from "@cortex/shared";
 import { ActionStore } from "./actions";
 import type { MemoryBackend, MemoryWrite, PastChat } from "./memory";
-import { historyBlock } from "./prompts";
+import { actionPrompt, historyBlock } from "./prompts";
 import { runAgent } from "./run";
 import { cleanTitle } from "./title";
 import { mightHoldMemory, remember } from "./remember";
@@ -376,6 +376,14 @@ describe("action requests", () => {
     expect(route && route.type === "route" && route.decision.sources).toEqual(expect.arrayContaining(["gmail", "calendar"]));
     const answer = events.find((e) => e.type === "answer");
     expect(answer && answer.type === "answer" && answer.options).toEqual(["Webex sync", "Design review"]);
+  });
+});
+
+describe("action drafting prompt", () => {
+  it("shows the drafter each item's id, so it never has to ask the user for one", () => {
+    const ev = [{ id: "e1", source: "notion", title: "Video Resources", quote: "Links to lectures", ref: "1f2a-page-id" }];
+    const text = actionPrompt("add a page under Video Resources", ev, [], []).map((m) => m.content).join(" ");
+    expect(text).toContain("(id: 1f2a-page-id)");
   });
 });
 

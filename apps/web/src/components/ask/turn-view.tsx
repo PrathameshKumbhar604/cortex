@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Brain, FileText, Pencil } from "lucide-react";
+import { Brain, CornerDownRight, FileText, Pencil } from "lucide-react";
 import { explainError, explainFailure } from "@cortex/shared";
 import { Problem } from "../problem";
 import type { Turn } from "@/lib/use-agent";
@@ -54,7 +54,18 @@ export function TurnView({
 
   return (
     <motion.article initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", duration: 0.3, bounce: 0 }}>
-      <Question question={turn.question} done={turn.done} onEdit={onEdit} />
+      {turn.reply ? (
+        // The answer to Cortex's question stays out of the way: a pill that shows what was picked only when opened.
+        <details className="group/reply mb-3 w-fit max-w-full">
+          <summary className="press flex w-fit cursor-pointer list-none items-center gap-1 rounded-full border border-line py-0.5 pr-2.5 pl-2 text-[12.5px] text-muted hover:border-line-strong hover:text-ink focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
+            <CornerDownRight className="size-3" aria-hidden />
+            Your answer
+          </summary>
+          <p className="mt-1.5 pl-2 text-[14px] leading-snug text-ink-2">{turn.question}</p>
+        </details>
+      ) : (
+        <Question question={turn.question} done={turn.done} onEdit={onEdit} />
+      )}
       {turn.attachments && turn.attachments.length > 0 && (
         <ul className="-mt-1 mb-3 flex flex-wrap gap-1.5" aria-label="Attached files">
           {turn.attachments.map((f) => (

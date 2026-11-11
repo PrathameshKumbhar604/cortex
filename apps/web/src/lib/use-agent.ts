@@ -57,6 +57,8 @@ export interface Turn {
   needsDetails?: boolean;
   /** Likely answers to the question Cortex asked back (needsDetails). */
   options?: string[];
+  /** An answer picked from Cortex's question card: shown as a quiet pill under that question, not as a new question. */
+  reply?: boolean;
   claims: Claim[];
   conflicts: Conflict[];
   missing: string[];
@@ -214,9 +216,9 @@ export function useAgent() {
   );
 
   const ask = useCallback(
-    async (question: string, mode: RunMode, attachments: Attachment[] = [], language?: Turn["language"]) => {
+    async (question: string, mode: RunMode, attachments: Attachment[] = [], language?: Turn["language"], reply?: boolean) => {
       if (!question.trim() || abort.current) return;
-      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined, language };
+      const turn = { ...newTurn(question.trim(), mode), attachments: attachments.length ? attachments : undefined, language, reply };
       setTurns((all) => [...all, turn]);
       await run(turn, turns);
     },
@@ -234,7 +236,7 @@ export function useAgent() {
       const old = turns[i];
       const q = question?.trim() || old?.question;
       if (!old || !q || abort.current) return;
-      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments, language: old.language });
+      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments, language: old.language, reply: old.reply });
       setTurns((all) => all.map((t) => (t.id === turnId ? next : t)));
       await run(next, turns.slice(0, i), true);
     },
