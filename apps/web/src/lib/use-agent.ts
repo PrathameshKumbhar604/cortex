@@ -11,6 +11,7 @@ import type {
   Conflict,
   Evidence,
   MemoryItem,
+  OptionRef,
   Plan,
   RouteDecision,
   RunMode,
@@ -57,6 +58,8 @@ export interface Turn {
   needsDetails?: boolean;
   /** Likely answers to the question Cortex asked back (needsDetails). */
   options?: string[];
+  /** The app items (with ids) behind those options, sent back with the history so a pick needs no new search. */
+  refs?: OptionRef[];
   /** An answer picked from Cortex's question card: shown as a quiet pill under that question, not as a new question. */
   reply?: boolean;
   claims: Claim[];
@@ -128,7 +131,7 @@ function reduce(t: Turn, e: AgentEvent): Turn {
     case "token":
       return { ...t, answer: t.answer + e.text };
     case "answer":
-      return { ...t, answer: e.markdown, needsDetails: e.needsDetails, options: e.options };
+      return { ...t, answer: e.markdown, needsDetails: e.needsDetails, options: e.options, refs: e.refs };
     case "verdict":
       return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing, followups: e.followups ?? [] };
     case "action_proposal":
@@ -164,7 +167,7 @@ export function useAgent() {
         .slice(-40) // the whole chat; the agent fits it into its context budget
         .flatMap((t) => [
           { role: "user" as const, content: t.question },
-          { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails },
+          { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails, refs: t.needsDetails ? t.refs : undefined },
         ]);
       setBusy(true);
       const ctrl = new AbortController();

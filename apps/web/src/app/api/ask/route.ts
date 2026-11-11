@@ -32,7 +32,15 @@ export async function POST(req: Request) {
     return jsonError(`You've reached today's limit of ${dailyQuestionLimit} question${dailyQuestionLimit === 1 ? "" : "s"} on this Cortex. It resets at midnight (UTC).`, 429);
   }
   const d = await depsFor(sess);
-  const history = (body.history ?? []).slice(-80).map((t) => ({ role: t.role, content: String(t.content).slice(0, 4000), needsDetails: t.needsDetails === true }));
+  const history = (body.history ?? []).slice(-80).map((t) => ({
+    role: t.role,
+    content: String(t.content).slice(0, 4000),
+    needsDetails: t.needsDetails === true,
+    // Client-sent, so only well-formed strings; any id still goes through the user's own account and their approval.
+    refs: Array.isArray(t.refs)
+      ? t.refs.slice(0, 8).filter((r) => typeof r?.label === "string" && typeof r?.source === "string" && typeof r?.ref === "string").map((r) => ({ label: r.label.slice(0, 200), source: r.source.slice(0, 40), ref: r.ref.slice(0, 200) }))
+      : undefined,
+  }));
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

@@ -391,6 +391,31 @@ describe("choices for a question back", () => {
   });
 });
 
+describe("picking an offered option", () => {
+  const history = [
+    { role: "user" as const, content: "read the latest mail with the youtube links and add it to my notes" },
+    { role: "assistant" as const, content: "Which Notion page should it go under?", needsDetails: true, refs: [{ label: "Test Note", source: "notion", ref: "page-123" }] },
+  ];
+
+  it("hands the drafter the picked item's id, so it drafts instead of asking again", async () => {
+    const draft = { connector: "notion", action: "create_page", title: "YouTube links", args: { parentId: "page-123", title: "YouTube links", content: "links" } };
+    const { llm } = stubLlm("unused", draft);
+    const prompts: string[] = [];
+    const json = llm.json.bind(llm);
+    llm.json = ((o: { messages: { content: string }[] }, v: (x: unknown) => unknown) => (prompts.push(o.messages.map((m) => m.content).join(" ")), json(o as never, v as never))) as typeof llm.json;
+    const events = await collect(runAgent({ question: "Test Note", mode: "fast", userId: "u1", history }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
+    expect(prompts.some((p) => p.includes("(id: page-123)"))).toBe(true);
+    expect(events.some((e) => e.type === "action_proposal")).toBe(true);
+  });
+
+  it("never asks the user for an id", async () => {
+    const { llm } = stubLlm("unused", { ask: "What's the Notion page ID for Test Note?" });
+    const events = await collect(runAgent({ question: "something else", mode: "fast", userId: "u1", history }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.markdown).not.toMatch(/\bID\b/i);
+  });
+});
+
 describe("routing a request to save something", () => {
   it("treats 'add it to my notes' as an action over the apps it names", () => {
     const d = routeByRules("read the latest mail which has the youtube links and add it to my notes", ["gmail", "notion"]);

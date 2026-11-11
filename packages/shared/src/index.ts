@@ -131,7 +131,7 @@ export type AgentEvent =
   | { type: "evidence"; items: Evidence[] }
   | { type: "source_error"; failure: SourceFailure }
   | { type: "token"; text: string }
-  | { type: "answer"; markdown: string; needsDetails?: boolean; options?: string[] } // needsDetails: a question back about an action; options: likely answers to it
+  | { type: "answer"; markdown: string; needsDetails?: boolean; options?: string[]; refs?: OptionRef[] } // needsDetails: a question back about an action; options: likely answers to it
   | { type: "verdict"; claims: Claim[]; groundedness: number; conflicts: Conflict[]; missing: string[]; followups: string[] }
   | { type: "action_proposal"; proposal: ActionProposal }
   | { type: "memory_written"; items: MemoryItem[] }
@@ -139,10 +139,18 @@ export type AgentEvent =
   | { type: "error"; message: string }
   | { type: "done" };
 
+/** An offered answer that names an item in an app (a Notion page, a Slack channel): picking it hands over the item's id. */
+export interface OptionRef {
+  label: string;
+  source: string;
+  ref: string;
+}
+
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;
   needsDetails?: boolean; // the assistant asked for details to finish an action
+  refs?: OptionRef[]; // the items behind the options offered with that question
 }
 
 export const SOURCE_NAMES: Record<string, string> = {
