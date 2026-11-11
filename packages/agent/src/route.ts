@@ -16,7 +16,12 @@ const ABOUT_CHAT =
 const ABOUT_WHAT_YOU_DID =
   /\b(which|what|where)\b.{0,40}\b(did|have) you (just )?(pull(ed)?( up)?|use[d]?|read|f[io]u?nd|get|got|fetch(ed)?|open(ed)?|look(ed)? at|check(ed)?|search(ed)?|take|took|pick(ed)?|draft(ed)?|add(ed)?)\b|\bwhere did (you|that|this|it) (come|get)\b/i;
 /** Changing a draft just made ("change the page", "make it a new page", "use Priya instead"). */
-const EDITS_DRAFT = /\b(change|edit|update|rename|retitle|move|instead|different|another|new|swap|replace|use|put|add|make|title|page|channel|recipient)\b/i;
+const EDITS_DRAFT = /\b(change|edit|update|rename|retitle|move|instead|different|another|new|swap|replace|use|put|add|make|create)\b/i;
+/** A question rather than a request ("which page is this going in?", "tell me where it goes"); "can you move it?" is a request. */
+const ASKS = /\?\s*$|^\s*(which|what|where|who|when|how|is|are|does|did)\b|\b(which|what) (page|channel|one|title|email|list|folder|calendar)\b|\btell me\b/i;
+const ASKS_FOR_ACTION = /^\s*(please\s+)?(can|could|would|will) you\b/i;
+/** Points at the draft ("is this going", "where does it go", "what did you add") rather than at something new. */
+const ABOUT_DRAFT = /\b(it|this|that|draft|going|goes|added|adding|created|creating|saved|saving|putting)\b/i;
 /** Points at earlier chats ("what were my previous chats about?", "what did we discuss last time?"). */
 export const ABOUT_PAST_CHATS =
   /\b((previous|past|other|earlier|old|last|recent) (chats?|conversations?|sessions?)|last time|the other day|(we|i) (talked|spoke|discussed|chatted)|(you|i) (said|told|mentioned|asked)( me| you)? (yesterday|before|last week|last time|the other day))\b/i;
@@ -175,11 +180,24 @@ export async function decideRoute(
   if (asked?.role === "assistant" && ABOUT_WHAT_YOU_DID.test(question)) {
     return { decision: { route: "general", sources: [], tier: "fast", reason: "about what Cortex just did", by: "rules" } };
   }
-  // A change to the draft just made goes back to drafting, with that draft (in the history) as the starting point.
-  if (asked?.role === "assistant" && asked.drafted && EDITS_DRAFT.test(question)) {
-    const request = history.findLast((t) => t.role === "user")?.content ?? "";
-    // The message stays as written: the drafter reads the draft from the history, and a new request isn't merged into the old one.
-    return { decision: { route: "action", sources: hintedSources(`${request} ${question}`, ids), tier: "strong", reason: "changes the draft", by: "rules" } };
+  // A draft in the last few turns: a question about it is answered from the chat (it holds the draft and where it goes),
+  // a change to it goes back to drafting with that draft as the starting point.
+  const draft = history.slice(-6).findLast((t) => t.role === "assistant" && t.drafted);
+  if (draft && !asked?.needsDetails) {
+    // Only a question about the draft: "what's on my calendar tomorrow?" two turns later still searches.
+    const aboutDraft = ABOUT_DRAFT.test(question) && !(/\b(my|our)\b/i.test(question) && SOURCE_WORDS.test(question));
+    if (aboutDraft && ASKS.test(question) && !ASKS_FOR_ACTION.test(question) && !IMPERATIVE.test(question)) {
+      return { decision: { route: "general", sources: [], tier: "fast", reason: "about the draft", by: "rules" } };
+    }
+    if (EDITS_DRAFT.test(question)) {
+      // A complete request of its own ("create an event … in my calendar") is new work, not an edit: route it alone,
+      // so the old request's apps (and its Notion page) don't leak into it.
+      const own = routeByRules(question, ids);
+      if (own?.route === "action" && own.sources.length) return { decision: own };
+      const request = history.findLast((t) => t.role === "user")?.content ?? "";
+      // The message stays as written: the drafter reads the draft from the history, and a new request isn't merged into the old one.
+      return { decision: { route: "action", sources: hintedSources(`${request} ${question}`, ids), tier: "strong", reason: "changes the draft", by: "rules" } };
+    }
   }
   // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on),
   // and so does a yes to "Shall I create…?": the approval card is the confirmation, never another question.

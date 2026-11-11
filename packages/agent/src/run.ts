@@ -17,7 +17,7 @@ import type {
   StepId,
   SubQuestion,
 } from "@cortex/shared";
-import { sourceName } from "@cortex/shared";
+import { SOURCE_NAMES, sourceName } from "@cortex/shared";
 import type { ActionStore } from "./actions";
 import { memoryNotRunning, type MemoryBackend, type PastChat } from "./memory";
 import { remember } from "./remember";
@@ -513,7 +513,31 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         const found = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: input.question, limit: 4 }, ctx)));
         chosen = found.flatMap((r) => (r.ok ? r.items : [])).map((e, i) => ({ ...e, id: `p${i + 1}` }));
       }
-      const drafted = await draftAction(input, deps, { request: question, evidence: [...chosen, ...ranked], briefs: actionBriefs(targets), targets, history, budget, signal });
+      // Where it could go: the earlier draft's place first, then any the searches found, else the app's recent items.
+      // Only for an action that takes a place (a Notion page), so a calendar event never goes "under" a page.
+      const earlier = places.length ? earlierPlace(history) : undefined;
+      if (earlier && places.some((c) => c.id === earlier.source) && !chosen.some((e) => e.ref === earlier.ref)) chosen.unshift({ ...earlier, id: `p${chosen.length + 1}` });
+      if (places.length && ![...chosen, ...ranked].some((e) => e.ref && places.some((c) => c.id === e.source)) && budget.canCallTool()) {
+        budget.toolCalls += Math.min(places.length, 2);
+        const recent = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: "", limit: 4 }, ctx)));
+        chosen.push(...recent.flatMap((r) => (r.ok ? r.items : [])).map((e) => ({ ...e, id: "" })));
+      }
+      chosen = chosen.map((e, i) => ({ ...e, id: `p${i + 1}`, quote: e.quote.startsWith("Place:") ? e.quote : `Place: ${e.quote}` }));
+      const evidenceForDraft = [...chosen, ...ranked];
+      const draftOpts = { request: question, evidence: evidenceForDraft, briefs: actionBriefs(targets), targets, history, budget, signal };
+      let drafted = await draftAction(input, deps, draftOpts);
+      // Still asking where although a place is known: draft into the likeliest one; the card shows it and can be changed.
+      const fallback = chosen.find((e) => e.ref);
+      if (drafted && !drafted.proposals.length && fallback && ASKS_WHERE.test(drafted.ask ?? "") && budget.canCallLlm()) {
+        const request = `${question}\n(Put it under “${fallback.title}” (id: ${fallback.ref}). The user can change this on the approval card, so do not ask where.)`;
+        drafted = (await draftAction(input, deps, { ...draftOpts, request })) ?? drafted;
+      }
+      // The card says where it goes, by name: an id alone tells the user nothing ("which page is this going in?").
+      for (const p of drafted?.proposals ?? []) {
+        const place = Object.entries(p.args).find(([k, v]) => k.endsWith("Id") && typeof v === "string" && evidenceForDraft.some((e) => e.ref === v));
+        const e = place && evidenceForDraft.find((x) => x.ref === place[1]);
+        if (e) p.summary = `Goes in “${e.title}” (${sourceName(e.source)})\n${p.summary}`;
+      }
       if (drafted) {
         const n = drafted.proposals.length;
         const used = drafted.used ?? [];
@@ -728,6 +752,8 @@ async function draftAction(
  * has an answer.
  */
 export function usedEvidence(drafts: unknown[], proposals: ActionProposal[], evidence: Evidence[]): Evidence[] {
+  // Where a draft goes (its parent page) is not what it was made from.
+  const targets = new Set(proposals.flatMap((p) => Object.values(p.args).filter((v): v is string => typeof v === "string")));
   const named = drafts.flatMap((d) => {
     const from = (d as { from?: unknown })?.from;
     return Array.isArray(from) ? from : [];
@@ -739,7 +765,7 @@ export function usedEvidence(drafts: unknown[], proposals: ActionProposal[], evi
     return [...words].filter((w) => drafted.includes(w)).length >= 3;
   });
   // Not the place items (p1…): they are where the draft goes, not what it was made from.
-  return [...new Set(picked.length ? picked : echoed)].filter((e) => !/^p\d+$/.test(e.id)).slice(0, 3);
+  return [...new Set(picked.length ? picked : echoed)].filter((e) => !/^p\d+$/.test(e.id) && !(e.ref && targets.has(e.ref))).slice(0, 3);
 }
 
 /** Text compared the way people read it: case, spacing, and typographic dashes and quotes ("To‑do" vs "To-do") ignored. */
@@ -747,6 +773,19 @@ const same = (a: string, b: string) => {
   const n = (s: string) => s.normalize("NFKC").replace(/[‐-―−]/g, "-").replace(/[‘’“”"']/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   return n(a) === n(b);
 };
+
+/** A question about where something goes ("Which Notion page should it go under?"). */
+const ASKS_WHERE = /\b(which|what)\b[^?]*\b(page|channel|list|folder|database|project|parent)\b|\b(under|where)\b/i;
+
+/** The place the latest draft in the chat went (its id and, when the card named it, its name), to reuse by default. */
+function earlierPlace(history: ChatTurn[]): Evidence | undefined {
+  const t = history.findLast((x) => x.role === "assistant" && x.drafted);
+  const id = t?.content.match(/"(\w+Id)":"([^"]+)"/);
+  if (!t || !id) return undefined;
+  const name = t.content.match(/Goes in “([^”]+)” \(([^)]+)\)/);
+  const source = Object.entries(SOURCE_NAMES).find(([, n]) => n === name?.[2])?.[0] ?? "notion";
+  return { id: "", source, title: name?.[1] ?? "the page the earlier draft used", quote: "Place: where the earlier draft in this conversation goes.", ref: id[2] };
+}
 
 /** Apps whose actions take an item id (a Notion parent page): their search results are the items themselves. Slack's are messages, not channels. */
 const placesOf = (targets: Connector[]) => targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && p.name.endsWith("Id"))));

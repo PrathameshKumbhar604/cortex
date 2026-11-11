@@ -521,6 +521,71 @@ describe("the which-page loop", () => {
     expect(historyBlock([...history, { role: "user", content: "a" }, { role: "assistant", content: "b" }])).toContain("Kx7mQa");
   });
 
+  const drafted: ChatTurn[] = [
+    { role: "user", content: "read the latest mail which has the youtube links and add it to my notes" },
+    {
+      role: "assistant",
+      content: 'Here\'s the draft.\n[Drafted: Add YouTube links to notes in notion (pending): Goes in “YouTube Links” (Notion) {"parentId":"page-yt","title":"YouTube Links (Nov 11)","content":"| 1 | Video 1 | Kx7mQa |"}]',
+      drafted: true,
+    },
+  ];
+
+  it("doesn't count the page a draft goes in as what it was made from", () => {
+    const email = { id: "e1", source: "gmail", title: "Web links youtube", quote: "links" };
+    const page = { id: "e2", source: "notion", title: "YouTube Links", quote: "videos", ref: "page-yt" };
+    const p = [{ id: "a", connectorId: "notion", actionId: "create_page", title: "x", summary: "", args: { parentId: "page-yt", title: "t" }, risk: "low" as const, status: "pending" as const }];
+    expect(usedEvidence([{ from: [1, 2] }], p, [email, page])).toEqual([email]);
+  });
+
+  it("names the page on the approval card", async () => {
+    const draft = { connector: "notion", action: "create_page", title: "Add links", args: { parentId: "page-yt", title: "YouTube Links (Nov 11)", content: "| a | b |" } };
+    const { events } = await run("add the youtube links to my notes", [], draft);
+    const p = events.find((e) => e.type === "action_proposal");
+    expect(p && p.type === "action_proposal" && p.proposal.summary).toMatch(/^Goes in “YouTube Links” \(Notion\)\n/);
+  });
+
+  it("answers questions about a recent draft from the chat, even a turn later; real changes go to drafting", async () => {
+    const { llm, calls } = stubLlm("unused");
+    const later: ChatTurn[] = [...drafted, { role: "user", content: "are you an idiot?" }, { role: "assistant", content: "Sorry about that." }];
+    const routeOf = async (q: string, h: ChatTurn[]) => (await decideRoute(q, h, [{ id: "notion", describes: "pages" }, { id: "gmail", describes: "emails" }], llm)).decision.route;
+    expect(await routeOf("which page is this going in ?", drafted)).toBe("general");
+    expect(await routeOf("currently it is being added in which page tell me that first", later)).toBe("general");
+    expect(await routeOf("do one thing create a new project and add it in that", later)).toBe("action");
+    expect(await routeOf("can you move it to Weekly To-do?", drafted)).toBe("action");
+    expect(calls.route).toBe(0);
+    // A new question a turn after a draft is still searched, not answered from the chat.
+    expect(await routeOf("what's in my inbox from Priya?", later)).not.toBe("general");
+  });
+
+  it("never offers the earlier Notion page as the place for an action that takes none", async () => {
+    const { llm } = stubLlm("unused", { ask: "Where should the meeting be held?" });
+    const prompts: string[] = [];
+    const json = llm.json.bind(llm);
+    llm.json = ((o: { messages: { content: string }[] }, v: (x: unknown) => unknown) => (prompts.push(o.messages.map((m) => m.content).join(" ")), json(o as never, v as never))) as typeof llm.json;
+    await collect(runAgent({ question: "create an event called standup tomorrow at 4pm in my calendar", mode: "fast", userId: "u1", history: drafted }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
+    // The chat (with the earlier draft) is always shown; what must not happen is offering its page as a place, or retrying into it.
+    expect(prompts.some((p) => p.includes("Place: where the earlier draft") || p.includes("(Put it under"))).toBe(false);
+  });
+
+  it("drafts into the earlier draft's page instead of asking where again", async () => {
+    const { llm } = stubLlm("unused");
+    const prompts: string[] = [];
+    const ask = { ask: "What should the new project be called and which Notion page should it go under?" };
+    const draft = { connector: "notion", action: "create_page", title: "New project", args: { parentId: "page-yt", title: "YouTube project", content: "| a | b |" } };
+    llm.json = (async (o: { messages: { content: string }[] }, v: (x: unknown) => unknown) => {
+      const text = o.messages.map((m) => m.content).join(" ");
+      prompts.push(text);
+      const out = text.includes("(Put it under “YouTube Links” (id: page-yt)") ? draft : ask;
+      return { text: JSON.stringify(out), provider: "stub", model: "m", cached: false, data: v(out) };
+    }) as typeof llm.json;
+    const reg = new ConnectorRegistry();
+    reg.register(notion([]));
+    const events = await collect(runAgent({ question: "do one thing create a new project and add it in that", mode: "fast", userId: "u1", history: drafted }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() }));
+    expect(prompts[0]).toContain("(id: page-yt)"); // the earlier place is offered to the drafter up front
+    const p = events.find((e) => e.type === "action_proposal");
+    expect(p && p.type === "action_proposal" && p.proposal.summary).toMatch(/^Goes in “YouTube Links” \(Notion\)/);
+  });
+
   it("never shows a slightly-off section marker in the answer", () => {
     const s = splitSections("Pick a page.\n<<<CONFLICT>>> none\n<<< NEXT >>>\nWhich page?");
     expect(s.answer).toBe("Pick a page.");

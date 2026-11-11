@@ -108,7 +108,7 @@ function newTurn(question: string, mode: RunMode): Turn {
 function withContext(t: Turn): string {
   const sources = t.evidence.slice(0, 5).map((e) => `${e.source}: "${e.title}"${e.author ? ` from ${e.author}` : ""}${e.timestamp ? ` (${e.timestamp.slice(0, 10)})` : ""}`);
   // The drafted text itself, so "put it on a new page" or "change the title" can redo the draft without the original search.
-  const drafts = t.actions.map((a) => `${a.title} in ${a.connectorId} (${a.status}) ${JSON.stringify(a.args).slice(0, 1200)}`);
+  const drafts = t.actions.map((a) => `${a.title} in ${a.connectorId} (${a.status}): ${a.summary.split("\n")[0]} ${JSON.stringify(a.args).slice(0, 1200)}`);
   return [t.answer, sources.length && `[Sources used: ${sources.join("; ")}]`, drafts.length && `[Drafted: ${drafts.join("; ")}]`].filter(Boolean).join("\n");
 }
 

@@ -169,7 +169,9 @@ Fill optional details only when the user gave them; sensible defaults are fine (
 For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
 When the user changes an earlier draft ("use a new page", "change the title", "send it to Priya instead"), draft it again from the conversation: keep everything from the earlier draft except what they changed.
-Titles, subjects and names for things you create, write yourself from the content; never ask for them. Ask only for what you cannot know: where something goes, who it is for, when it happens.
+Titles, subjects and names for things you create, write yourself from the content; never ask for them.
+Where something goes (the page it goes under): what the user named; else the place of the earlier draft in this conversation; else the best match among the evidence items marked "Place". The approval card shows it and the user can change it there, so never ask where when any of these exists. "Create it", "just do it", "you pick" mean: choose and draft.
+Ask only for what you cannot know: who it is for, when it happens, or where it goes when no place is known at all.
 Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...},"from":[numbers of the evidence items its content came from]}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
     },
     {
