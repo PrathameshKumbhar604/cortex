@@ -151,6 +151,7 @@ export interface ChatTurn {
   content: string;
   needsDetails?: boolean; // the assistant asked for details to finish an action
   refs?: OptionRef[]; // the items behind the options offered with that question
+  drafted?: boolean; // this answer came with drafts awaiting approval (their content is in `content`)
 }
 
 export const SOURCE_NAMES: Record<string, string> = {

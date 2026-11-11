@@ -503,9 +503,17 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       const targets = scoped.length ? scoped : connected;
       // A picked option arrives as its label; the item behind it (with its id) goes to the drafter first, so it never re-asks.
       const prev = history.at(-1);
-      const picked = prev?.needsDetails ? prev.refs?.find((r) => r.label.trim().toLowerCase() === input.question.trim().toLowerCase()) : undefined;
-      const chosen: Evidence[] = picked ? [{ id: "p1", source: picked.source, title: picked.label, quote: `The user picked this ${sourceName(picked.source)} item.`, ref: picked.ref }] : [];
-      const drafted = await draftAction(input, deps, { evidence: [...chosen, ...ranked], briefs: actionBriefs(targets), targets, history, budget, signal });
+      const picked = prev?.needsDetails ? prev.refs?.find((r) => same(r.label, input.question)) : undefined;
+      let chosen: Evidence[] = picked ? [{ id: "p1", source: picked.source, title: picked.label, quote: `The user picked this ${sourceName(picked.source)} item.`, ref: picked.ref }] : [];
+      // A typed answer ("the Weekly To-do page") is looked up by its own words: inside the combined request it is cut
+      // off by the request's keywords, and the item it names (with its id) never reaches the drafter.
+      const places = placesOf(targets);
+      if (!picked && prev?.needsDetails && places.length && budget.canCallTool()) {
+        budget.toolCalls += Math.min(places.length, 2);
+        const found = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: input.question, limit: 4 }, ctx)));
+        chosen = found.flatMap((r) => (r.ok ? r.items : [])).map((e, i) => ({ ...e, id: `p${i + 1}` }));
+      }
+      const drafted = await draftAction(input, deps, { request: question, evidence: [...chosen, ...ranked], briefs: actionBriefs(targets), targets, history, budget, signal });
       if (drafted) {
         const n = drafted.proposals.length;
         const used = drafted.used ?? [];
@@ -677,7 +685,7 @@ async function recall(input: RunInput, deps: AgentDeps, question: string, askedA
 async function draftAction(
   input: RunInput,
   deps: AgentDeps,
-  o: { evidence: Evidence[]; briefs: ActionBrief[]; targets: Connector[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
+  o: { request: string; evidence: Evidence[]; briefs: ActionBrief[]; targets: Connector[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
 ): Promise<{ proposals: ActionProposal[]; used?: Evidence[]; ask?: string; options?: string[]; refs?: OptionRef[] } | null> {
   const drafts: unknown[] = [];
   let ask: string | undefined;
@@ -685,7 +693,7 @@ async function draftAction(
   if (o.budget.canCallLlm()) {
     o.budget.llmCalls++;
     const res = await deps.llm.json(
-      { tier: "strong", messages: actionPrompt(input.question, o.evidence, o.briefs, o.history), maxTokens: 1200, cacheTtlMs: 0, signal: o.signal },
+      { tier: "strong", messages: actionPrompt(o.request, o.evidence, o.briefs, o.history), maxTokens: 1200, cacheTtlMs: 0, signal: o.signal },
       (v) => (Array.isArray(v) ? v : (v as { actions?: unknown[] })?.actions ?? [v]),
     );
     o.budget.models.add(`${res.provider}/${res.model}`);
@@ -708,6 +716,9 @@ async function draftAction(
   const offered = options?.length ? { options, refs: refsFor(options, o.evidence) } : await placeOptions(input, deps, o);
   // Users never know ids; a question for one is the drafter missing the item, so ask which item instead.
   if (ask && /\bIDs?\b/i.test(ask)) ask = offered.options.length ? "Which one should I use?" : undefined;
+  // Never the same question twice in a row: say what didn't match, so the next answer can be different.
+  const prev = o.history.at(-1);
+  if (ask && prev?.needsDetails && same(ask, prev.content)) ask = `I couldn't match “${input.question.trim().slice(0, 80)}” to anything. ${ask}`;
   return { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", ...offered };
 }
 
@@ -727,14 +738,23 @@ export function usedEvidence(drafts: unknown[], proposals: ActionProposal[], evi
     const words = new Set(e.quote.toLowerCase().match(/https?:\/\/[^\s)\]]+|[a-z0-9]{7,}/g) ?? []);
     return [...words].filter((w) => drafted.includes(w)).length >= 3;
   });
-  // Only the user's own items: the "picked" place (p1) is where the draft goes, not what it was made from.
-  return [...new Set(picked.length ? picked : echoed)].filter((e) => e.id !== "p1").slice(0, 3);
+  // Not the place items (p1…): they are where the draft goes, not what it was made from.
+  return [...new Set(picked.length ? picked : echoed)].filter((e) => !/^p\d+$/.test(e.id)).slice(0, 3);
 }
+
+/** Text compared the way people read it: case, spacing, and typographic dashes and quotes ("To‑do" vs "To-do") ignored. */
+const same = (a: string, b: string) => {
+  const n = (s: string) => s.normalize("NFKC").replace(/[‐-―−]/g, "-").replace(/[‘’“”"']/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  return n(a) === n(b);
+};
+
+/** Apps whose actions take an item id (a Notion parent page): their search results are the items themselves. Slack's are messages, not channels. */
+const placesOf = (targets: Connector[]) => targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && p.name.endsWith("Id"))));
 
 /** The ids behind options that name an item in the evidence. */
 function refsFor(labels: string[], items: { title: string; source: string; ref?: string }[]): OptionRef[] {
   return labels.flatMap((label) => {
-    const e = items.find((x) => x.ref && x.title.trim().toLowerCase() === label.trim().toLowerCase());
+    const e = items.find((x) => x.ref && same(x.title, label));
     return e ? [{ label, source: e.source, ref: e.ref! }] : [];
   });
 }
@@ -748,8 +768,7 @@ async function placeOptions(
   deps: AgentDeps,
   o: { evidence: Evidence[]; targets: Connector[]; signal: AbortSignal },
 ): Promise<{ options: string[]; refs: OptionRef[] }> {
-  // Only id params: those apps' search results are the items themselves (Notion pages). Slack's results are messages, not channels.
-  const places = o.targets.filter((c) => c.actions.some((a) => a.params.some((p) => p.required && p.name.endsWith("Id"))));
+  const places = placesOf(o.targets);
   const pick = (items: { title: string; source: string; ref?: string }[]) => {
     const fit = items.filter((e) => places.some((c) => c.id === e.source) && e.title.trim() && e.title.length <= 80);
     const options = [...new Set(fit.map((e) => e.title.trim()))].slice(0, 4);

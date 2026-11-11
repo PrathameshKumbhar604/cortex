@@ -30,9 +30,11 @@ export function historyBlock(history: ChatTurn[], budget = 8000): string {
   if (!history.length) return "none";
   const lines: string[] = [];
   let left = budget;
+  const lastDraft = history.findLastIndex((t) => t.drafted);
   for (let i = history.length - 1; i >= 0 && left > 0; i--) {
     const t = history[i]!;
-    const recent = history.length - i <= 4; // the last two exchanges carry most follow-ups
+    // The last two exchanges carry most follow-ups; the latest draft stays whole however many questions came after it.
+    const recent = history.length - i <= 4 || i === lastDraft;
     const text = t.content.replace(/\s+/g, " ").trim();
     const cut = text.slice(0, Math.min(recent ? 1500 : 240, left));
     lines.unshift(`${t.role}: ${cut}${cut.length < text.length ? "…" : ""}`);
@@ -166,6 +168,8 @@ Text for a page, note or doc is well-organised Markdown, never pasted raw: a sho
 Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
 For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
+When the user changes an earlier draft ("use a new page", "change the title", "send it to Priya instead"), draft it again from the conversation: keep everything from the earlier draft except what they changed.
+Titles, subjects and names for things you create, write yourself from the content; never ask for them. Ask only for what you cannot know: where something goes, who it is for, when it happens.
 Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...},"from":[numbers of the evidence items its content came from]}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
     },
     {

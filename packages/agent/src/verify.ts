@@ -43,7 +43,9 @@ function jsonArray(block: string | undefined): unknown[] {
 }
 
 /** Splits the synthesizer output into its answer and trailing sections. */
-export function splitSections(text: string): Sections {
+export function splitSections(raw: string): Sections {
+  // Models sometimes write a marker slightly off ("<<<CONFLICT>>>", "<<< NEXT >>>"); left as is, it would show in the answer.
+  const text = raw.replace(/<<<\s*(CONFLICT|MISSING|ACTION|MEMORY|NEXT)S?\s*>>>/gi, (_, k: string) => SECTION[MARKER[k.toUpperCase() as keyof typeof MARKER]]);
   const idx = (m: string) => text.indexOf(m);
   const markers = Object.values(SECTION)
     .map((m) => ({ m, i: idx(m) }))
@@ -66,6 +68,8 @@ export function splitSections(text: string): Sections {
     next: lines(body(SECTION.next)).map((l) => l.replace(/^\d+[.)]\s*/, "").replace(/^"|"$/g, "")).filter((l) => l.length < 90).slice(0, 3),
   };
 }
+
+const MARKER = { CONFLICT: "conflicts", MISSING: "missing", ACTION: "actions", MEMORY: "memory", NEXT: "next" } as const;
 
 /** Index of the first section marker (or a partial prefix of one) so streaming can stop forwarding tokens. */
 export function streamCutoff(text: string): number {

@@ -452,6 +452,82 @@ describe("remembering what a draft was made from", () => {
   });
 });
 
+describe("the which-page loop", () => {
+  // A Notion stand-in whose pages carry ids, and which records every search.
+  const notion = (searched: string[]): Connector => ({
+    ...new DemoConnector(TOOLKITS.find((t) => t.id === "notion")!),
+    id: "notion",
+    name: "Notion",
+    kind: "composio",
+    describes: "pages",
+    impact: "",
+    actions: TOOLKITS.find((t) => t.id === "notion")!.actions,
+    status: async () => ({ id: "notion", name: "Notion", kind: "composio", connected: true, available: true, canAct: true }),
+    search: async (i) => {
+      searched.push(i.query);
+      const pages = [
+        { source: "notion", title: "Weekly To-do List", quote: "groceries", ref: "page-todo" },
+        { source: "notion", title: "YouTube Links", quote: "videos", ref: "page-yt" },
+      ];
+      return i.query ? pages.filter((p) => i.query.toLowerCase().split(/\W+/).some((w) => w.length > 3 && p.title.toLowerCase().includes(w))) : pages;
+    },
+    execute: async () => ({ ok: true, message: "" }),
+  });
+  const run = (question: string, history: ChatTurn[], reply: object, searched: string[] = []) => {
+    const { llm } = stubLlm("unused", reply);
+    const prompts: string[] = [];
+    const json = llm.json.bind(llm);
+    llm.json = ((o: { messages: { content: string }[] }, v: (x: unknown) => unknown) => (prompts.push(o.messages.map((m) => m.content).join(" ")), json(o as never, v as never))) as typeof llm.json;
+    const reg = new ConnectorRegistry();
+    reg.register(notion(searched));
+    return collect(runAgent({ question, mode: "fast", userId: "u1", history }, { llm, registry: reg, memory: memStub(), actions: new ActionStore() })).then((events) => ({ events, prompts }));
+  };
+  const asked: ChatTurn[] = [
+    { role: "user", content: "add the youtube links table to a new notion page" },
+    { role: "assistant", content: "Which Notion page should the new page be created under?", needsDetails: true },
+  ];
+
+  it("looks up a typed answer by its own words, so the page and its id reach the drafter", async () => {
+    const searched: string[] = [];
+    const { prompts } = await run("the weekly to-do one", asked, { ask: "x" }, searched);
+    expect(searched).toContain("the weekly to-do one");
+    expect(prompts.at(-1)).toContain("(id: page-todo)");
+  });
+
+  it("gives the model's own options their ids even when its dashes differ", async () => {
+    const { events } = await run("add the youtube links to my weekly notion page", [], { ask: "Which page?", options: ["Weekly To‑do List"] });
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.refs).toEqual([{ label: "Weekly To‑do List", source: "notion", ref: "page-todo" }]);
+  });
+
+  it("never asks the same question twice in a row", async () => {
+    const { events } = await run("banana", asked, { ask: "Which Notion page should the new page be created under?" });
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.markdown).toMatch(/^I couldn't match “banana”/);
+  });
+
+  it("sends a change to the draft back to drafting, with the draft in view", async () => {
+    const draft = 'Here\'s the draft.\n[Drafted: Add YouTube links in notion (pending) {"parentId":"page-yt","title":"YouTube Links from email","content":"| 1 | Video 1 | Kx7mQa |"}]';
+    const history: ChatTurn[] = [
+      { role: "user", content: "read the latest mail which has the youtube links and add it to my notes" },
+      { role: "assistant", content: draft, drafted: true },
+      { role: "user", content: "what's my name?" },
+      { role: "assistant", content: "You haven't told me yet." },
+    ];
+    const { llm } = stubLlm("unused");
+    const { decision } = await decideRoute("i want to change the page", history.slice(0, 2), [{ id: "notion", describes: "pages" }], llm);
+    expect(decision).toMatchObject({ route: "action", by: "rules" });
+    // The latest draft is kept whole in the history even when later turns push it out of the recent window.
+    expect(historyBlock([...history, { role: "user", content: "a" }, { role: "assistant", content: "b" }])).toContain("Kx7mQa");
+  });
+
+  it("never shows a slightly-off section marker in the answer", () => {
+    const s = splitSections("Pick a page.\n<<<CONFLICT>>> none\n<<< NEXT >>>\nWhich page?");
+    expect(s.answer).toBe("Pick a page.");
+    expect(s.next).toEqual(["Which page?"]);
+  });
+});
+
 describe("routing a request to save something", () => {
   it("treats 'add it to my notes' as an action over the apps it names", () => {
     const d = routeByRules("read the latest mail which has the youtube links and add it to my notes", ["gmail", "notion"]);
