@@ -12,6 +12,9 @@ const ABOUT_ME = /^\s*(i (like|love|enjoy|hate|prefer|usually|always|never)|i'?m
 // About this conversation or what Cortex knows of the user: the chat and memory answer it, not the user's apps.
 const ABOUT_CHAT =
   /\b(what (did|have) (i|you) (just )?(ask|asked|say|said|tell|told|mention|mentioned)|(my|your) (last|previous|first|earlier) (question|message|answer|reply)|(this|our) (chat|conversation)|so far|what('s| is) my name|who am i|do you (know|remember) (me|my|who))\b/i;
+/** About what Cortex itself just did ("which email did you pull up?", "where did you get that?"): the chat holds it. */
+const ABOUT_WHAT_YOU_DID =
+  /\b(which|what|where)\b.{0,40}\b(did|have) you (just )?(pull(ed)?( up)?|use[d]?|read|f[io]u?nd|get|got|fetch(ed)?|open(ed)?|look(ed)? at|check(ed)?|search(ed)?|take|took|pick(ed)?|draft(ed)?|add(ed)?)\b|\bwhere did (you|that|this|it) (come|get)\b/i;
 /** Points at earlier chats ("what were my previous chats about?", "what did we discuss last time?"). */
 export const ABOUT_PAST_CHATS =
   /\b((previous|past|other|earlier|old|last|recent) (chats?|conversations?|sessions?)|last time|the other day|(we|i) (talked|spoke|discussed|chatted)|(you|i) (said|told|mentioned|asked)( me| you)? (yesterday|before|last week|last time|the other day))\b/i;
@@ -166,6 +169,10 @@ export async function decideRoute(
 ): Promise<{ decision: RouteDecision; llm?: { provider: string; model: string; cached: boolean } }> {
   const ids = sources.map((s) => s.id);
   const asked = history.at(-1);
+  // Only with an earlier answer to point at; as a first message it's a request to look ("what did you find on X?").
+  if (asked?.role === "assistant" && ABOUT_WHAT_YOU_DID.test(question)) {
+    return { decision: { route: "general", sources: [], tier: "fast", reason: "about what Cortex just did", by: "rules" } };
+  }
   // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on),
   // and so does a yes to "Shall I create…?": the approval card is the confirmation, never another question.
   if (asked?.role === "assistant" && (asked.needsDetails || (AGREES.test(question) && /\?\s*$/.test(asked.content.trim())))) {

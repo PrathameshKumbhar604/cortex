@@ -508,9 +508,12 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       const drafted = await draftAction(input, deps, { evidence: [...chosen, ...ranked], briefs: actionBriefs(targets), targets, history, budget, signal });
       if (drafted) {
         const n = drafted.proposals.length;
-        const md = n > 1 ? `Here are ${n} drafts. Check each, edit if needed, and approve. Nothing happens until you do.` : n ? "Here's the draft. Check it, edit if needed, and approve. Nothing happens until you do." : drafted.ask!;
+        const used = drafted.used ?? [];
+        const from = used.length ? ` Made from ${used.map((e) => `“${e.title}” in ${sourceName(e.source)}`).join(", ")}.` : "";
+        const md = n > 1 ? `Here are ${n} drafts.${from} Check each, edit if needed, and approve. Nothing happens until you do.` : n ? `Here's the draft.${from} Check it, edit if needed, and approve. Nothing happens until you do.` : drafted.ask!;
         yield* skip(["verify", "remember"]);
-        yield { type: "evidence", items: [] };
+        // What the draft was made from stays as the turn's sources (and in the chat history), so it can be asked about.
+        yield { type: "evidence", items: used.map((e, i) => ({ ...e, id: `e${i + 1}` })) };
         yield { type: "token", text: md };
         yield { type: "answer", markdown: md, needsDetails: !drafted.proposals.length, options: drafted.options, refs: drafted.refs };
         yield { type: "step", step: "synthesize", status: "done", detail: drafted.proposals.length ? "ready for approval" : "needs details" };
@@ -675,7 +678,7 @@ async function draftAction(
   input: RunInput,
   deps: AgentDeps,
   o: { evidence: Evidence[]; briefs: ActionBrief[]; targets: Connector[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
-): Promise<{ proposals: ActionProposal[]; ask?: string; options?: string[]; refs?: OptionRef[] } | null> {
+): Promise<{ proposals: ActionProposal[]; used?: Evidence[]; ask?: string; options?: string[]; refs?: OptionRef[] } | null> {
   const drafts: unknown[] = [];
   let ask: string | undefined;
   let options: string[] | undefined;
@@ -701,11 +704,31 @@ async function draftAction(
     const p = deps.actions.propose(input.userId, deps.registry, d);
     if ("id" in p) proposals.push(p);
   }
-  if (proposals.length) return { proposals };
+  if (proposals.length) return { proposals, used: usedEvidence(drafts, proposals, o.evidence) };
   const offered = options?.length ? { options, refs: refsFor(options, o.evidence) } : await placeOptions(input, deps, o);
   // Users never know ids; a question for one is the drafter missing the item, so ask which item instead.
   if (ask && /\bIDs?\b/i.test(ask)) ask = offered.options.length ? "Which one should I use?" : undefined;
   return { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", ...offered };
+}
+
+/**
+ * The evidence a draft was made from: the items the drafter named ("from": [n]), else the ones whose distinctive
+ * words (links, long words) reappear in the drafted text. Kept as the turn's sources, so "which email did you use?"
+ * has an answer.
+ */
+export function usedEvidence(drafts: unknown[], proposals: ActionProposal[], evidence: Evidence[]): Evidence[] {
+  const named = drafts.flatMap((d) => {
+    const from = (d as { from?: unknown })?.from;
+    return Array.isArray(from) ? from : [];
+  });
+  const picked = named.filter((n): n is number => Number.isInteger(n)).map((n) => evidence[n - 1]).filter((e): e is Evidence => !!e);
+  const drafted = JSON.stringify(proposals.map((p) => p.args)).toLowerCase();
+  const echoed = evidence.filter((e) => {
+    const words = new Set(e.quote.toLowerCase().match(/https?:\/\/[^\s)\]]+|[a-z0-9]{7,}/g) ?? []);
+    return [...words].filter((w) => drafted.includes(w)).length >= 3;
+  });
+  // Only the user's own items: the "picked" place (p1) is where the draft goes, not what it was made from.
+  return [...new Set(picked.length ? picked : echoed)].filter((e) => e.id !== "p1").slice(0, 3);
 }
 
 /** The ids behind options that name an item in the evidence. */

@@ -5,10 +5,10 @@ import type { AgentEvent, ChatTurn, MemoryItem } from "@cortex/shared";
 import { ActionStore } from "./actions";
 import type { MemoryBackend, MemoryWrite, PastChat } from "./memory";
 import { actionPrompt, historyBlock } from "./prompts";
-import { runAgent } from "./run";
+import { runAgent, usedEvidence } from "./run";
 import { cleanTitle } from "./title";
 import { mightHoldMemory, remember } from "./remember";
-import { carryOver, isFollowUp, routeByRules } from "./route";
+import { carryOver, decideRoute, isFollowUp, routeByRules } from "./route";
 import { parseWindow } from "./time";
 import { splitSections, streamCutoff, verifyClaims } from "./verify";
 
@@ -413,6 +413,42 @@ describe("picking an offered option", () => {
     const events = await collect(runAgent({ question: "something else", mode: "fast", userId: "u1", history }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
     const answer = events.find((e) => e.type === "answer");
     expect(answer && answer.type === "answer" && answer.markdown).not.toMatch(/\bID\b/i);
+  });
+});
+
+describe("remembering what a draft was made from", () => {
+  const email = { id: "e1", source: "gmail", title: "Web links youtube", quote: "1 https://www.youtube.com/watch?v=jfKfPfyJRdk Kx7mQa 2 https://www.youtube.com/watch?v=dQw4w9WgXcQ Tr9pLm 3 https://www.youtube.com/watch?v=aqz-KE-bpKQ Vn4sYt" };
+  const other = { id: "e2", source: "notion", title: "Weekly To-do List", quote: "groceries laundry assignments" };
+  const proposal = (args: Record<string, unknown>) => [{ id: "a", connectorId: "notion", actionId: "create_page", title: "x", summary: "", args, risk: "low" as const, status: "pending" as const }];
+
+  it("keeps the items the drafter names, else the ones its text repeats", () => {
+    const args = { title: "YouTube links", content: "https://www.youtube.com/watch?v=jfKfPfyJRdk Kx7mQa\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ Tr9pLm\nhttps://www.youtube.com/watch?v=aqz-KE-bpKQ Vn4sYt" };
+    expect(usedEvidence([{ from: [2] }], proposal(args), [email, other])).toEqual([other]);
+    expect(usedEvidence([{}], proposal(args), [email, other])).toEqual([email]);
+    expect(usedEvidence([{}], proposal({ title: "Standup" }), [email, other])).toEqual([]);
+  });
+
+  it("names the source in the reply and keeps it as the turn's evidence", async () => {
+    const draft = { connector: "calendar", action: "create_event", title: "Standup", args: { title: "Standup", start: "2026-10-30T16:00:00" }, from: [1] };
+    const { llm } = stubLlm("unused", draft);
+    const events = await collect(runAgent({ question: "create an event for the demo day standup tomorrow at 4pm", mode: "fast", userId: "u1" }, { llm, registry: buildRegistry("demo", {}), memory: memStub(), actions: new ActionStore() }));
+    const ev = events.filter((e) => e.type === "evidence").at(-1);
+    const items = ev && ev.type === "evidence" ? ev.items : [];
+    expect(items).toHaveLength(1);
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.markdown).toContain(`Made from “${items[0]!.title}”`);
+  });
+
+  it("answers 'which email did you pull up?' from the chat, without searching", async () => {
+    const { llm, calls } = stubLlm("unused");
+    const history = [
+      { role: "user" as const, content: "read the latest mail with the youtube links and add it to my notes" },
+      { role: "assistant" as const, content: "Here's the draft.\n[Sources used: gmail: \"Web links youtube\" from Temp mail]" },
+    ];
+    const { decision } = await decideRoute("which email did you pull up?", history, [{ id: "gmail", describes: "emails" }], llm);
+    expect(decision).toMatchObject({ route: "general", by: "rules" });
+    expect(calls.route).toBe(0);
+    expect((await decideRoute("what did you find about orbit in my inbox?", [], [{ id: "gmail", describes: "emails" }], llm)).decision.route).not.toBe("general");
   });
 });
 

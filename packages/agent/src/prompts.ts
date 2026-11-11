@@ -165,7 +165,7 @@ If the user says they don't know ("idk", "not sure", "you pick"), never ask the 
 Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
 For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
-Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...}}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
+Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...},"from":[numbers of the evidence items its content came from]}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
     },
     {
       role: "user" as const,

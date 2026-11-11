@@ -101,6 +101,16 @@ function newTurn(question: string, mode: RunMode): Turn {
   };
 }
 
+/**
+ * An answer as the agent reads it back in the history: its text plus what it drew on and drafted, so "which email
+ * did you use?" or "change the title" can be answered from the chat.
+ */
+function withContext(t: Turn): string {
+  const sources = t.evidence.slice(0, 5).map((e) => `${e.source}: "${e.title}"${e.author ? ` from ${e.author}` : ""}${e.timestamp ? ` (${e.timestamp.slice(0, 10)})` : ""}`);
+  const drafts = t.actions.map((a) => `${a.title} in ${a.connectorId} (${a.status})`);
+  return [t.answer, sources.length && `[Sources used: ${sources.join("; ")}]`, drafts.length && `[Drafted: ${drafts.join("; ")}]`].filter(Boolean).join("\n");
+}
+
 function reduce(t: Turn, e: AgentEvent): Turn {
   const now = performance.now();
   switch (e.type) {
@@ -167,7 +177,7 @@ export function useAgent() {
         .slice(-40) // the whole chat; the agent fits it into its context budget
         .flatMap((t) => [
           { role: "user" as const, content: t.question },
-          { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails, refs: t.needsDetails ? t.refs : undefined },
+          { role: "assistant" as const, content: withContext(t), needsDetails: t.needsDetails, refs: t.needsDetails ? t.refs : undefined },
         ]);
       setBusy(true);
       const ctrl = new AbortController();
