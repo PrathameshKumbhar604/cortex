@@ -205,7 +205,9 @@ export class ComposioMcpConnector implements Connector {
     const data = await this.session.execute(this.spec.search.slug, args, account);
     const items = extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
     // Fetching one message by id returns its whole body here too (checked November 2026), only search results are previews.
-    return withDetails(this.spec, items, input.query, (slug, args) => this.session.execute(slug, args, account));
+    const run = (slug: string, args: Record<string, unknown>) => this.session.execute(slug, args, account);
+    await Promise.all([this.spec.links?.(items, run, account), withDetails(this.spec, items, input.query, run)]);
+    return items;
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

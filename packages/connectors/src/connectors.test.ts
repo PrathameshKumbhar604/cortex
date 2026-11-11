@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ComposioMcpConnector, ConnectorRegistry, DemoConnector, FirecrawlConnector, TOOLKITS, aliasFor, buildRegistry, extractEvidence } from "./index";
 import type { Connector } from "./types";
-import { driveQuery, gmailBody, gmailQuery } from "./composio/toolkits";
+import { driveQuery, gmailAccountLinks, gmailBody, gmailQuery, notionMarkdown } from "./composio/toolkits";
 import { htmlToText, rankByQuery } from "./extract";
 
 const ctx = { userId: "u1" };
@@ -368,5 +368,33 @@ describe("calendar and task actions", () => {
       notes: "Print 2 copies",
     });
     expect(a.toArgs({ title: "Call Asha" })).toEqual({ title: "Call Asha", tasklist_id: "@default" });
+  });
+});
+
+describe("Notion page text", () => {
+  it("turns pipe tables into Notion tables and leaves everything else alone", () => {
+    const md = "# YouTube links\n\nFrom the email.\n\n| # | Video | Password |\n| --- | :-- | --- |\n| 1 | [Video 1](https://youtu.be/a) | Kx7mQa |\n| 2 | [Video 2](https://youtu.be/b) | Tr9pLm |\n\n- a note | with a pipe";
+    expect(notionMarkdown(md)).toBe(
+      '# YouTube links\n\nFrom the email.\n\n<table header-row="true">\n<tr><td>#</td><td>Video</td><td>Password</td></tr>\n<tr><td>1</td><td>[Video 1](https://youtu.be/a)</td><td>Kx7mQa</td></tr>\n<tr><td>2</td><td>[Video 2](https://youtu.be/b)</td><td>Tr9pLm</td></tr>\n</table>\n\n- a note | with a pipe',
+    );
+    expect(notionMarkdown("| not a table |\nplain")).toBe("| not a table |\nplain");
+  });
+});
+
+describe("Gmail links", () => {
+  it("open in the connected account, asking for its address once", async () => {
+    let calls = 0;
+    const run = async () => (calls++, { emailAddress: "me@example.com" });
+    const items = [{ source: "gmail" as const, title: "t", quote: "q", url: "https://mail.google.com/mail/u/0/#all/1a1cad00998f5d89" }];
+    await gmailAccountLinks(items, run, "acct-1");
+    await gmailAccountLinks([{ ...items[0]!, url: "https://mail.google.com/mail/u/0/#all/x" }], run, "acct-1");
+    expect(items[0]!.url).toBe("https://mail.google.com/mail/?authuser=me%40example.com#all/1a1cad00998f5d89");
+    expect(calls).toBe(1);
+  });
+
+  it("keep the plain link when the address can't be read", async () => {
+    const items = [{ source: "gmail" as const, title: "t", quote: "q", url: "https://mail.google.com/mail/u/0/#all/abc" }];
+    await gmailAccountLinks(items, async () => { throw new Error("down"); }, "acct-2");
+    expect(items[0]!.url).toBe("https://mail.google.com/mail/u/0/#all/abc");
   });
 });

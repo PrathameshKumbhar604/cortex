@@ -1,5 +1,5 @@
 import { htmlToText } from "../extract";
-import type { ActionDef, SearchInput } from "../types";
+import type { ActionDef, RawEvidence, SearchInput } from "../types";
 
 export interface ComposioActionSpec extends ActionDef {
   slug: string;
@@ -20,6 +20,8 @@ export interface ComposioToolkitSpec {
   };
   /** Optional second stage: fetch full content for the best few hits only. */
   detail?: { slug: string; toArgs(ref: string): Record<string, unknown>; top: number; text?(data: unknown): string };
+  /** Optional: rewrite result links for the user's own account (`key` identifies them; `run` calls a tool as them). */
+  links?(items: RawEvidence[], run: (slug: string, args: Record<string, unknown>) => Promise<unknown>, key: string): Promise<void>;
   actions: ComposioActionSpec[];
 }
 
@@ -127,6 +129,7 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
       }),
     },
     detail: { slug: "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID", toArgs: (ref) => ({ message_id: ref, format: "full" }), top: 2, text: gmailText },
+    links: gmailAccountLinks,
     actions: [
       {
         id: "send_email",
@@ -331,7 +334,7 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
           { name: "content", type: "string", description: "page body (markdown)" },
         ],
         preview: (a) => `New page "${s(a.title)}"\n\n${s(a.content).slice(0, 400)}`,
-        toArgs: (a) => ({ parent_id: s(a.parentId), title: s(a.title), markdown: s(a.content) }),
+        toArgs: (a) => ({ parent_id: s(a.parentId), title: s(a.title), markdown: notionMarkdown(s(a.content)) }),
       },
     ],
   },
@@ -422,6 +425,51 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
 ];
 
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
+
+const GMAIL_THREAD = "https://mail.google.com/mail/u/0/#all/";
+const gmailAccounts = new Map<string, { at: number; email: Promise<string | undefined> }>();
+const address = (v: unknown) => (typeof v === "string" && v.includes("@") ? v : undefined);
+
+/**
+ * Gmail links open in the browser's first signed-in Google account (/u/0/), which may not be the connected one; then
+ * Gmail can't find the thread and shows the inbox. authuser=<connected address> opens the right mailbox.
+ */
+export async function gmailAccountLinks(items: RawEvidence[], run: (slug: string, args: Record<string, unknown>) => Promise<unknown>, key: string) {
+  if (!items.some((e) => e.url?.startsWith(GMAIL_THREAD))) return;
+  let hit = gmailAccounts.get(key);
+  if (!hit || Date.now() - hit.at > 3_600_000) {
+    hit = { at: Date.now(), email: run("GMAIL_GET_PROFILE", { user_id: "me" }).then((d) => address((d as { emailAddress?: unknown })?.emailAddress), () => undefined) };
+    gmailAccounts.set(key, hit);
+  }
+  const email = await hit.email;
+  if (!email) {
+    gmailAccounts.delete(key); // asked again next search; meanwhile the /u/0/ link works for single-account browsers
+    return;
+  }
+  for (const e of items) if (e.url?.startsWith(GMAIL_THREAD)) e.url = `https://mail.google.com/mail/?authuser=${encodeURIComponent(email)}#all/${e.url.slice(GMAIL_THREAD.length)}`;
+}
+
+/**
+ * Notion's markdown has no pipe tables (it writes them as <table><tr><td>); a drafted table would land as raw "| a | b |"
+ * lines. Converts each pipe table, keeping its first row as the header.
+ */
+export function notionMarkdown(md: string): string {
+  const lines = md.split("\n");
+  const out: string[] = [];
+  const cells = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  for (let i = 0; i < lines.length; i++) {
+    const sep = lines[i + 1]?.trim() ?? "";
+    if (!lines[i]!.trim().startsWith("|") || !/^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(sep)) {
+      out.push(lines[i]!);
+      continue;
+    }
+    const rows = [cells(lines[i]!)];
+    for (i += 2; i < lines.length && lines[i]!.trim().startsWith("|"); i++) rows.push(cells(lines[i]!));
+    i--;
+    out.push('<table header-row="true">', ...rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`), "</table>");
+  }
+  return out.join("\n");
+}
 
 /** The longer of the decoded payload and Composio's own `messageText`: either can come back partial depending on the route. */
 export function gmailText(data: unknown): string {

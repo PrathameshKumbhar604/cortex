@@ -96,7 +96,9 @@ export class ComposioConnector implements Connector {
   async search(input: SearchInput, ctx: ConnectorContext) {
     const data = await this.run(this.spec.search.slug, this.spec.search.toArgs(input), ctx);
     const items = extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
-    return withDetails(this.spec, items, input.query, (slug, args) => this.run(slug, args, ctx));
+    const run = (slug: string, args: Record<string, unknown>) => this.run(slug, args, ctx);
+    await Promise.all([this.spec.links?.(items, run, ctx.userId), withDetails(this.spec, items, input.query, run)]);
+    return items;
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {
