@@ -20,14 +20,18 @@ const config: ExpoConfig = {
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: true,
+    // Chats are kept on the phone (they quote mail and documents): they must not go into the Google account's backup.
+    allowBackup: false,
     permissions: ["android.permission.RECORD_AUDIO"],
-    blockedPermissions: ["android.permission.SYSTEM_ALERT_WINDOW"],
+    // Files are picked through Android's own picker, which needs no storage permission.
+    blockedPermissions: ["android.permission.SYSTEM_ALERT_WINDOW", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"],
   },
   plugins: [
     "expo-router",
     "expo-secure-store",
     "@clerk/expo",
-    ["expo-audio", { microphonePermission: "Cortex uses the microphone for dictation and voice mode." }],
+    // Cortex only plays and records while it is on screen: no foreground service (Play asks for a declaration and a video for one).
+    ["expo-audio", { microphonePermission: "Cortex uses the microphone for dictation and voice mode.", enableBackgroundPlayback: false }],
     [
       "expo-splash-screen",
       {

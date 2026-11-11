@@ -1,5 +1,5 @@
 import "@/polyfills";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -10,6 +10,7 @@ import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { setSignedOutHandler, setTokenGetter } from "@/api/client";
 import { CLERK_KEY } from "@/config";
+import { forgetAccount } from "@/state";
 import { prefs } from "@/storage";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 import { OnboardingProvider, useOnboarding } from "@/auth/OnboardingProvider";
@@ -65,6 +66,13 @@ function Routes() {
     setTokenGetter((opts) => getToken(opts));
     setSignedOutHandler(() => void signOut());
   }, [getToken, signOut]);
+
+  // However the session ended (Sign out, account deleted, expired), that person's chats leave the phone.
+  const wasSignedIn = useRef(false);
+  useEffect(() => {
+    if (wasSignedIn.current && !isSignedIn) void forgetAccount();
+    wasSignedIn.current = !!isSignedIn;
+  }, [isSignedIn]);
 
   const ready = isLoaded && (!isSignedIn || onboarding.state !== "loading");
   useEffect(() => {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { TextInput, View } from "react-native";
 import Animated, { FadeIn, LinearTransition, ZoomIn } from "react-native-reanimated";
-import { Check, CircleSlash, PenLine, TriangleAlert } from "@/ui/icons";
+import { ArrowUpRight, Check, CircleSlash, PenLine, TriangleAlert } from "@/ui/icons";
+import { openLink } from "@/lib/links";
 import { sourceName, type ActionProposal } from "@cortex/shared";
 import { haptic } from "@/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -106,6 +107,10 @@ export function ActionCard({ proposal, onDecide }: { proposal: ActionProposal; o
         <Txt variant="small" tone={proposal.status === "failed" ? "risk" : "muted"} style={{ marginTop: 8 }}>
           {proposal.result}
         </Txt>
+      )}
+
+      {proposal.status === "executed" && !!proposal.url && (
+        <Button kind="secondary" label={`View in ${sourceName(proposal.connectorId)}`} icon={<ArrowUpRight size={14} color={c.ink} />} onPress={() => openLink(proposal.url)} style={{ alignSelf: "flex-start", marginTop: 10 }} />
       )}
 
       {pending && (

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { TextInput, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { router } from "expo-router";
-import { Brain, FileText, Pencil } from "@/ui/icons";
+import { Brain, CornerDownRight, FileText, Pencil } from "@/ui/icons";
 import { explainError, explainFailure } from "@cortex/shared";
 import type { Turn } from "@/agent/reduce";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -39,7 +39,7 @@ export const TurnView = memo(function TurnView({ turn, chatId, onDecide, onRetry
 
   return (
     <Animated.View entering={FadeIn.duration(260)}>
-      <Question question={turn.question} done={turn.done} onEdit={onEdit} />
+      {turn.reply ? <Reply text={turn.question} /> : <Question question={turn.question} done={turn.done} onEdit={onEdit} />}
       {turn.attachments && turn.attachments.length > 0 && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: -4, marginBottom: 12 }}>
           {turn.attachments.map((f) => (
@@ -195,6 +195,27 @@ function Question({ question, done, onEdit }: { question: string; done: boolean;
         >
           <Pencil size={15} color={c.hair} strokeWidth={1.75} />
         </Press>
+      )}
+    </View>
+  );
+}
+
+/** An answer to Cortex's own question stays out of the way: a pill that shows what was picked only when tapped. */
+function Reply({ text }: { text: string }) {
+  const { c } = useTheme();
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ marginBottom: 12, alignItems: "flex-start", gap: 6 }}>
+      <Press accessibilityLabel="Your answer" accessibilityState={{ expanded: open }} onPress={() => setOpen((o) => !o)} style={{ flexDirection: "row", alignItems: "center", gap: 6, minHeight: 30, borderRadius: 15, borderWidth: 1, borderColor: c.line, paddingLeft: 9, paddingRight: 11 }}>
+        <CornerDownRight size={12} color={c.muted} />
+        <Txt variant="note" tone="muted">
+          Your answer
+        </Txt>
+      </Press>
+      {open && (
+        <Txt variant="small" tone="ink2" selectable style={{ paddingLeft: 8 }}>
+          {text}
+        </Txt>
       )}
     </View>
   );

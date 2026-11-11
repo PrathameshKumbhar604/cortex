@@ -7,6 +7,7 @@ import type {
   Conflict,
   Evidence,
   MemoryItem,
+  OptionRef,
   Plan,
   RouteDecision,
   RunMode,
@@ -51,6 +52,12 @@ export interface Turn {
   memoryWritten: MemoryItem[];
   answer: string;
   needsDetails?: boolean;
+  /** Likely answers to the question Cortex asked back (needsDetails). */
+  options?: string[];
+  /** The app items (with ids) behind those options, sent back with the history so a pick needs no new search. */
+  refs?: OptionRef[];
+  /** An answer picked from Cortex's question card: shown as a quiet pill under that question, not as a new question. */
+  reply?: boolean;
   claims: Claim[];
   conflicts: Conflict[];
   missing: string[];
@@ -90,6 +97,16 @@ export function newTurn(question: string, mode: RunMode): Turn {
   };
 }
 
+/**
+ * An answer as the agent reads it back in the history: its text plus what it drew on and drafted, so "which email
+ * did you use?" or "change the title" can be answered from the chat.
+ */
+export function withContext(t: Turn): string {
+  const sources = t.evidence.slice(0, 5).map((e) => `${e.source}: "${e.title}"${e.author ? ` from ${e.author}` : ""}${e.timestamp ? ` (${e.timestamp.slice(0, 10)})` : ""}`);
+  const drafts = t.actions.map((a) => `${a.title} in ${a.connectorId} (${a.status}): ${a.summary.split("\n")[0]} ${JSON.stringify(a.args).slice(0, 1200)}`);
+  return [t.answer, sources.length && `[Sources used: ${sources.join("; ")}]`, drafts.length && `[Drafted: ${drafts.join("; ")}]`].filter(Boolean).join("\n");
+}
+
 export function reduce(t: Turn, e: AgentEvent): Turn {
   const now = performance.now();
   switch (e.type) {
@@ -120,7 +137,7 @@ export function reduce(t: Turn, e: AgentEvent): Turn {
     case "token":
       return { ...t, answer: t.answer + e.text };
     case "answer":
-      return { ...t, answer: e.markdown, needsDetails: e.needsDetails };
+      return { ...t, answer: e.markdown, needsDetails: e.needsDetails, options: e.options, refs: e.refs };
     case "verdict":
       return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing, followups: e.followups ?? [] };
     case "action_proposal":

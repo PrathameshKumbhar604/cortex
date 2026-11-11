@@ -32,6 +32,7 @@ const clean = (t: SavedThread): SavedThread => ({ ...t, turns: t.turns.map(norma
 interface Deps {
   read: (key: string) => Promise<string | null>;
   write: (key: string, value: string) => Promise<void>;
+  remove: (key: string) => Promise<void>;
   remote: { list: () => Promise<SavedThread[]>; put: (t: SavedThread) => Promise<void>; remove: (id: string) => Promise<void> };
   debounceMs?: number;
 }
@@ -55,13 +56,13 @@ export function createChatStore(deps: Deps) {
   const push = (id: string) => {
     dirty.add(id);
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      for (const tid of dirty) {
-        const t = threads.find((x) => x.id === tid);
-        if (t) void deps.remote.put(t).catch(() => {});
-      }
-      dirty.clear();
-    }, deps.debounceMs ?? 1500);
+    timer = setTimeout(() => void flush(), deps.debounceMs ?? 1500);
+  };
+  const flush = async () => {
+    clearTimeout(timer);
+    const sending = [...dirty].map((id) => threads.find((x) => x.id === id)).filter((t) => !!t);
+    dirty.clear();
+    await Promise.all(sending.map((t) => deps.remote.put(t).catch(() => {})));
   };
 
   const store = {
@@ -127,6 +128,18 @@ export function createChatStore(deps: Deps) {
     restore(thread: SavedThread) {
       commit([...threads, thread]);
       push(thread.id);
+    },
+    /** Sends waiting changes now (before signing out, while the session still works). */
+    flush,
+    /** Forgets this account's chats, in memory and on the phone. The server's copy is untouched. */
+    async close() {
+      clearTimeout(timer);
+      dirty.clear();
+      const k = owner && key();
+      owner = null;
+      threads = [];
+      emit();
+      if (k) await deps.remove(k).catch(() => {});
     },
     /** Sends one chat now (a share link is made from the server's copy). */
     async saveNow(id: string) {

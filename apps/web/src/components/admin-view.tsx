@@ -46,6 +46,7 @@ const KIND: Record<string, { label: string; tone: string }> = {
   "voice.off": { label: "Voice mode paused", tone: "text-warn" },
   "action.executed": { label: "Action done", tone: "text-ok" },
   "action.failed": { label: "Action failed", tone: "text-warn" },
+  "answer.report": { label: "Answer reported", tone: "text-risk" },
   error: { label: "Error shown", tone: "text-warn" },
 };
 const FILTERS = [

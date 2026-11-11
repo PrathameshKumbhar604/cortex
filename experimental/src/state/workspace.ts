@@ -31,6 +31,11 @@ export async function refreshWorkspace(): Promise<WorkspaceInfo | null> {
   return info;
 }
 
+export function resetWorkspace() {
+  info = null;
+  emit();
+}
+
 export async function switchWorkspace(workspace: "demo" | "live") {
   await api("/api/connections", { method: "PUT", json: { workspace } });
   prefs.set("cortex.workspace", workspace);

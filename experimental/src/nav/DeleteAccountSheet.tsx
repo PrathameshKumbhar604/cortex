@@ -3,7 +3,6 @@ import { View } from "react-native";
 import { useClerk } from "@clerk/expo";
 import { api } from "@/api/client";
 import { haptic } from "@/haptics";
-import { prefs } from "@/storage";
 import { useTheme } from "@/theme/ThemeProvider";
 import { font } from "@/theme/type";
 import { Trash2 } from "@/ui/icons";
@@ -24,7 +23,6 @@ export function DeleteAccountSheet({ open, onClose, email }: { open: boolean; on
     try {
       await api("/api/me", { method: "DELETE", json: { confirm: true }, timeoutMs: 60_000 });
       haptic.success();
-      prefs.delete("cortex.workspace");
       onClose();
       await signOut().catch(() => {});
     } catch (e) {

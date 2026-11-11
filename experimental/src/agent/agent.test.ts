@@ -27,6 +27,24 @@ describe("reduce", () => {
   });
 });
 
+describe("history (in step with the web)", () => {
+  it("sends the picked items, the drafts and the sources with each earlier answer", async () => {
+    const { stream, bodies } = fakeStream(async (emit) => {
+      emit({ type: "evidence", items: [{ id: "e1", source: "gmail", title: "Invoice", quote: "q", author: "Asha" }] } as unknown as AgentEvent);
+      emit({ type: "answer", markdown: "Which page?", needsDetails: true, options: ["Videos"], refs: [{ label: "Videos", source: "notion", ref: "abc" }] } as AgentEvent);
+      emit({ type: "done" } as AgentEvent);
+    });
+    const a = createAgent({ stream, useOtherChats: () => false });
+    await a.ask("save it to notion", { mode: "fast" });
+    expect(a.get().turns[0]).toMatchObject({ needsDetails: true, options: ["Videos"] });
+    await a.ask("Videos", { mode: "fast", reply: true });
+    expect(a.get().turns[1]!.reply).toBe(true);
+    const history = (bodies[1] as { history: { role: string; content: string; refs?: unknown; needsDetails?: boolean }[] }).history;
+    expect(history[1]).toMatchObject({ role: "assistant", needsDetails: true, refs: [{ label: "Videos", source: "notion", ref: "abc" }] });
+    expect(history[1]!.content).toContain('[Sources used: gmail: "Invoice" from Asha]');
+  });
+});
+
 describe("createAgent", () => {
   it("streams a turn to done and sends the web's request body", async () => {
     const { stream, bodies } = fakeStream(async (emit) => {

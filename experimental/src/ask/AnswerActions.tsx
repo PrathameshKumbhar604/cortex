@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Share as NativeShare, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Check, ChevronLeft, ChevronRight, Copy, RotateCw, Share2 } from "@/ui/icons";
+import { Check, ChevronLeft, ChevronRight, Copy, Flag, RotateCw, Share2 } from "@/ui/icons";
 import type { Turn } from "@/agent/reduce";
 import { versionInfo } from "@/agent/versions";
 import { api } from "@/api/client";
@@ -10,7 +10,16 @@ import { snapshot, toMarkdown } from "@/lib/share";
 import { chats } from "@/state";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Press, Txt } from "@/ui/primitives";
+import { Sheet, SheetRow } from "@/ui/Sheet";
 import { toast } from "@/ui/toast";
+
+// The reasons /api/report accepts.
+const REASONS = [
+  ["harmful", "Harmful or unsafe"],
+  ["offensive", "Offensive or hateful"],
+  ["wrong", "Wrong or misleading"],
+  ["other", "Something else"],
+] as const;
 
 /** "‹ 2/3 ›": steps between the attempts at a regenerated turn. */
 export function VersionSwitch({ turn, onVersion }: { turn: Turn; onVersion: (v: number) => void }) {
@@ -37,6 +46,17 @@ export function AnswerActions({ turn, chatId, onRetry, onVersion }: { turn: Turn
   const { c } = useTheme();
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [reporting, setReporting] = useState(false);
+
+  const report = async (reason: string) => {
+    setReporting(false);
+    try {
+      await api("/api/report", { method: "POST", json: { reason, question: turn.question.slice(0, 300), answer: turn.answer.slice(0, 1500) } });
+      toast("Thanks. Your report was sent to the Cortex team.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Couldn't send the report. Try again in a moment.");
+    }
+  };
 
   const copy = async () => {
     const snap = snapshot(turn);
@@ -70,11 +90,22 @@ export function AnswerActions({ turn, chatId, onRetry, onVersion }: { turn: Turn
   );
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", marginLeft: -8 }}>
-      {onVersion && <VersionSwitch turn={turn} onVersion={onVersion} />}
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginLeft: -8 }}>
+      {onVersion &&<VersionSwitch turn={turn} onVersion={onVersion} />}
       {quiet(copied ? "Copied" : "Copy", copied ? <Check size={14} color={c.accent} /> : <Copy size={14} color={c.muted} />, () => void copy())}
       {chatId && quiet(sharing ? "Sharing…" : "Share", <Share2 size={14} color={c.muted} />, () => void share(), sharing)}
       {quiet("Retry", <RotateCw size={14} color={c.muted} />, onRetry, !onRetry)}
+      <Press accessibilityLabel="Report this answer" onPress={() => setReporting(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+        <Flag size={14} color={c.muted} />
+      </Press>
+      <Sheet open={reporting} onClose={() => setReporting(false)} title="Report this answer">
+        <Txt variant="small" tone="muted" style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+          This sends your question and the start of this answer to the Cortex team to review.
+        </Txt>
+        {REASONS.map(([id, label]) => (
+          <SheetRow key={id} label={label} onPress={() => void report(id)} />
+        ))}
+      </Sheet>
     </View>
   );
 }

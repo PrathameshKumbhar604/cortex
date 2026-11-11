@@ -96,6 +96,9 @@ function makeRules(c: Palette, partial: string[], evidence: Evidence[], onJump: 
         </Text>
       );
     },
+    // Never load an image an answer names: text hidden in an email or web page can make the model write one whose
+    // address carries the user's data to someone else's server. Its description is shown instead.
+    image: (node: ASTNode) => (node.attributes.alt ? <Text key={node.key}>{node.attributes.alt}</Text> : null),
     fence: (node: ASTNode) => <CodePanel key={node.key} code={node.content.replace(/\n$/, "").replace(CARET, "")} lang={(node as ASTNode & { sourceInfo?: string }).sourceInfo?.trim() || undefined} />,
     code_block: (node: ASTNode) => <CodePanel key={node.key} code={node.content.replace(/\n$/, "").replace(CARET, "")} />,
     table: (node: ASTNode, children, _p, styles) => (

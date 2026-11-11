@@ -23,6 +23,7 @@ describe("createChatStore", () => {
       deps: {
         read: async (k: string) => disk.get(k) ?? null,
         write: async (k: string, v: string) => void disk.set(k, v),
+        remove: async (k: string) => void disk.delete(k),
         remote: {
           list: async () => [t("srv", 7)],
           put: async (th: SavedThread) => void calls.push({ method: "PUT", path: "/api/chats", body: th }),
@@ -64,6 +65,22 @@ describe("createChatStore", () => {
     expect(calls.some((c) => c.method === "DELETE" && c.path === "c")).toBe(true);
     s.restore(gone!);
     expect(s.list()).toHaveLength(1);
+  });
+
+  it("signing out: waiting changes are sent, then nothing of the account stays on the phone", async () => {
+    const { deps, calls, disk } = io();
+    const s = createChatStore({ ...deps, debounceMs: 60_000 });
+    await s.open("u1");
+    s.save(t("c", 1));
+    await s.flush();
+    expect(calls.filter((c) => c.method === "PUT")).toHaveLength(1);
+    await s.close();
+    expect(s.list()).toHaveLength(0);
+    expect(disk.has("cortex.chats:u1")).toBe(false);
+    s.save(t("late", 2)); // nobody is signed in: nothing is written
+    await new Promise((r) => setTimeout(r, 5));
+    expect(disk.size).toBe(0);
+    await s.close(); // clears the waiting push
   });
 
   it("keeps each account's chats apart", async () => {

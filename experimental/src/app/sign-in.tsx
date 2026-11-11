@@ -8,6 +8,7 @@ import { ArrowRight, MailCheck } from "@/ui/icons";
 import { API_URL, OAUTH_ENABLED } from "@/config";
 import { explainClerk, type Mode } from "@/auth/explain";
 import { haptic } from "@/haptics";
+import { openLink } from "@/lib/links";
 import { useTheme } from "@/theme/ThemeProvider";
 import { font } from "@/theme/type";
 import { Button, Field, Notice, Press, Rule, Txt, Wordmark } from "@/ui/primitives";
@@ -274,7 +275,10 @@ export default function SignIn() {
           </View>
 
           <Txt variant="note" tone="hair" style={{ marginTop: 32 }}>
-            By continuing you agree that Cortex reads your connected apps only to answer you, and acts only when you approve.
+            By continuing you agree that Cortex reads your connected apps only to answer you, and acts only when you approve.{" "}
+            <Txt variant="note" tone="muted" accessibilityRole="link" onPress={() => openLink(`${API_URL}/privacy`)} style={{ textDecorationLine: "underline" }}>
+              Privacy policy
+            </Txt>
           </Txt>
         </View>
       )}

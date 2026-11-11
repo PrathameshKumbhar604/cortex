@@ -6,7 +6,7 @@ import { Wordmark } from "@/components/shell";
 
 export const metadata: Metadata = { title: "Privacy policy", description: "What Cortex keeps, who it shares it with, and how to delete it." };
 
-const UPDATED = "9 November 2026";
+const UPDATED = "11 November 2026";
 
 /** Public, plain-language privacy policy (required by Google Play). Describes what the code actually does. */
 export default function Privacy() {
@@ -31,13 +31,25 @@ export default function Privacy() {
           <li><b>Memories</b>: priorities, preferences, people and decisions from your chats, each with the reason it was kept. Never passwords or codes. You can review, edit or delete them on the Memory page.</li>
           <li><b>Usage counts</b> (questions, searches, actions per day) to keep the free service within its limits, and a log of errors.</li>
           <li><b>Shared links</b> you create: a frozen copy of that one answer, until you turn the link off.</li>
+          <li><b>Reports</b> you send about an answer: your question and the start of that answer, so the problem can be looked at.</li>
         </ul>
+        <p className="mt-3">
+          The Android app also keeps a copy of your recent chats on your phone so they open at once. That copy is removed from the phone when you sign out or delete
+          your account, and is not included in your Google account&rsquo;s device backup.
+        </p>
 
         <h2>Your connected apps</h2>
         <p>
           When you connect an app you sign in with that app directly, through Composio, and grant it access. Cortex reads from the app only to answer the question you
           asked, and changes something (sends an email, creates an event or task) only after you approve that exact action on screen. Cortex does not copy your mailbox,
           calendar or documents; only the snippets an answer cites are saved with that chat. You can disconnect any app at any time on the Sources page.
+        </p>
+
+        <h2>Google account data</h2>
+        <p>
+          When you connect Gmail, Google Calendar, Google Tasks or Google Drive, Cortex uses what it reads from them only to answer your questions and to carry out the
+          actions you approve. Cortex does not use it for advertising, does not sell it, and does not use it to train AI models of its own. The AI model providers
+          listed below receive only the parts needed to write that answer, under their own terms.
         </p>
 
         <h2>Voice and the microphone</h2>
@@ -57,6 +69,12 @@ export default function Privacy() {
           <li><b>Firecrawl</b>: web searches, when a question needs the public web.</li>
           <li><b>Amazon Web Services</b>: the server Cortex runs on, where its data is stored.</li>
         </ul>
+
+        <h2>Security and how long data is kept</h2>
+        <p>
+          Everything travels between your device and Cortex over an encrypted connection (HTTPS). Your data is kept for as long as your account exists, so your chats,
+          files and memories are there when you come back. Deleting a chat, file or memory removes it at once; deleting your account removes everything.
+        </p>
 
         <h2>Deleting your data</h2>
         <p>

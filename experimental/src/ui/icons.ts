@@ -18,6 +18,7 @@ export { default as Compass } from "lucide-react-native/icons/compass";
 export { default as Copy } from "lucide-react-native/icons/copy";
 export { default as CornerDownRight } from "lucide-react-native/icons/corner-down-right";
 export { default as FileText } from "lucide-react-native/icons/file-text";
+export { default as Flag } from "lucide-react-native/icons/flag";
 export { default as FolderOpen } from "lucide-react-native/icons/folder-open";
 export { default as Hourglass } from "lucide-react-native/icons/hourglass";
 export { default as Info } from "lucide-react-native/icons/info";

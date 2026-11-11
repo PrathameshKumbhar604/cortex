@@ -66,6 +66,13 @@ export async function loadBrief(refresh = false) {
   return state;
 }
 
+/** Signed out: the brief belonged to that account. */
+export function resetBrief() {
+  state = null;
+  seen = null;
+  emit();
+}
+
 /** Remembers the cards on screen as seen (the 200 most recent keys). */
 export function markSeen(cards: BriefCard[]) {
   seen = [...new Set([...cards.map(cardKey), ...getSeen()])].slice(0, 200);

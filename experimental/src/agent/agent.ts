@@ -1,5 +1,5 @@
 import type { ActionProposal, AgentEvent, ChatTurn, RunMode } from "@cortex/shared";
-import { newTurn, reduce, type Attachment, type Turn } from "./reduce";
+import { newTurn, reduce, withContext, type Attachment, type Turn } from "./reduce";
 import { addVersion, selectVersion } from "./versions";
 
 // The web's useAgent (apps/web/src/lib/use-agent.ts) as a small store outside React, so it can be tested and so a
@@ -17,6 +17,8 @@ export interface AskOptions {
   mode: RunMode;
   attachments?: Attachment[];
   language?: Turn["language"];
+  /** An answer to Cortex's own question (picked or typed on its card). */
+  reply?: boolean;
 }
 
 export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean; decideAction?: (id: string, body: unknown) => Promise<{ proposal?: ActionProposal; error?: string }> }) {
@@ -35,7 +37,7 @@ export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean
       .slice(-40)
       .flatMap((t) => [
         { role: "user" as const, content: t.question },
-        { role: "assistant" as const, content: t.answer, needsDetails: t.needsDetails },
+        { role: "assistant" as const, content: withContext(t), needsDetails: t.needsDetails, refs: t.needsDetails ? t.refs : undefined, drafted: t.actions.length > 0 || undefined },
       ]);
     const ctrl = new AbortController();
     abort = ctrl;
@@ -83,7 +85,7 @@ export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean
       const q = question.trim();
       if (!q || abort) return;
       const before = state.turns;
-      const turn: Turn = { ...newTurn(q, opts.mode), attachments: opts.attachments?.length ? opts.attachments : undefined, language: opts.language };
+      const turn: Turn = { ...newTurn(q, opts.mode), attachments: opts.attachments?.length ? opts.attachments : undefined, language: opts.language, reply: opts.reply };
       set({ turns: [...before, turn] });
       await run(turn, before, false);
     },
@@ -93,7 +95,7 @@ export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean
       const old = state.turns[i];
       const q = question?.trim() || old?.question;
       if (!old || !q || abort) return;
-      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments, language: old.language });
+      const next = addVersion(old, { ...newTurn(q, old.mode), attachments: old.attachments, language: old.language, reply: old.reply });
       const before = state.turns.slice(0, i);
       set({ turns: state.turns.map((t) => (t.id === turnId ? next : t)) });
       await run(next, before, true);

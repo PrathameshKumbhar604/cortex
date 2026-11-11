@@ -8,6 +8,7 @@ import { ArrowUpRight, Brain, Cable, Compass, LogOut, ShieldCheck, Trash2 } from
 import { DeleteAccountSheet } from "./DeleteAccountSheet";
 import { useOnboarding } from "@/auth/OnboardingProvider";
 import { haptic } from "@/haptics";
+import { chats } from "@/state";
 import { useWorkspace } from "@/state/workspace";
 import { prefs } from "@/storage";
 import { useTheme, type ThemePref } from "@/theme/ThemeProvider";
@@ -145,8 +146,7 @@ export function AccountSheet({ open, onClose, onNavigate }: { open: boolean; onC
           danger
           onPress={() => {
             onClose();
-            prefs.delete("cortex.workspace");
-            void signOut();
+            void chats.flush().then(() => signOut()); // the last changes reach the server before this phone forgets them
           }}
         />
       </ScrollView>

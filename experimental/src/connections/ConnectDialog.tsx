@@ -62,13 +62,14 @@ export function ConnectDialog({
             source={{ uri: target.url }}
             style={{ flex: 1, backgroundColor: c.surface }}
             onLoadEnd={() => setLoading(false)}
+            incognito // GitHub, Slack and Notion sign-ins are not kept: the next account on this phone starts signed out
             setSupportMultipleWindows={false} // links that open a new window stay in this dialog
             onShouldStartLoadWithRequest={(req) => {
               if (/^https:\/\/accounts\.google\.com\//.test(req.url)) {
                 void WebBrowser.openBrowserAsync(req.url, { showTitle: true, createTask: false });
                 return false;
               }
-              return /^https?:/.test(req.url);
+              return /^https:/.test(req.url);
             }}
           />
         )}

@@ -11,6 +11,7 @@ import type { RunMode } from "@cortex/shared";
 import type { Turn } from "@/agent/reduce";
 import { normalizeTurn } from "@/agent/versions";
 import { api } from "@/api/client";
+import { Choices } from "@/ask/Choices";
 import { Composer, type PendingFile } from "@/ask/Composer";
 import { PlusSheet } from "@/ask/PlusSheet";
 import { TurnView } from "@/ask/TurnView";
@@ -103,7 +104,7 @@ export default function Ask() {
   }, [!latest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = useCallback(
-    (q: string) => {
+    (q: string, reply?: boolean) => {
       const question = q.trim();
       if (!question || agent.get().busy) return;
       setDraft("");
@@ -116,7 +117,7 @@ export default function Ask() {
       asked.current = true;
       const ready = files.filter((f) => f.status === "ready" && f.id).map((f) => ({ id: f.id!, name: f.name, size: f.size }));
       setFiles([]);
-      void agent.ask(question, { mode, attachments: ready });
+      void agent.ask(question, { mode, attachments: ready, reply });
     },
     [files, localId, mode],
   );
@@ -215,7 +216,7 @@ export default function Ask() {
           )}
         />
       ) : (
-        <Empty workspace={workspace} onAsk={submit} />
+        <Empty workspace={workspace} onAsk={(q) => submit(q)} />
       )}
 
       {away && (
@@ -231,6 +232,7 @@ export default function Ask() {
 
       <KeyboardStickyView offset={{ opened: insets.bottom }}>
         <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: insets.bottom + 10, backgroundColor: c.surface }}>
+          {latest?.done && !busy && latest.needsDetails && <Choices key={latest.id} question={latest.answer} options={latest.options ?? []} onPick={(a) => submit(a, true)} />}
           {latest?.done && latest.followups.length > 0 && !busy && (
             <Animated.ScrollView entering={FadeIn.duration(200)} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10, paddingHorizontal: 2 }}>
               {latest.followups.slice(0, 3).map((f) => (
