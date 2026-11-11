@@ -55,6 +55,8 @@ export interface Turn {
   memoryWritten: MemoryItem[];
   answer: string;
   needsDetails?: boolean;
+  /** Likely answers to the question Cortex asked back (needsDetails). */
+  options?: string[];
   claims: Claim[];
   conflicts: Conflict[];
   missing: string[];
@@ -124,7 +126,7 @@ function reduce(t: Turn, e: AgentEvent): Turn {
     case "token":
       return { ...t, answer: t.answer + e.text };
     case "answer":
-      return { ...t, answer: e.markdown, needsDetails: e.needsDetails };
+      return { ...t, answer: e.markdown, needsDetails: e.needsDetails, options: e.options };
     case "verdict":
       return { ...t, claims: e.claims, groundedness: e.groundedness, conflicts: e.conflicts, missing: e.missing, followups: e.followups ?? [] };
     case "action_proposal":

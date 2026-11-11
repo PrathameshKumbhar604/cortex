@@ -505,7 +505,7 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         yield* skip(["verify", "remember"]);
         yield { type: "evidence", items: [] };
         yield { type: "token", text: md };
-        yield { type: "answer", markdown: md, needsDetails: !drafted.proposals.length };
+        yield { type: "answer", markdown: md, needsDetails: !drafted.proposals.length, options: drafted.options };
         yield { type: "step", step: "synthesize", status: "done", detail: drafted.proposals.length ? "ready for approval" : "needs details" };
         yield { type: "verdict", claims: [], groundedness: 1, conflicts: [], missing: [], followups: [] };
         for (const p of drafted.proposals) yield { type: "action_proposal", proposal: p };
@@ -668,9 +668,10 @@ async function draftAction(
   input: RunInput,
   deps: AgentDeps,
   o: { evidence: Evidence[]; briefs: ActionBrief[]; history: ChatTurn[]; budget: Budget; signal: AbortSignal },
-): Promise<{ proposals: ActionProposal[]; ask?: string } | null> {
+): Promise<{ proposals: ActionProposal[]; ask?: string; options?: string[] } | null> {
   const drafts: unknown[] = [];
   let ask: string | undefined;
+  let options: string[] | undefined;
   if (o.budget.canCallLlm()) {
     o.budget.llmCalls++;
     const res = await deps.llm.json(
@@ -679,9 +680,12 @@ async function draftAction(
     );
     o.budget.models.add(`${res.provider}/${res.model}`);
     for (const d of res.data) {
-      const r = d as { ask?: unknown; notAction?: unknown };
+      const r = d as { ask?: unknown; options?: unknown; notAction?: unknown };
       if (r?.notAction === true) return null;
-      if (typeof r?.ask === "string" && r.ask.trim()) ask ??= r.ask.trim();
+      if (typeof r?.ask === "string" && r.ask.trim()) {
+        ask ??= r.ask.trim();
+        if (Array.isArray(r.options)) options ??= [...new Set(r.options.filter((o): o is string => typeof o === "string" && !!o.trim()).map((o) => o.trim().slice(0, 120)))].slice(0, 4);
+      }
       else drafts.push(d);
     }
   }
@@ -690,7 +694,7 @@ async function draftAction(
     const p = deps.actions.propose(input.userId, deps.registry, d);
     if ("id" in p) proposals.push(p);
   }
-  return proposals.length ? { proposals } : { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?" };
+  return proposals.length ? { proposals } : { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", options };
 }
 
 async function* rememberStep(

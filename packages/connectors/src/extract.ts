@@ -96,7 +96,9 @@ export function extractEvidence(source: SourceId, data: unknown, limit = 8): Raw
       source,
       title: compact(title ?? body ?? "Untitled", 140),
       quote: compact(body ?? title ?? ""),
-      url: pick(r, URL_KEYS),
+      // Gmail returns no link; its web app opens a thread (or message) by id.
+      // shortcut: u/0 is the browser's first signed-in Google account, add authuser=<email> if multi-account users land in the wrong inbox.
+      url: pick(r, URL_KEYS) ?? (source === "gmail" && (thread ?? str(r.messageId)) ? `https://mail.google.com/mail/u/0/#all/${thread ?? str(r.messageId)}` : undefined),
       author: pick(r, AUTHOR_KEYS),
       timestamp: toIso(pick(r, TIME_KEYS)),
       ref: str(r.messageId) ?? str(r.id) ?? undefined,

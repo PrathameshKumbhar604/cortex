@@ -14,6 +14,7 @@ import { Composer, type PendingFile } from "./composer";
 import { uploadFile } from "@/lib/files";
 import { toast } from "@/lib/toast";
 import { TurnView } from "./turn-view";
+import { Choices } from "./choices";
 import { QuestionRail } from "./question-rail";
 import { useUser } from "@clerk/nextjs";
 import { Logo } from "./sources";
@@ -324,6 +325,9 @@ export function AskView({ workspace }: { workspace: "demo" | "live" }) {
       {latest && (
         <div className="border-t border-line bg-surface/90 backdrop-blur-sm">
           <div className="mx-auto w-full max-w-[720px] px-4 py-3 sm:px-6 sm:py-4">
+            {latest.done && !busy && latest.needsDetails && latest.options?.length ? (
+              <Choices key={latest.id} question={latest.answer} options={latest.options} onPick={(a) => submit(a)} />
+            ) : null}
             {latest?.done && latest.followups.length > 0 && !busy && (
               // Wrapping, never scrolling: every suggestion is fully readable, even at phone width.
               <div className="mb-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Suggested next questions">

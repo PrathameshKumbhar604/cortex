@@ -157,12 +157,14 @@ Available actions:
 ${actions.map((a) => `- ${a.connector}.${a.action}(${a.params}): ${a.title}`).join("\n") || "- none"}
 Use only facts from the request, the conversation and the evidence; never invent email addresses, dates, times or names.
 If the latest message does not ask you to send, create, post or change something (it is a question, a search like "latest files", or the user moved on), return {"notAction":true}.
-If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question.
+Look in the evidence before asking: when the user says a detail is in their mail, docs or chats, take it from the evidence. Never ask again for something the evidence holds.
+If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question. If you already asked for it and the evidence still lacks it, say in a few words where you looked and that you couldn't find it, then ask.
+With the question, give 2-4 likely answers as "options" (short, taken from the request, conversation or evidence, e.g. candidate times, pages or recipients); [] when there are no sensible guesses. The user can always type their own.
 Never mention field names, IDs, formats or other technical terms. Find IDs (a page, file or channel the user names) in the evidence; if you can't, ask for it by name ("Which Notion page should it go under?").
 Fill optional details only when the user gave them; sensible defaults are fine (30 minutes for a meeting). Write the text the user would send, in a natural, concise voice.
 For something that has a date but no time (an exam day, a deadline), use an all-day date (2026-11-17) rather than inventing a time.
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
-Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...}}, ...]}, {"ask":"your question"}, {"notAction":true}.`,
+Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...}}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
     },
     {
       role: "user" as const,

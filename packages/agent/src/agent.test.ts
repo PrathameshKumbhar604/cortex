@@ -363,6 +363,20 @@ describe("action requests", () => {
     expect(route && route.type === "route" && route.decision).toMatchObject({ route: "action", sources: ["calendar"] });
     expect(calls.route).toBe(0);
   });
+
+  it("searches the original request with the reply, and passes the drafter's options on", async () => {
+    const { llm } = stubLlm("unused", { ask: "Which meeting?", options: ["Webex sync", "", "Webex sync", "Design review"] });
+    const history = [
+      { role: "user" as const, content: "add the webex meeting with its password to my calendar" },
+      { role: "assistant" as const, content: "What is the password for the Webex link?", needsDetails: true },
+    ];
+    const events = await collect(runAgent({ question: "it is available in mail", mode: "fast", userId: "u1", history }, deps(llm)));
+    const route = events.find((e) => e.type === "route");
+    expect(route && route.type === "route" && route.decision.question).toBe("add the webex meeting with its password to my calendar it is available in mail");
+    expect(route && route.type === "route" && route.decision.sources).toEqual(expect.arrayContaining(["gmail", "calendar"]));
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.options).toEqual(["Webex sync", "Design review"]);
+  });
 });
 
 describe("chat titles", () => {

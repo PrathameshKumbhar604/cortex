@@ -131,7 +131,7 @@ export type AgentEvent =
   | { type: "evidence"; items: Evidence[] }
   | { type: "source_error"; failure: SourceFailure }
   | { type: "token"; text: string }
-  | { type: "answer"; markdown: string; needsDetails?: boolean } // needsDetails: a question back about an action
+  | { type: "answer"; markdown: string; needsDetails?: boolean; options?: string[] } // needsDetails: a question back about an action; options: likely answers to it
   | { type: "verdict"; claims: Claim[]; groundedness: number; conflicts: Conflict[]; missing: string[]; followups: string[] }
   | { type: "action_proposal"; proposal: ActionProposal }
   | { type: "memory_written"; items: MemoryItem[] }

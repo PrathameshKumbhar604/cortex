@@ -169,8 +169,15 @@ export async function decideRoute(
   // A reply to "what time should it start?" goes back to drafting (which can still hand it on if the user moved on),
   // and so does a yes to "Shall I create…?": the approval card is the confirmation, never another question.
   if (asked?.role === "assistant" && (asked.needsDetails || (AGREES.test(question) && /\?\s*$/.test(asked.content.trim())))) {
-    const request = history.findLast((t) => t.role === "user")?.content ?? "";
-    return { decision: { route: "action", sources: hintedSources(`${request} ${question}`, ids), tier: "strong", reason: "answers a question about an action", by: "rules" } };
+    // The request plus every answer to Cortex's questions since: searched alone, "it's in my mail" finds nothing.
+    const parts = [question];
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i]!.role !== "user") continue;
+      parts.unshift(history[i]!.content.trim());
+      if (!history[i - 1]?.needsDetails) break;
+    }
+    const request = parts.join(" ");
+    return { decision: { route: "action", sources: hintedSources(request, ids), tier: "strong", reason: "answers a question about an action", by: "rules", question: request } };
   }
   const classify = async (q: string, rewrite: boolean) => {
     try {
