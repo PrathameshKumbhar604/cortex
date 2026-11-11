@@ -379,6 +379,14 @@ describe("action requests", () => {
   });
 });
 
+describe("routing a request to save something", () => {
+  it("treats 'add it to my notes' as an action over the apps it names", () => {
+    const d = routeByRules("read the latest mail which has the youtube links and add it to my notes", ["gmail", "notion"]);
+    expect(d).toMatchObject({ route: "action", sources: ["gmail", "notion"] });
+    expect(routeByRules("what notes did I take on the youtube links?", ["gmail", "notion"])?.route).not.toBe("action");
+  });
+});
+
 describe("action drafting prompt", () => {
   it("shows the drafter each item's id, so it never has to ask the user for one", () => {
     const ev = [{ id: "e1", source: "notion", title: "Video Resources", quote: "Links to lectures", ref: "1f2a-page-id" }];

@@ -18,7 +18,7 @@ export const ABOUT_PAST_CHATS =
 const URL = /https?:\/\/\S+/i;
 const WEB = /\b(search (it |this |that )?(on |in )?(the )?(web|internet|online)|web ?search|google (it|this|that)|on the (web|internet)|online|latest news|news (about|on)|look (it )?up online)\b/i;
 const ACTION =
-  /\b(send|draft|reply to|write (an? )?(email|message|reply)|email (him|her|them)|post (a |an |this |that )?(message|update)?|create (an? )?(event|meeting|issue|page|doc)|schedule|book (a )?(meeting|call)|open (an? )?issue|comment on|add (an? )?(event|meeting))\b/i;
+  /\b(send|draft|reply to|write (an? )?(email|message|reply)|email (him|her|them)|post (a |an |this |that )?(message|update)?|create (an? )?(event|meeting|issue|page|doc)|schedule|book (a )?(meeting|call)|open (an? )?issue|comment on|add (an? )?(event|meeting))\b|\b(add|save|put|copy|jot|note)\b.{0,60}\b(to|in|into|on) (my |the )?(notes?|notion|calendar|tasks?|to-?dos?|to-?do list|drive|docs?)\b/i;
 /** Requests that start with a command verb ("Email Dr. Ruiz…", "Remind the team…"). */
 const IMPERATIVE = /^\s*(please\s+)?(email|e-mail|mail|message|text|ping|dm|tell|remind|ask|invite|notify|schedule|send|draft|reply|respond|post|create|book|add|open|file|comment|update|reschedule|cancel|share)\b/i;
 const SOURCE_WORDS =

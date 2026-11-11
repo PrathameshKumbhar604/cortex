@@ -3,6 +3,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { ConnectorStatus } from "@cortex/shared";
 import { extractEvidence } from "../extract";
 import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
+import { withDetails } from "./connector";
 import { TOOLKITS, type ComposioToolkitSpec } from "./toolkits";
 
 const ENDPOINT = "https://connect.composio.dev/mcp";
@@ -200,10 +201,11 @@ export class ComposioMcpConnector implements Connector {
 
   async search(input: SearchInput, ctx: ConnectorContext) {
     const args = Object.fromEntries(Object.entries(this.spec.search.toArgs(input)).filter(([, v]) => v !== undefined && v !== ""));
-    const data = await this.session.execute(this.spec.search.slug, args, await this.accountFor(ctx.userId));
-    // No spec.detail stage here: the hosted MCP cuts every string to ~200 characters, so a full-message
-    // fetch returns the same snippet. The SDK connector (project keys) fetches full bodies.
-    return extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
+    const account = await this.accountFor(ctx.userId);
+    const data = await this.session.execute(this.spec.search.slug, args, account);
+    const items = extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
+    // Fetching one message by id returns its whole body here too (checked November 2026), only search results are previews.
+    return withDetails(this.spec, items, input.query, (slug, args) => this.session.execute(slug, args, account));
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

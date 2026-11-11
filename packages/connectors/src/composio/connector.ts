@@ -1,13 +1,37 @@
 import { Composio } from "@composio/core";
 import type { ConnectorStatus } from "@cortex/shared";
-import { compact, extractEvidence, rankByQuery } from "../extract";
-import { ConnectorError, type Connector, type ConnectorContext, type SearchInput } from "../types";
+import { extractEvidence, rankByQuery } from "../extract";
+import { ConnectorError, type Connector, type ConnectorContext, type RawEvidence, type SearchInput } from "../types";
 import type { ComposioToolkitSpec } from "./toolkits";
 
 let shared: Composio | null = null;
 function client(apiKey: string): Composio {
   shared ??= new Composio({ apiKey });
   return shared;
+}
+
+/**
+ * Searches return short previews (Gmail's is ~200 characters); the best few hits get their full text from the
+ * spec's detail tool, so an answer never stops mid-email.
+ */
+export async function withDetails(spec: ComposioToolkitSpec, items: RawEvidence[], query: string, run: (slug: string, args: Record<string, unknown>) => Promise<unknown>) {
+  const detail = spec.detail;
+  if (!detail || items.length === 0) return items;
+  const best = rankByQuery(items, query).slice(0, detail.top).filter((e) => e.ref);
+  await Promise.all(
+    best.map(async (e) => {
+      try {
+        const raw = await run(detail.slug, detail.toArgs(e.ref!));
+        const body = detail.text?.(raw) || extractEvidence(spec.id, { records: [raw] }, 1)[0]?.quote || "";
+        // Line breaks kept: an email's table or list stays readable to the model (compact() would flatten it).
+        const text = body.replace(/[^\S\n]+/g, " ").replace(/ *\n\s*/g, "\n").trim();
+        if (text.length > e.quote.length) e.quote = text.length > 2000 ? `${text.slice(0, 1999)}…` : text;
+      } catch {
+        // keep the snippet
+      }
+    }),
+  );
+  return items;
 }
 
 /** One class serves every Composio toolkit; behaviour comes from the spec. */
@@ -72,21 +96,7 @@ export class ComposioConnector implements Connector {
   async search(input: SearchInput, ctx: ConnectorContext) {
     const data = await this.run(this.spec.search.slug, this.spec.search.toArgs(input), ctx);
     const items = extractEvidence(this.id, this.spec.search.records?.(data, input) ?? data, input.limit ?? 8);
-    const detail = this.spec.detail;
-    if (!detail || items.length === 0) return items;
-    const best = rankByQuery(items, input.query).slice(0, detail.top).filter((e) => e.ref);
-    await Promise.all(
-      best.map(async (e) => {
-        try {
-          const raw = await this.run(detail.slug, detail.toArgs(e.ref!), ctx);
-          const body = detail.text?.(raw) || extractEvidence(this.id, { records: [raw] }, 1)[0]?.quote || "";
-          if (body.length > e.quote.length) e.quote = compact(body, 900);
-        } catch {
-          // keep the snippet
-        }
-      }),
-    );
-    return items;
+    return withDetails(this.spec, items, input.query, (slug, args) => this.run(slug, args, ctx));
   }
 
   async execute(actionId: string, args: Record<string, unknown>, ctx: ConnectorContext) {

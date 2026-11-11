@@ -126,7 +126,7 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
         include_payload: false,
       }),
     },
-    detail: { slug: "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID", toArgs: (ref) => ({ message_id: ref, format: "full" }), top: 2, text: gmailBody },
+    detail: { slug: "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID", toArgs: (ref) => ({ message_id: ref, format: "full" }), top: 2, text: gmailText },
     actions: [
       {
         id: "send_email",
@@ -422,6 +422,13 @@ export const TOOLKITS: ComposioToolkitSpec[] = [
 ];
 
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
+
+/** The longer of the decoded payload and Composio's own `messageText`: either can come back partial depending on the route. */
+export function gmailText(data: unknown): string {
+  const own = String((data as { messageText?: unknown })?.messageText ?? "");
+  const decoded = gmailBody(data);
+  return decoded.length >= own.length ? decoded : own;
+}
 
 /** Gmail's full message: decode the text/plain part (or text/html as a fallback) from base64url. */
 export function gmailBody(data: unknown): string {
