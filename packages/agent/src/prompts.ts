@@ -172,7 +172,7 @@ For something that has a date but no time (an exam day, a deadline), use an all-
 If the user agrees to something offered earlier in the conversation ("yes", "go ahead"), draft exactly what was offered.
 When the user changes an earlier draft ("use a new page", "change the title", "send it to Priya instead"), draft it again from the conversation: keep everything from the earlier draft except what they changed.
 Titles, subjects and names for things you create, write yourself from the content; never ask for them.
-Where something goes (the page it goes under): what the user named; else the place of the earlier draft in this conversation; else the best match among the evidence items marked "Place". The approval card shows it and the user can change it there, so never ask where when any of these exists. "Create it", "just do it", "you pick" mean: choose and draft.
+Where something goes (the page it goes under): what the user named; else the place of the earlier draft in this conversation; else decide it yourself: think about what the content is about and choose the evidence item marked "Place" it belongs in by meaning (software testing notes go in a software testing page, not one that only shares a word like "Unit"). The approval card shows it, so never ask where when any of these exists. "Create it", "just do it", "you pick", "a new page" mean: choose and draft.
 Ask only for what you cannot know: who it is for, when it happens, or where it goes when no place is known at all.
 Return only JSON, one of: {"actions":[{"connector":"...","action":"...","title":"short description","args":{...},"from":[numbers of the evidence items its content came from]}, ...]}, {"ask":"your question","options":["..."]}, {"notAction":true}.`,
     },

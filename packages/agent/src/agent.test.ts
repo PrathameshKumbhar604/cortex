@@ -513,10 +513,19 @@ describe("the which-page loop", () => {
     expect(prompts.at(-1)).toContain("The user already answered your question: “create a new page”");
   });
 
-  it("never asks where twice: after an answer, it drafts into the likeliest page", async () => {
+  it("never asks where twice: after an answer, it decides the page itself from all of them", async () => {
     const asks = { ask: "Which Notion page should the new page be created under?" };
     const { prompts } = await run("create a new page", [{ role: "user", content: "add the youtube links table to my notes" }, { role: "assistant", content: "What should go in it?", needsDetails: true }], asks);
-    expect(prompts.at(-1)).toMatch(/\(Put it under “(YouTube Links|Weekly To-do List)” \(id: page-/);
+    expect(prompts.at(-1)).toContain("Decide where it goes yourself");
+    // Every page is a candidate, not only the one sharing a word with the request.
+    expect(prompts.at(-1)).toContain("(id: page-todo)");
+    expect(prompts.at(-1)).toContain("(id: page-yt)");
+  });
+
+  it("decides where on the first request too, instead of asking", async () => {
+    const { prompts } = await run("add the youtube links table to my notes", [], { ask: "Which Notion page should it go under?" });
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain("Decide where it goes yourself");
   });
 
   it("treats 'enter them in my notes' as a request to save", () => {

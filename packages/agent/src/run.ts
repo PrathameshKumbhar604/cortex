@@ -513,29 +513,38 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
         const found = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: input.question, limit: 4 }, ctx)));
         chosen = found.flatMap((r) => (r.ok ? r.items : [])).map((e, i) => ({ ...e, id: `p${i + 1}` }));
       }
-      // Where it could go: the earlier draft's place first, then any the searches found, else the app's recent items.
+      // Where it could go: the earlier draft's place first, then what the user named, then every page the drafter could
+      // choose from (the ones the search found and the app's recent ones), so it picks the one that fits by meaning
+      // ("STQA" for software testing notes) instead of asking, or taking a page that merely shares a word ("Unit III").
       // Only for an action that takes a place (a Notion page), so a calendar event never goes "under" a page.
       const earlier = places.length ? earlierPlace(history) : undefined;
       if (earlier && places.some((c) => c.id === earlier.source) && !chosen.some((e) => e.ref === earlier.ref)) chosen.unshift({ ...earlier, id: `p${chosen.length + 1}` });
-      if (places.length && ![...chosen, ...ranked].some((e) => e.ref && places.some((c) => c.id === e.source)) && budget.canCallTool()) {
-        budget.toolCalls += Math.min(places.length, 2);
-        const recent = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: "", limit: 4 }, ctx)));
-        chosen.push(...recent.flatMap((r) => (r.ok ? r.items : [])).map((e) => ({ ...e, id: "" })));
+      const named = chosen.find((e) => e.ref); // picked, typed or the earlier draft's: put it there
+      if (places.length) {
+        const isPlace = (e: { ref?: string; source: string }) => !!e.ref && places.some((c) => c.id === e.source);
+        let recent: Evidence[] = [];
+        if (budget.canCallTool()) {
+          budget.toolCalls += Math.min(places.length, 2);
+          const found = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: "", limit: 6 }, ctx)));
+          recent = found.flatMap((r) => (r.ok ? r.items : [])).map((e) => ({ ...e, id: "" }));
+        }
+        for (const e of [...ranked.filter(isPlace), ...recent]) if (chosen.length < 10 && !chosen.some((x) => x.ref === e.ref)) chosen.push(e);
       }
       chosen = chosen.map((e, i) => ({ ...e, id: `p${i + 1}`, quote: e.quote.startsWith("Place:") ? e.quote : `Place: ${e.quote}` }));
-      const evidenceForDraft = [...chosen, ...ranked];
+      const evidenceForDraft = [...chosen, ...ranked.filter((e) => !chosen.some((x) => x.ref && x.ref === e.ref && x.source === e.source))];
       const draftOpts = { request: question, evidence: evidenceForDraft, briefs: actionBriefs(targets), targets, history, budget, signal };
       let drafted = await draftAction(input, deps, draftOpts);
-      // Asking again although the user just answered, or asking where although a place is known, is how a chat gets
-      // stuck in a loop: draft once more with the answer as an instruction and the likeliest place; the card can change both.
+      // Asking again although the user just answered, or asking where although there are pages to choose from, is how a
+      // chat gets stuck in a loop: draft once more, following the answer and choosing the place itself.
       const answered = !!prev?.needsDetails;
-      // Once the user has answered ("create a new page", "anywhere"), any page the app returned will do: never ask where twice.
-      const fallback = chosen.find((e) => e.ref) ?? (answered ? ranked.find((e) => e.ref && places.some((c) => c.id === e.source)) : undefined);
-      const where = !!fallback && ASKS_WHERE.test(drafted?.ask ?? "");
+      const canChoose = chosen.some((e) => e.ref);
+      const where = canChoose && ASKS_WHERE.test(drafted?.ask ?? "");
       if (drafted && !drafted.proposals.length && (answered || where) && budget.canCallLlm()) {
         const notes = [
           answered && `(The user already answered your question: “${input.question.trim().slice(0, 300)}”. Follow that answer and do not ask again, unless only the user can know what is still missing, such as a recipient or a date.)`,
-          fallback && `(Put it under “${fallback.title}” (id: ${fallback.ref}) unless the request names another place. The user can change this on the approval card, so do not ask where.)`,
+          named
+            ? `(Put it under “${named.title}” (id: ${named.ref}) unless the request names another place. The user can change this on the approval card, so do not ask where.)`
+            : canChoose && `(Decide where it goes yourself: think about what the content is about and choose the "Place" item it belongs in by meaning, not by a shared word. The approval card shows the page, so do not ask where.)`,
         ].filter(Boolean);
         // A retry that fails (models busy) or still drafts nothing usable leaves the first result standing.
         const again = await draftAction(input, deps, { ...draftOpts, request: `${question}\n${notes.join("\n")}` }).catch(() => null);
