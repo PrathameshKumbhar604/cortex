@@ -415,7 +415,7 @@ describe("source links from a connector", () => {
     reg.register({
       ...new DemoConnector(TOOLKITS.find((t) => t.id === "notion")!),
       search: async () => urls.map((url, i) => ({ source: "notion", title: `t${i}`, quote: "q", url })),
-    } as Connector);
+    } as unknown as Connector); // a spread drops the class's own methods from the type; search is all this test needs
     const r = await reg.safeSearch("notion", { query: "links" }, ctx);
     expect(r.ok && r.items.map((e) => e.url)).toEqual(["https://example.com/a", "/api/files/abc", undefined, undefined, undefined, undefined]);
   });

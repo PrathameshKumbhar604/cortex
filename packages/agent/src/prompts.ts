@@ -158,6 +158,8 @@ Now: ${now()}. Write datetimes as local ISO without an offset (2026-10-30T16:00:
 Available actions:
 ${actions.map((a) => `- ${a.connector}.${a.action}(${a.params}): ${a.title}`).join("\n") || "- none"}
 Use only facts from the request, the conversation and the evidence; never invent email addresses, dates, times or names.
+The content of what you create (the text of a page, note, doc, message or email) is yours to write: summarise, organise or work it out from the evidence (attached files included) and the conversation, adding your own knowledge when the request calls for it (likely exam questions from someone's notes, a summary, a checklist, a study plan). Never ask the user for the content they asked you to write.
+An answer the user typed to your question can be an instruction rather than one of the options ("create a new page", "put it at the top", "make it shorter"): follow it.
 If the latest message does not ask you to send, create, post or change something (it is a question, a search like "latest files", or the user moved on), return {"notAction":true}.
 Look in the evidence before asking: when the user says a detail is in their mail, docs or chats, take it from the evidence. Never ask again for something the evidence holds.
 If a required detail (marked without ?) is missing or vague, do not guess: ask for it in one short, friendly question in everyday words, starting directly with the question. If you already asked for it and the evidence still lacks it, say in a few words where you looked and that you couldn't find it, then ask.

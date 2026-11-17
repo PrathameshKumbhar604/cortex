@@ -62,7 +62,8 @@ export async function POST(req: Request) {
             useOtherChats: body.useOtherChats === true,
             regenerate: body.regenerate === true,
             replyLanguage: body.language === "hi" || body.language === "mr" ? body.language : undefined,
-            attachments: await attachmentEvidence(sess.userId, attached, question),
+            // A reply to Cortex's question ("create a new page") says little about the file: rank by the request too.
+            attachments: await attachmentEvidence(sess.userId, attached, history.at(-1)?.needsDetails ? [...history.filter((t) => t.role === "user").slice(-3).map((t) => t.content), question].join(" ") : question),
             signal: req.signal,
           },
           { ...d, memory: scopedMemory(d.memory, memoryUser(sess)) },

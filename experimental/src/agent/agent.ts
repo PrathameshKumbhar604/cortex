@@ -21,6 +21,12 @@ export interface AskOptions {
   reply?: boolean;
 }
 
+/** An answer to Cortex's question keeps the files its request came with: the drafter still needs to read them. */
+function requestFiles(before: Turn[]): Attachment[] | undefined {
+  for (let i = before.length - 1; i >= 0 && before[i]!.needsDetails; i--) if (before[i]!.attachments?.length) return before[i]!.attachments;
+  return undefined;
+}
+
 export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean; decideAction?: (id: string, body: unknown) => Promise<{ proposal?: ActionProposal; error?: string }> }) {
   let state: AgentState = { turns: [], busy: false };
   let abort: AbortController | null = null;
@@ -51,7 +57,7 @@ export function createAgent(deps: { stream: Stream; useOtherChats: () => boolean
           threadId: state.serverThreadId,
           history,
           useOtherChats: deps.useOtherChats(),
-          attachments: (turn.attachments ?? []).map((a) => a.id),
+          attachments: (turn.attachments ?? requestFiles(before) ?? []).map((a) => a.id),
           regenerate,
           language: turn.language,
         },

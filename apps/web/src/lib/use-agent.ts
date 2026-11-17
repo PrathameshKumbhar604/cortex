@@ -112,6 +112,12 @@ function withContext(t: Turn): string {
   return [t.answer, sources.length && `[Sources used: ${sources.join("; ")}]`, drafts.length && `[Drafted: ${drafts.join("; ")}]`].filter(Boolean).join("\n");
 }
 
+/** An answer to Cortex's question keeps the files its request came with: the drafter still needs to read them. */
+function requestFiles(before: Turn[]): Attachment[] | undefined {
+  for (let i = before.length - 1; i >= 0 && before[i]!.needsDetails; i--) if (before[i]!.attachments?.length) return before[i]!.attachments;
+  return undefined;
+}
+
 function reduce(t: Turn, e: AgentEvent): Turn {
   const now = performance.now();
   switch (e.type) {
@@ -172,7 +178,7 @@ export function useAgent() {
   const run = useCallback(
     async (turn: Turn, before: Turn[], regenerate = false) => {
       const { mode } = turn;
-      const attachments = turn.attachments ?? [];
+      const attachments = turn.attachments ?? requestFiles(before) ?? [];
       const history: ChatTurn[] = before
         .filter((t) => t.done && t.answer)
         .slice(-40) // the whole chat; the agent fits it into its context budget

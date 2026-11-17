@@ -28,6 +28,18 @@ describe("reduce", () => {
 });
 
 describe("history (in step with the web)", () => {
+  it("an answer to Cortex's question keeps the files its request came with", async () => {
+    const { stream, bodies } = fakeStream(async (emit) => {
+      emit({ type: "answer", markdown: "Which page?", needsDetails: true } as AgentEvent);
+      emit({ type: "done" } as AgentEvent);
+    });
+    const a = createAgent({ stream, useOtherChats: () => false });
+    await a.ask("make a page of exam questions from these", { mode: "fast", attachments: [{ id: "f1", name: "unit1.pdf", size: 1 }] });
+    await a.ask("create a new page", { mode: "fast", reply: true });
+    await a.ask("the second one", { mode: "fast", reply: true });
+    expect(bodies.map((b) => (b as { attachments: string[] }).attachments)).toEqual([["f1"], ["f1"], ["f1"]]);
+  });
+
   it("sends the picked items, the drafts and the sources with each earlier answer", async () => {
     const { stream, bodies } = fakeStream(async (emit) => {
       emit({ type: "evidence", items: [{ id: "e1", source: "gmail", title: "Invoice", quote: "q", author: "Asha" }] } as unknown as AgentEvent);

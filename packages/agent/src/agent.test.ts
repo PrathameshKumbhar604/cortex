@@ -497,13 +497,41 @@ describe("the which-page loop", () => {
   it("gives the model's own options their ids even when its dashes differ", async () => {
     const { events } = await run("add the youtube links to my weekly notion page", [], { ask: "Which page?", options: ["Weekly To‑do List"] });
     const answer = events.find((e) => e.type === "answer");
-    expect(answer && answer.type === "answer" && answer.refs).toEqual([{ label: "Weekly To‑do List", source: "notion", ref: "page-todo" }]);
+    expect(answer && answer.type === "answer" && answer.refs).toContainEqual({ label: "Weekly To‑do List", source: "notion", ref: "page-todo" });
+    // The app's other pages come alongside the model's guess, once each despite the different dash.
+    expect(answer && answer.type === "answer" && answer.options).toEqual(["Weekly To‑do List", "YouTube Links"]);
   });
 
   it("never asks the same question twice in a row", async () => {
     const { events } = await run("banana", asked, { ask: "Which Notion page should the new page be created under?" });
     const answer = events.find((e) => e.type === "answer");
-    expect(answer && answer.type === "answer" && answer.markdown).toMatch(/^I couldn't match “banana”/);
+    expect(answer && answer.type === "answer" && answer.markdown).toMatch(/^Your answer “banana” didn't settle this/);
+  });
+
+  it("follows a typed answer as an instruction instead of asking the same thing again", async () => {
+    const { prompts } = await run("create a new page", asked, { ask: "Which Notion page should the new page be created under?" });
+    expect(prompts.at(-1)).toContain("The user already answered your question: “create a new page”");
+  });
+
+  it("never asks where twice: after an answer, it drafts into the likeliest page", async () => {
+    const asks = { ask: "Which Notion page should the new page be created under?" };
+    const { prompts } = await run("create a new page", [{ role: "user", content: "add the youtube links table to my notes" }, { role: "assistant", content: "What should go in it?", needsDetails: true }], asks);
+    expect(prompts.at(-1)).toMatch(/\(Put it under “(YouTube Links|Weekly To-do List)” \(id: page-/);
+  });
+
+  it("treats 'enter them in my notes' as a request to save", () => {
+    expect(routeByRules("go through the pdf and enter them in my notes", ["files", "notion"])?.route).toBe("action");
+  });
+
+  it("offers pages only for a question about where, never for one about the content", async () => {
+    const { events } = await run("add the youtube links to my weekly notion page", [], { ask: "What are the expected end-sem exam questions from the Unit III page?" });
+    const answer = events.find((e) => e.type === "answer");
+    expect(answer && answer.type === "answer" && answer.options).toEqual([]);
+  });
+
+  it("writes the content it was asked for instead of asking the user for it", () => {
+    const system = actionPrompt("make a notion page of expected exam questions from my notes", [], [])[0]!.content;
+    expect(system).toMatch(/Never ask the user for the content they asked you to write/);
   });
 
   it("sends a change to the draft back to drafting, with the draft in view", async () => {

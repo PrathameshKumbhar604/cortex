@@ -119,15 +119,19 @@ function evidenceFor(f: { id: string; name: string; created_at: string; text: st
   }));
 }
 
-/** Attached to a question: the file's most relevant passages always go to the answer, searched or not. */
+/**
+ * Attached to a question: the file's most relevant passages always go to the answer, searched or not. About 12
+ * passages in all, so a request to work through the file ("expected exam questions from my notes") sees most of it.
+ */
 export async function attachmentEvidence(userId: string, ids: string[], question: string): Promise<RawEvidence[]> {
   await ready;
   const words = terms(question);
+  const each = Math.max(3, Math.floor(12 / Math.min(ids.length, 5)));
   return ids.slice(0, 5).flatMap((id) => {
     const f = db.prepare("SELECT id, name, created_at, text FROM files WHERE id = ? AND user_id = ?").get(id, userId) as
       | { id: string; name: string; created_at: string; text: string }
       | undefined;
-    return f?.text ? evidenceFor(f, words, 3) : [];
+    return f?.text ? evidenceFor(f, words, each) : [];
   });
 }
 

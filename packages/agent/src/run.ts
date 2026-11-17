@@ -526,11 +526,20 @@ async function* runAgentImpl(input: RunInput, rawDeps: AgentDeps): AsyncGenerato
       const evidenceForDraft = [...chosen, ...ranked];
       const draftOpts = { request: question, evidence: evidenceForDraft, briefs: actionBriefs(targets), targets, history, budget, signal };
       let drafted = await draftAction(input, deps, draftOpts);
-      // Still asking where although a place is known: draft into the likeliest one; the card shows it and can be changed.
-      const fallback = chosen.find((e) => e.ref);
-      if (drafted && !drafted.proposals.length && fallback && ASKS_WHERE.test(drafted.ask ?? "") && budget.canCallLlm()) {
-        const request = `${question}\n(Put it under “${fallback.title}” (id: ${fallback.ref}). The user can change this on the approval card, so do not ask where.)`;
-        drafted = (await draftAction(input, deps, { ...draftOpts, request })) ?? drafted;
+      // Asking again although the user just answered, or asking where although a place is known, is how a chat gets
+      // stuck in a loop: draft once more with the answer as an instruction and the likeliest place; the card can change both.
+      const answered = !!prev?.needsDetails;
+      // Once the user has answered ("create a new page", "anywhere"), any page the app returned will do: never ask where twice.
+      const fallback = chosen.find((e) => e.ref) ?? (answered ? ranked.find((e) => e.ref && places.some((c) => c.id === e.source)) : undefined);
+      const where = !!fallback && ASKS_WHERE.test(drafted?.ask ?? "");
+      if (drafted && !drafted.proposals.length && (answered || where) && budget.canCallLlm()) {
+        const notes = [
+          answered && `(The user already answered your question: “${input.question.trim().slice(0, 300)}”. Follow that answer and do not ask again, unless only the user can know what is still missing, such as a recipient or a date.)`,
+          fallback && `(Put it under “${fallback.title}” (id: ${fallback.ref}) unless the request names another place. The user can change this on the approval card, so do not ask where.)`,
+        ].filter(Boolean);
+        // A retry that fails (models busy) or still drafts nothing usable leaves the first result standing.
+        const again = await draftAction(input, deps, { ...draftOpts, request: `${question}\n${notes.join("\n")}` }).catch(() => null);
+        if (again?.proposals.length) drafted = again;
       }
       // The card says where it goes, by name: an id alone tells the user nothing ("which page is this going in?").
       for (const p of drafted?.proposals ?? []) {
@@ -717,7 +726,8 @@ async function draftAction(
   if (o.budget.canCallLlm()) {
     o.budget.llmCalls++;
     const res = await deps.llm.json(
-      { tier: "strong", messages: actionPrompt(o.request, o.evidence, o.briefs, o.history), maxTokens: 1200, cacheTtlMs: 0, signal: o.signal },
+      // Room for a whole page of written content (a page of exam questions) inside the JSON.
+      { tier: "strong", messages: actionPrompt(o.request, o.evidence, o.briefs, o.history), maxTokens: 3000, cacheTtlMs: 0, signal: o.signal },
       (v) => (Array.isArray(v) ? v : (v as { actions?: unknown[] })?.actions ?? [v]),
     );
     o.budget.models.add(`${res.provider}/${res.model}`);
@@ -737,12 +747,18 @@ async function draftAction(
     if ("id" in p) proposals.push(p);
   }
   if (proposals.length) return { proposals, used: usedEvidence(drafts, proposals, o.evidence) };
-  const offered = options?.length ? { options, refs: refsFor(options, o.evidence) } : await placeOptions(input, deps, o);
+  const asksId = !!ask && /\bIDs?\b/i.test(ask);
+  // A question about where offers the model's guesses plus the app's own pages, so the right one is on the card.
+  // Pages are never offered as answers to anything else ("what should the questions be?").
+  const own = options?.length ? { options, refs: refsFor(options, o.evidence) } : { options: [], refs: [] };
+  const where = !ask || asksId || ASKS_WHERE.test(ask) ? await placeOptions(input, deps, o) : { options: [], refs: [] };
+  const labels = [...own.options, ...where.options].filter((l, i, all) => all.findIndex((x) => same(x, l)) === i).slice(0, 4);
+  const offered = { options: labels, refs: [...own.refs, ...where.refs].filter((r) => labels.includes(r.label)) };
   // Users never know ids; a question for one is the drafter missing the item, so ask which item instead.
-  if (ask && /\bIDs?\b/i.test(ask)) ask = offered.options.length ? "Which one should I use?" : undefined;
-  // Never the same question twice in a row: say what didn't match, so the next answer can be different.
+  if (asksId) ask = offered.options.length ? "Which one should I use?" : undefined;
+  // Never the same question twice in a row: say the answer didn't settle it, so the next one can be different.
   const prev = o.history.at(-1);
-  if (ask && prev?.needsDetails && same(ask, prev.content)) ask = `I couldn't match “${input.question.trim().slice(0, 80)}” to anything. ${ask}`;
+  if (ask && prev?.needsDetails && same(ask, prev.content)) ask = `Your answer “${input.question.trim().slice(0, 80)}” didn't settle this. ${ask}`;
   return { proposals, ask: ask ?? "I need a bit more to go on. What exactly should I do, and what should it say?", ...offered };
 }
 
@@ -775,7 +791,8 @@ const same = (a: string, b: string) => {
 };
 
 /** A question about where something goes ("Which Notion page should it go under?"). */
-const ASKS_WHERE = /\b(which|what)\b[^?]*\b(page|channel|list|folder|database|project|parent)\b|\b(under|where)\b/i;
+// "Which Notion page…", "what page…", "…go under?", never "What are the questions from the Unit III page?".
+const ASKS_WHERE = /\b(which|what)\s+(\w+\s+)?(pages?|notes?|sections?|docs?|documents?|channel|list|folder|database|project|parent)\b|\b(under|where)\b/i;
 
 /** The place the latest draft in the chat went (its id and, when the card named it, its name), to reuse by default. */
 function earlierPlace(history: ChatTurn[]): Evidence | undefined {
@@ -814,10 +831,11 @@ async function placeOptions(
     return { options, refs: refsFor(options, fit) };
   };
   const found = pick(o.evidence);
-  if (found.options.length || !places.length) return found;
+  if (found.options.length >= 4 || !places.length) return found;
+  // A keyword match alone is often the wrong page ("Unit III" for unit 1 notes): the app's recent pages go alongside it.
   const ctx = { userId: input.userId, signal: o.signal };
   const recent = await Promise.all(places.slice(0, 2).map((c) => deps.registry.safeSearch(c.id, { query: "", limit: 4 }, ctx)));
-  return pick(recent.flatMap((r) => (r.ok ? r.items : [])));
+  return pick([...o.evidence, ...recent.flatMap((r) => (r.ok ? r.items : []))]);
 }
 
 async function* rememberStep(
